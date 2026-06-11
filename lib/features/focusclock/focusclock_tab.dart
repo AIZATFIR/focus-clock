@@ -9,7 +9,6 @@ import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
-import '../ai_chat/ai_chat_sheet.dart';
 import '../eisenhower/eisenhower_tab.dart';
 import '../presets/presets_tab.dart';
 import 'analog_clock_face.dart';
@@ -190,10 +189,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   bool _crossedHalf = false;
   late final AnimationController _pulseCtrl;
   late final AnimationController _revealCtrl;
-  final _aiSheet = DraggableScrollableController();
-
-  /// Peek fraction of the AI sheet (shows handle + NOW & AROUND).
-  static const _peek = 0.16;
 
   @override
   void initState() {
@@ -212,7 +207,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   void dispose() {
     _pulseCtrl.dispose();
     _revealCtrl.dispose();
-    _aiSheet.dispose();
     super.dispose();
   }
 
@@ -231,28 +225,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     }
     SystemSound.play(SystemSoundType.click);
     HapticFeedback.lightImpact();
-  }
-
-  void _toggleAiSheet() {
-    if (!_aiSheet.isAttached) return;
-    final expanded = _aiSheet.size > 0.5;
-    _aiSheet.animateTo(
-      expanded ? _peek : 0.85,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-    );
-    HapticFeedback.selectionClick();
-  }
-
-  void _expandAiSheet() {
-    if (!_aiSheet.isAttached) return;
-    if (_aiSheet.size < 0.5) {
-      _aiSheet.animateTo(
-        0.85,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-      );
-    }
   }
 
   /// True if [start, end) overlaps any activity (excluding [excludeId]).
@@ -288,13 +260,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       _pulseCtrl.value = 0;
     }
 
-    return LayoutBuilder(builder: (context, cons) {
-      final peekPx = cons.maxHeight * _peek;
+    return LayoutBuilder(builder: (context, _) {
       return Stack(
         children: [
-          // Clock area (above the AI sheet peek)
+          // Clock area — full height (AI is now a separate page)
           Positioned.fill(
-            bottom: peekPx,
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
@@ -376,7 +346,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           // Eisenhower Matrix mini button — bottom left
           Positioned(
             left: 14,
-            bottom: peekPx + 12,
+            bottom: 12,
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -440,7 +410,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           // AM/PM — small toggle, bottom right of the clock
           Positioned(
             right: 14,
-            bottom: peekPx + 12,
+            bottom: 12,
             child: _AmPmMini(
               half: half,
               onChanged: (h) {
@@ -450,51 +420,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
             ),
           ),
 
-          // AI assistant — pull-up sheet with NOW & AROUND in its header
-          DraggableScrollableSheet(
-            controller: _aiSheet,
-            initialChildSize: _peek,
-            minChildSize: _peek,
-            maxChildSize: 0.85,
-            snap: true,
-            builder: (ctx, scrollCtrl) => ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-              child: Container(
-                clipBehavior: Clip.hardEdge,
-                decoration: const BoxDecoration(
-                  color: AppPalette.card,
-                  border:
-                      Border(top: BorderSide(color: AppPalette.stroke)),
-                ),
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _toggleAiSheet,
-                      child: _SheetHeader(
-                        activities: activities,
-                        now: now,
-                        half: half,
-                        is24h: is24h,
-                      ),
-                    ),
-                    // Only render chat panel when sheet is open enough
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (ctx, c) => c.maxHeight < 72
-                            ? const SizedBox.shrink()
-                            : AiChatPanel(
-                                scrollController: scrollCtrl,
-                                onExpandSheet: _expandAiSheet,
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       );
     });
@@ -710,119 +635,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (!mounted) return;
     await showActivityDetailSheet(context, activity: a, mode: DetailMode.create);
   }
-}
-
-/// Header of the AI pull-up sheet: drag handle + NOW & AROUND summary.
-/// Tap to expand into the AI assistant.
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({
-    required this.activities,
-    required this.now,
-    required this.half,
-    required this.is24h,
-  });
-  final List<Activity> activities;
-  final DateTime now;
-  final AmPmHalf half;
-  final bool is24h;
-
-  @override
-  Widget build(BuildContext context) {
-    final m = minuteOfHalf(now);
-    Activity? current;
-    Activity? next;
-    for (final a in activities) {
-      if (m >= a.startMinute && m < a.endMinute) current = a;
-      if (a.startMinute > m &&
-          (next == null || a.startMinute < next.startMinute)) {
-        next = a;
-      }
-    }
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 6),
-              decoration: BoxDecoration(
-                color: AppPalette.stroke,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              const Text(
-                'NOW & AROUND',
-                style: TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 1.5,
-                    color: AppPalette.textDim),
-              ),
-              const Spacer(),
-              Text('✨',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: AppPalette.accent.withValues(alpha: 0.9))),
-              const Icon(Icons.keyboard_arrow_up,
-                  size: 16, color: AppPalette.textDim),
-            ],
-          ),
-          const SizedBox(height: 2),
-          if (current != null)
-            _row(current, label: 'Now', highlight: true)
-          else
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: Text('No active block',
-                  style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
-            ),
-          if (next != null) _row(next, label: 'Next'),
-        ],
-      ),
-    );
-  }
-
-  Widget _row(Activity a, {required String label, bool highlight = false}) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 5),
-        child: Row(
-          children: [
-            if (a.iconKey != null && a.iconKey!.isNotEmpty)
-              Text(a.iconKey!, style: const TextStyle(fontSize: 14))
-            else
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                    color: Color(a.colorValue), shape: BoxShape.circle),
-              ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '${a.title.isEmpty ? "(no title)" : a.title}  ·  '
-                '${formatMinuteOfHalf(a.startMinute, half, is24h: is24h)}–'
-                '${formatMinuteOfHalf(a.endMinute, half, is24h: is24h)}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: highlight ? FontWeight.w600 : FontWeight.w400,
-                  color: highlight ? AppPalette.accent : AppPalette.text,
-                ),
-              ),
-            ),
-            Text(label,
-                style:
-                    const TextStyle(fontSize: 11, color: AppPalette.textDim)),
-          ],
-        ),
-      );
 }
 
 /// Compact AM/PM toggle pinned at the clock's bottom-right corner.

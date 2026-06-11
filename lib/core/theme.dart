@@ -27,6 +27,9 @@ class AppPalette {
 ThemeData buildDarkTheme() {
   final base = ThemeData.dark(useMaterial3: true);
   return base.copyWith(
+    splashFactory: NoSplash.splashFactory,
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
     scaffoldBackgroundColor: AppPalette.bg,
     colorScheme: base.colorScheme.copyWith(
       surface: AppPalette.bg,
@@ -100,6 +103,9 @@ ThemeData buildBlackTheme() {
 ThemeData buildLightTheme() {
   final base = ThemeData.light(useMaterial3: true);
   return base.copyWith(
+    splashFactory: NoSplash.splashFactory,
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
     scaffoldBackgroundColor: AppPalette.lightBg,
     colorScheme: base.colorScheme.copyWith(
       surface: AppPalette.lightBg,
