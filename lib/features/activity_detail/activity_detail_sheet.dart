@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../core/theme.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
+import '../../services/gcal_service.dart';
 import '../../widgets/color_swatch_picker.dart';
 
 enum DetailMode { view, edit, create }
@@ -564,6 +566,18 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       );
     }
     HapticFeedback.lightImpact();
+
+    // Push to Google Calendar if signed in (fire-and-forget)
+    final gcalSigned = ref.read(gcalSignedInProvider);
+    if (gcalSigned) {
+      final gcal = ref.read(gcalServiceProvider);
+      final pushTarget = segments.length == 1
+          ? widget.initial
+          : (await repo.getGroup(widget.initial.groupId ?? '')).firstOrNull
+              ?? widget.initial;
+      unawaited(gcal.pushActivity(pushTarget));
+    }
+
     if (mounted) Navigator.pop(context);
   }
 

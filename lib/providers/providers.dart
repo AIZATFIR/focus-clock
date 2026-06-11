@@ -9,6 +9,7 @@ import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
 import '../services/ai_service.dart';
+import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
 
 /// Overridden in main().
@@ -70,6 +71,12 @@ final activitiesByDateProvider = StreamProvider<List<Activity>>((ref) {
 
 /// Bottom-nav selected index.
 final tabIndexProvider = StateProvider<int>((_) => 1);
+
+/// Google Calendar service singleton.
+final gcalServiceProvider = Provider<GCalService>((_) => GCalService());
+
+/// Whether the user is currently signed into GCal (updated after sign-in/out).
+final gcalSignedInProvider = StateProvider<bool>((_) => false);
 
 /// Upcoming activities for Eisenhower Matrix (today + 14 days).
 final eisenhowerActivitiesProvider = StreamProvider<List<Activity>>((ref) {

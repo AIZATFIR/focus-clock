@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
+import '../../services/gcal_service.dart';
 
 // Provider presets
 const _providerPresets = [
@@ -142,6 +143,11 @@ class SettingsScreen extends ConsumerWidget {
               _save(ref, s,
                   aiBaseUrl: baseUrl, aiApiKey: apiKey, aiModel: model);
             }),
+
+            // ── Google Calendar ─────────────────────────────────────────────
+            const Divider(),
+            const _Section(title: 'Google Calendar'),
+            _GCalTile(),
 
             // ── About ───────────────────────────────────────────────────────
             const Divider(),
@@ -385,6 +391,94 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Google Calendar tile ──────────────────────────────────────────────────────
+
+class _GCalTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_GCalTile> createState() => _GCalTileState();
+}
+
+class _GCalTileState extends ConsumerState<_GCalTile> {
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSilent();
+  }
+
+  Future<void> _restoreSilent() async {
+    final svc = ref.read(gcalServiceProvider);
+    await svc.restoreSilent();
+    if (mounted) {
+      ref.read(gcalSignedInProvider.notifier).state = svc.isSignedIn;
+    }
+  }
+
+  Future<void> _toggle() async {
+    if (!gcalSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Google Sign-In only available on Android / iOS / macOS'),
+      ));
+      return;
+    }
+    setState(() => _loading = true);
+    final svc = ref.read(gcalServiceProvider);
+    final signedIn = ref.read(gcalSignedInProvider);
+    if (signedIn) {
+      await svc.signOut();
+      ref.read(gcalSignedInProvider.notifier).state = false;
+    } else {
+      final ok = await svc.signIn();
+      ref.read(gcalSignedInProvider.notifier).state = ok;
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign-in cancelled or failed')),
+        );
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final signedIn = ref.watch(gcalSignedInProvider);
+    return ListTile(
+      leading: const Text('📅', style: TextStyle(fontSize: 22)),
+      title: Text(signedIn ? 'Connected' : 'Connect Google Calendar'),
+      subtitle: Text(
+        signedIn
+            ? 'Activities sync to your calendar'
+            : gcalSupported
+                ? 'Tap to sign in with Google'
+                : 'Available on Android / iOS',
+        style: const TextStyle(fontSize: 12),
+      ),
+      trailing: _loading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : signedIn
+              ? TextButton(
+                  onPressed: _toggle,
+                  style: TextButton.styleFrom(
+                      foregroundColor: AppPalette.danger),
+                  child: const Text('Disconnect'),
+                )
+              : FilledButton(
+                  onPressed: gcalSupported ? _toggle : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppPalette.accent,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('Connect'),
+                ),
     );
   }
 }
