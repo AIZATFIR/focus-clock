@@ -8,8 +8,9 @@ import '../../services/ai_service.dart';
 /// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
 /// Transcript is provider-backed: conversation continues across open/close.
 class AiChatPanel extends ConsumerStatefulWidget {
-  const AiChatPanel({super.key, this.scrollController});
+  const AiChatPanel({super.key, this.scrollController, this.onExpandSheet});
   final ScrollController? scrollController;
+  final VoidCallback? onExpandSheet;
 
   @override
   ConsumerState<AiChatPanel> createState() => _AiChatPanelState();
@@ -18,12 +19,14 @@ class AiChatPanel extends ConsumerStatefulWidget {
 class _AiChatPanelState extends ConsumerState<AiChatPanel> {
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
+  final _listCtrl = ScrollController();
   bool _sending = false;
 
   @override
   void dispose() {
     _ctrl.dispose();
     _focus.dispose();
+    _listCtrl.dispose();
     super.dispose();
   }
 
@@ -183,12 +186,13 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
   }
 
   void _scrollToBottom() {
+    // Expand the sheet first so the list has room, then scroll to bottom.
+    widget.onExpandSheet?.call();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final s = widget.scrollController;
-      if (s != null && s.hasClients) {
-        s.animateTo(
-          s.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
+      if (_listCtrl.hasClients) {
+        _listCtrl.animateTo(
+          _listCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
       }
@@ -240,7 +244,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
           child: messages.isEmpty
               ? _EmptyState()
               : ListView.builder(
-                  controller: widget.scrollController,
+                  controller: _listCtrl,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   itemCount: messages.length,
                   itemBuilder: (_, i) => _Bubble(msg: messages[i]),

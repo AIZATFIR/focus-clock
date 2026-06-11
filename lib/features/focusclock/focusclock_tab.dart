@@ -233,13 +233,25 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   }
 
   void _toggleAiSheet() {
-    final expanded = _aiSheet.isAttached && _aiSheet.size > 0.5;
+    if (!_aiSheet.isAttached) return;
+    final expanded = _aiSheet.size > 0.5;
     _aiSheet.animateTo(
       expanded ? _peek : 0.85,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
     HapticFeedback.selectionClick();
+  }
+
+  void _expandAiSheet() {
+    if (!_aiSheet.isAttached) return;
+    if (_aiSheet.size < 0.5) {
+      _aiSheet.animateTo(
+        0.85,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   /// True if [start, end) overlaps any activity (excluding [excludeId]).
@@ -402,7 +414,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                     ),
                     Expanded(
-                      child: AiChatPanel(scrollController: scrollCtrl),
+                      child: AiChatPanel(
+                        scrollController: scrollCtrl,
+                        onExpandSheet: _expandAiSheet,
+                      ),
                     ),
                   ],
                 ),

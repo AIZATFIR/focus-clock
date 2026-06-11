@@ -17,6 +17,25 @@ class WeeklyReviewScreen extends ConsumerStatefulWidget {
 class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
   bool _aiLoading = false;
   String? _aiReview;
+  final _scrollCtrl = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _scrollToAiCard() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +60,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
           activities: activities,
           aiLoading: _aiLoading,
           aiReview: _aiReview,
+          scrollCtrl: _scrollCtrl,
         ),
       ),
     );
@@ -59,6 +79,7 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       final ai = ref.read(aiServiceProvider);
       final reply = await ai.send(prompt);
       setState(() => _aiReview = reply);
+      _scrollToAiCard();
     } catch (e) {
       setState(() => _aiReview = '❌ Error: $e');
     } finally {
@@ -146,10 +167,12 @@ class _Body extends StatelessWidget {
     required this.activities,
     required this.aiLoading,
     required this.aiReview,
+    required this.scrollCtrl,
   });
   final List<Activity> activities;
   final bool aiLoading;
   final String? aiReview;
+  final ScrollController scrollCtrl;
 
   @override
   Widget build(BuildContext context) {
@@ -161,6 +184,7 @@ class _Body extends StatelessWidget {
     final rate = total > 0 ? done / total : 0.0;
 
     return ListView(
+      controller: scrollCtrl,
       padding: const EdgeInsets.all(16),
       children: [
         // Week label

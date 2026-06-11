@@ -17,12 +17,20 @@ const _providerPresets = [
 ];
 
 const _modelSuggestions = [
+  // OpenRouter (free, recommended)
   'google/gemini-2.0-flash-exp:free',
   'google/gemini-2.5-flash-preview:free',
   'meta-llama/llama-3.3-70b-instruct:free',
   'mistralai/mistral-7b-instruct:free',
+  // Groq (fastest free — sub-second latency)
+  'llama-3.3-70b-versatile',
+  'llama-3.1-70b-versatile',
+  'llama-3.2-3b-preview',
+  // OpenAI
   'gpt-4o-mini',
+  // Anthropic (via OpenRouter)
   'claude-haiku-4-5-20251001',
+  // Local (Ollama)
   'llama3.2:latest',
 ];
 
@@ -336,8 +344,13 @@ class _AiConfigTileState extends State<_AiConfigTile> {
           const SizedBox(height: 10),
 
           // Model
-          const Text('Model',
-              style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
+          Row(children: [
+            const Text('Model',
+                style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
+            const Spacer(),
+            const Text('💡 Groq = fastest free',
+                style: TextStyle(fontSize: 11, color: AppPalette.textDim)),
+          ]),
           const SizedBox(height: 4),
           Autocomplete<String>(
             initialValue: TextEditingValue(text: _modelCtrl.text),
