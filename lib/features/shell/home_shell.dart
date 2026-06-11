@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../agenda/agenda_tab.dart';
-import '../eisenhower/eisenhower_tab.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
@@ -26,7 +25,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
     super.initState();
     final initial = ref.read(tabIndexProvider);
     _pc = PageController(initialPage: initial);
-    _tc = TabController(length: 4, vsync: this, initialIndex: initial);
+    _tc = TabController(length: 3, vsync: this, initialIndex: initial.clamp(0, 2));
   }
 
   @override
@@ -104,8 +103,6 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 text: 'Clock', height: 52),
             Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
                 text: 'Agenda', height: 52),
-            Tab(icon: Icon(Icons.grid_view_rounded, size: 20),
-                text: 'Matrix', height: 52),
           ],
         ),
       ),
@@ -118,7 +115,6 @@ class _HomeShellState extends ConsumerState<HomeShell>
           PresetsTab(),
           FocusClockTab(),
           AgendaTab(),
-          EisenhowerTab(),
         ],
       ),
     );

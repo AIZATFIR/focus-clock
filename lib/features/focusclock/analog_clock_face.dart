@@ -64,7 +64,7 @@ class AnalogClockFace extends StatelessWidget {
 
 /// Geometry scale shared with hit-testing: clock occupies 92% at rest,
 /// grows to 98% when the minute ring is revealed.
-double clockGrowFactor(double outerReveal) => 0.92 + 0.06 * outerReveal;
+double clockGrowFactor(double outerReveal) => 0.87 + 0.13 * outerReveal;
 
 class _ClockPainter extends CustomPainter {
   _ClockPainter({
@@ -102,16 +102,47 @@ class _ClockPainter extends CustomPainter {
     final arcInner = r * 0.55;
     final arcOuter = r * 0.85;
 
+    // Aura — soft glow when clock is in normal (non-expanded) state
+    final aura = (1.0 - outerReveal).clamp(0.0, 1.0);
+    if (aura > 0.01) {
+      canvas.drawCircle(
+        center,
+        outerRadius + 14,
+        Paint()
+          ..color = AppPalette.accent.withValues(alpha: 0.06 * aura)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 22 * aura),
+      );
+      canvas.drawCircle(
+        center,
+        outerRadius + 3,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6 * aura
+          ..color = AppPalette.accent.withValues(alpha: 0.09 * aura)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 8 * aura),
+      );
+    }
+
     // Face
     canvas.drawCircle(
         center, outerRadius, Paint()..color = AppPalette.card.withValues(alpha: 0.6));
+
+    // Outer ring — two-layer: accent shimmer inner + stroke outer
     canvas.drawCircle(
       center,
       outerRadius,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = AppPalette.stroke,
+        ..strokeWidth = 1.5
+        ..color = AppPalette.accent.withValues(alpha: 0.18 + outerReveal * 0.12),
+    );
+    canvas.drawCircle(
+      center,
+      outerRadius + 1,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = AppPalette.stroke.withValues(alpha: 0.7),
     );
 
     // 5-min grid lines in arc band

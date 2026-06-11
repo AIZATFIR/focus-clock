@@ -10,6 +10,7 @@ import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
 import '../ai_chat/ai_chat_sheet.dart';
+import '../eisenhower/eisenhower_tab.dart';
 import '../presets/presets_tab.dart';
 import 'analog_clock_face.dart';
 
@@ -298,7 +299,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               child: AspectRatio(
                 aspectRatio: 1,
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(4),
                   child: LayoutBuilder(
                     builder: (context, c) => DragTarget<Preset>(
                       onAcceptWithDetails: (details) =>
@@ -372,6 +373,70 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
             ),
           ),
 
+          // Eisenhower Matrix mini button — bottom left
+          Positioned(
+            left: 14,
+            bottom: peekPx + 12,
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: AppPalette.card,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (ctx) => SizedBox(
+                    height: MediaQuery.of(ctx).size.height * 0.82,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppPalette.stroke,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Eisenhower Matrix',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                        const Divider(height: 16),
+                        const Expanded(child: EisenhowerTab()),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppPalette.card,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppPalette.stroke),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.grid_view_rounded,
+                        size: 14, color: AppPalette.textDim),
+                    const SizedBox(width: 5),
+                    const Text('Matrix',
+                        style: TextStyle(
+                            fontSize: 11, color: AppPalette.textDim)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // AM/PM — small toggle, bottom right of the clock
           Positioned(
             right: 14,
@@ -414,10 +479,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         is24h: is24h,
                       ),
                     ),
+                    // Only render chat panel when sheet is open enough
                     Expanded(
-                      child: AiChatPanel(
-                        scrollController: scrollCtrl,
-                        onExpandSheet: _expandAiSheet,
+                      child: LayoutBuilder(
+                        builder: (ctx, c) => c.maxHeight < 72
+                            ? const SizedBox.shrink()
+                            : AiChatPanel(
+                                scrollController: scrollCtrl,
+                                onExpandSheet: _expandAiSheet,
+                              ),
                       ),
                     ),
                   ],
