@@ -396,6 +396,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(20)),
               child: Container(
+                clipBehavior: Clip.hardEdge,
                 decoration: const BoxDecoration(
                   color: AppPalette.card,
                   border:

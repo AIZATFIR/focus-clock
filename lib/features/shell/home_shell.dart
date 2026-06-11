@@ -111,6 +111,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       ),
       body: PageView(
         controller: _pc,
+        physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (i) =>
             ref.read(tabIndexProvider.notifier).state = i,
         children: const [
