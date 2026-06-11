@@ -150,20 +150,30 @@ class _ClockPainter extends CustomPainter {
       }
     }
 
-    // Tick marks
-    final tickPaint = Paint()..color = AppPalette.text;
-    for (int i = 0; i < 60; i++) {
-      final angle = (i / 60) * 2 * math.pi - math.pi / 2;
-      final isHour = i % 5 == 0;
+    // Tick marks — every 5 minutes (144 ticks for 720-min clock)
+    // Hour marks (m%60==0) have labels drawn below, skip here.
+    // 30-min: prominent, 15-min: medium, 5-min: small.
+    final tickPaint = Paint()..strokeCap = StrokeCap.round;
+    for (int m = 0; m < 720; m += 5) {
+      if (m % 60 == 0) continue; // hour label handles these
+      final angle = (m / 720) * 2 * math.pi - math.pi / 2;
+      final is30 = m % 30 == 0;
+      final is15 = m % 15 == 0;
+      final tickLen = is30 ? 13.0 : is15 ? 9.0 : 5.0;
+      final sw = is30 ? 2.0 : is15 ? 1.5 : 0.8;
+      final opacity = is30 ? 0.85 : is15 ? 0.65 : 0.35;
       final s = Offset(
-        center.dx + math.cos(angle) * (outerRadius - (isHour ? 14 : 6)),
-        center.dy + math.sin(angle) * (outerRadius - (isHour ? 14 : 6)),
+        center.dx + math.cos(angle) * (outerRadius - tickLen),
+        center.dy + math.sin(angle) * (outerRadius - tickLen),
       );
       final e = Offset(
         center.dx + math.cos(angle) * (outerRadius - 2),
         center.dy + math.sin(angle) * (outerRadius - 2),
       );
-      canvas.drawLine(s, e, tickPaint..strokeWidth = isHour ? 3 : 1);
+      canvas.drawLine(s, e,
+          tickPaint
+            ..color = AppPalette.text.withValues(alpha: opacity)
+            ..strokeWidth = sw);
     }
 
     // Hour numbers — 24h dial shows 13–23 on PM half, 0–11 on AM
