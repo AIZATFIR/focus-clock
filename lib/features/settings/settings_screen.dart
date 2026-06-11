@@ -8,31 +8,79 @@ import '../../services/gcal_service.dart';
 
 // Provider presets
 const _providerPresets = [
-  ('OpenRouter', 'https://openrouter.ai/api/v1'),
+  ('Google AI', 'https://generativelanguage.googleapis.com/v1beta/openai'),
   ('Groq', 'https://api.groq.com/openai/v1'),
+  ('OpenRouter', 'https://openrouter.ai/api/v1'),
   ('OpenAI', 'https://api.openai.com/v1'),
-  ('Gemini (OpenAI compat)', 'https://generativelanguage.googleapis.com/v1beta/openai'),
   ('Ollama (local)', 'http://localhost:11434/v1'),
   ('Custom', ''),
 ];
 
 const _modelSuggestions = [
-  // OpenRouter (free, recommended)
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemini-2.5-flash-preview:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
+  // Google AI Studio (free tier, recommended default)
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
   // Groq (fastest free — sub-second latency)
   'llama-3.3-70b-versatile',
   'llama-3.1-70b-versatile',
-  'llama-3.2-3b-preview',
+  // OpenRouter (free routes)
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
   // OpenAI
   'gpt-4o-mini',
-  // Anthropic (via OpenRouter)
-  'claude-haiku-4-5-20251001',
   // Local (Ollama)
   'llama3.2:latest',
 ];
+
+/// Short in-app guide: how to get an API key, per provider.
+const _apiKeyGuides = <String, (String url, List<String> steps)>{
+  'Google AI': (
+    'aistudio.google.com/apikey',
+    [
+      'Buka aistudio.google.com/apikey, login akun Google',
+      'Klik "Create API key" → pilih project (atau buat baru)',
+      'Copy key (mulai dengan "AIza...") → paste di bawah',
+      'Gratis: model gemini-2.5-flash, kuota harian cukup besar',
+    ],
+  ),
+  'Groq': (
+    'console.groq.com/keys',
+    [
+      'Buka console.groq.com, daftar gratis (email/Google)',
+      'Menu "API Keys" → "Create API Key"',
+      'Copy key (mulai dengan "gsk_...") → paste di bawah',
+      'Paling cepat: respons < 1 detik, free tier 14.400 req/hari',
+    ],
+  ),
+  'OpenRouter': (
+    'openrouter.ai/keys',
+    [
+      'Buka openrouter.ai, login (Google/GitHub)',
+      'Menu "Keys" → "Create Key"',
+      'Copy key (mulai dengan "sk-or-...") → paste di bawah',
+      'Pilih model berakhiran ":free" supaya gratis',
+    ],
+  ),
+  'OpenAI': (
+    'platform.openai.com/api-keys',
+    [
+      'Buka platform.openai.com, login',
+      '"API keys" → "Create new secret key"',
+      'Copy key (mulai dengan "sk-...") → paste di bawah',
+      'Berbayar — perlu isi billing dulu',
+    ],
+  ),
+  'Ollama (local)': (
+    'ollama.com/download',
+    [
+      'Install Ollama dari ollama.com/download',
+      'Jalankan: ollama pull llama3.2',
+      'API key tidak perlu — kosongkan saja',
+      'Gratis & offline, tapi perlu PC yang kuat',
+    ],
+  ),
+};
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -214,7 +262,8 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   late TextEditingController _keyCtrl;
   late TextEditingController _modelCtrl;
   bool _obscureKey = true;
-  String _selectedPreset = 'OpenRouter';
+  bool _showGuide = false;
+  String _selectedPreset = 'Google AI';
 
   @override
   void initState() {
@@ -238,13 +287,28 @@ class _AiConfigTileState extends State<_AiConfigTile> {
     super.dispose();
   }
 
+  static const _defaultModelFor = {
+    'Google AI': 'gemini-2.5-flash',
+    'Groq': 'llama-3.3-70b-versatile',
+    'OpenRouter': 'google/gemini-2.0-flash-exp:free',
+    'OpenAI': 'gpt-4o-mini',
+    'Ollama (local)': 'llama3.2:latest',
+  };
+
   void _pickPreset(String name) {
     final preset = _providerPresets.firstWhere((p) => p.$1 == name);
     setState(() {
       _selectedPreset = name;
       if (preset.$2.isNotEmpty) _urlCtrl.text = preset.$2;
+      final m = _defaultModelFor[name];
+      if (m != null) {
+        _modelCtrl.text = m;
+        _acFieldCtrl?.text = m;
+      }
     });
   }
+
+  TextEditingController? _acFieldCtrl;
 
   @override
   Widget build(BuildContext context) {
@@ -299,6 +363,66 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             ),
           ),
 
+          // How-to-get-API-key guide (per provider)
+          if (_apiKeyGuides.containsKey(_selectedPreset)) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => setState(() => _showGuide = !_showGuide),
+              child: Row(
+                children: [
+                  Icon(
+                    _showGuide
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.keyboard_arrow_right_rounded,
+                    size: 16,
+                    color: AppPalette.accent,
+                  ),
+                  const Text(
+                    'Cara dapat API key (gratis)',
+                    style: TextStyle(fontSize: 12, color: AppPalette.accent),
+                  ),
+                ],
+              ),
+            ),
+            if (_showGuide)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppPalette.accent.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: AppPalette.accent.withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '🔗 ${_apiKeyGuides[_selectedPreset]!.$1}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppPalette.accent),
+                    ),
+                    const SizedBox(height: 6),
+                    ..._apiKeyGuides[_selectedPreset]!.$2.asMap().entries.map(
+                          (e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: Text(
+                              '${e.key + 1}. ${e.value}',
+                              style: const TextStyle(
+                                  fontSize: 11.5,
+                                  height: 1.4,
+                                  color: AppPalette.text),
+                            ),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+          ],
+
           const SizedBox(height: 14),
 
           // Base URL
@@ -348,7 +472,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             const Text('Model',
                 style: TextStyle(fontSize: 13, color: AppPalette.textDim)),
             const Spacer(),
-            const Text('💡 Groq = fastest free',
+            const Text('💡 Google AI = gratis · Groq = tercepat',
                 style: TextStyle(fontSize: 11, color: AppPalette.textDim)),
           ]),
           const SizedBox(height: 4),
@@ -359,19 +483,21 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                     m.toLowerCase().contains(v.text.toLowerCase()))
                 .toList(),
             onSelected: (v) => _modelCtrl.text = v,
-            fieldViewBuilder:
-                (ctx, ctrl, focusNode, onSubmit) => TextField(
-              controller: ctrl,
-              focusNode: focusNode,
-              onChanged: (v) => _modelCtrl.text = v,
-              style: const TextStyle(fontSize: 13),
-              decoration: const InputDecoration(
-                hintText: 'google/gemini-2.0-flash-exp:free',
-                border: OutlineInputBorder(),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-            ),
+            fieldViewBuilder: (ctx, ctrl, focusNode, onSubmit) {
+              _acFieldCtrl = ctrl;
+              return TextField(
+                controller: ctrl,
+                focusNode: focusNode,
+                onChanged: (v) => _modelCtrl.text = v,
+                style: const TextStyle(fontSize: 13),
+                decoration: const InputDecoration(
+                  hintText: 'gemini-2.5-flash',
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 14),

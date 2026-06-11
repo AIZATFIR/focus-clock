@@ -12,7 +12,7 @@ class AppSettings {
   bool trueBlack = false; // AMOLED: pure black bg when dark theme active
   int clockHandsMode = 1; // 1=single precision, 2=hour+min, 3=hour+min+sec
   bool showMinuteLabels = false;
-  String aiBaseUrl = 'https://openrouter.ai/api/v1';
+  String aiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
   String aiApiKey = '';
-  String aiModel = 'google/gemini-2.0-flash-exp:free';
+  String aiModel = 'gemini-2.5-flash';
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
@@ -212,6 +213,9 @@ User presets: $presetList.
 - After every tool call, summarise in 1 sentence.
 - If ambiguous (multiple matches), list IDs and ask.
 - Reply in the same language as the user. Be concise.
+- Blocks may cross midnight: for sleep 22:00→05:00 call create_activity ONCE
+  with start_hour=22, duration_minutes=420. NEVER truncate at midnight or
+  split into two calls — the app splits segments automatically.
 
 ## Eisenhower Matrix
 - Use set_priority to classify tasks: importance=1 (important), importance=0 (not important).
@@ -342,6 +346,47 @@ Key constraints:
     };
   }
 
+  /// Create a block that may cross midnight: splits into per-half segment
+  /// rows sharing a groupId (same mechanism as manual drag/picker creation).
+  Future<int> _createSpan({
+    required String title,
+    required DateTime date,
+    required int startHour,
+    required int startMin,
+    required int durationMinutes,
+    String description = '',
+    String recurrence = 'none',
+    int colorValue = 0xFFFFD700,
+  }) async {
+    final startDt =
+        DateTime(date.year, date.month, date.day, startHour, startMin);
+    final endDt = startDt.add(Duration(minutes: durationMinutes));
+    final segments = splitSpan(startDt, endDt);
+    final groupId = segments.length > 1 ? const Uuid().v4() : null;
+    final now = DateTime.now();
+    final acts = [
+      for (final s in segments)
+        Activity()
+          ..title = title
+          ..startMinute = s.start
+          ..endMinute = s.end
+          ..ampmHalf = s.half
+          ..date = s.date
+          ..groupId = groupId
+          ..description = description
+          ..recurrence = recurrence
+          ..colorValue = colorValue
+          ..createdAt = now
+          ..updatedAt = now,
+    ];
+    if (acts.length == 1) return _activityRepo.upsert(acts.first);
+    // Fresh Activity as `original` (id == autoIncrement, no group):
+    // replaceSpan just inserts the segments in one transaction.
+    await _activityRepo.replaceSpan(original: Activity()..title = title,
+        segments: acts);
+    return acts.first.id;
+  }
+
   Future<Map<String, dynamic>> _createActivity(
       Map<String, dynamic> args) async {
     final title = args['title'] as String;
@@ -352,25 +397,15 @@ Key constraints:
     final description = args['description'] as String? ?? '';
     final recurrence = args['recurrence'] as String? ?? 'none';
 
-    final date = DateTime.parse(dateStr);
-    final half = startHour < 12 ? AmPmHalf.am : AmPmHalf.pm;
-    final relStart = (startHour % 12) * 60 + startMin;
-    final relEnd = (relStart + duration).clamp(0, 720);
-    final now = DateTime.now();
-
-    final a = Activity()
-      ..title = title
-      ..startMinute = relStart
-      ..endMinute = relEnd
-      ..ampmHalf = half
-      ..date = dateOnly(date)
-      ..description = description
-      ..recurrence = recurrence
-      ..colorValue = 0xFFFFD700
-      ..createdAt = now
-      ..updatedAt = now;
-
-    final id = await _activityRepo.upsert(a);
+    final id = await _createSpan(
+      title: title,
+      date: DateTime.parse(dateStr),
+      startHour: startHour,
+      startMin: startMin,
+      durationMinutes: duration,
+      description: description,
+      recurrence: recurrence,
+    );
     return {'success': true, 'id': id, 'title': title};
   }
 
@@ -391,28 +426,62 @@ Key constraints:
       existing.date = dateOnly(DateTime.parse(args['date'] as String));
     }
 
-    if (args['start_hour'] != null || args['start_minute'] != null) {
-      final h = args['start_hour'] != null
-          ? (args['start_hour'] as num).toInt()
-          : (existing.ampmHalf == AmPmHalf.pm ? 12 : 0) +
-              existing.startMinute ~/ 60;
-      final m = args['start_minute'] != null
-          ? (args['start_minute'] as num).toInt()
-          : existing.startMinute % 60;
-      final dur = existing.endMinute - existing.startMinute;
-      existing.ampmHalf = h < 12 ? AmPmHalf.am : AmPmHalf.pm;
-      existing.startMinute = (h % 12) * 60 + m;
-      if (args['duration_minutes'] == null) {
-        existing.endMinute = (existing.startMinute + dur).clamp(0, 720);
-      }
+    final timeChanged = args['start_hour'] != null ||
+        args['start_minute'] != null ||
+        args['duration_minutes'] != null;
+    if (!timeChanged) {
+      await _activityRepo.upsert(existing);
+      return {'success': true, 'id': id};
     }
 
+    final h = args['start_hour'] != null
+        ? (args['start_hour'] as num).toInt()
+        : (existing.ampmHalf == AmPmHalf.pm ? 12 : 0) +
+            existing.startMinute ~/ 60;
+    final m = args['start_minute'] != null
+        ? (args['start_minute'] as num).toInt()
+        : existing.startMinute % 60;
+
+    // True duration: a cross-midnight block is stored as group segments.
+    int dur;
     if (args['duration_minutes'] != null) {
-      final dur = (args['duration_minutes'] as num).toInt();
-      existing.endMinute = (existing.startMinute + dur).clamp(0, 720);
+      dur = (args['duration_minutes'] as num).toInt();
+    } else if (existing.groupId != null) {
+      final group = await _activityRepo.getGroup(existing.groupId!);
+      dur = group.fold(0, (s, g) => s + g.endMinute - g.startMinute);
+    } else {
+      dur = existing.endMinute - existing.startMinute;
     }
 
-    await _activityRepo.upsert(existing);
+    final startDt = DateTime(
+        existing.date.year, existing.date.month, existing.date.day, h, m);
+    final segments = splitSpan(startDt, startDt.add(Duration(minutes: dur)));
+    final groupId = segments.length > 1
+        ? (existing.groupId ?? const Uuid().v4())
+        : null;
+    final now = DateTime.now();
+    await _activityRepo.replaceSpan(
+      original: existing,
+      segments: [
+        for (final s in segments)
+          Activity()
+            ..title = existing.title
+            ..presetId = existing.presetId
+            ..iconKey = existing.iconKey
+            ..startMinute = s.start
+            ..endMinute = s.end
+            ..ampmHalf = s.half
+            ..date = s.date
+            ..groupId = groupId
+            ..description = existing.description
+            ..recurrence = existing.recurrence
+            ..colorValue = existing.colorValue
+            ..importance = existing.importance
+            ..deadline = existing.deadline
+            ..createdAt = existing.createdAt
+            ..updatedAt = now,
+      ],
+    );
     return {'success': true, 'id': id};
   }
 
@@ -539,27 +608,18 @@ Key constraints:
       'color': 0xFF2E2E4E,
     });
 
-    // Create all blocks
+    // Create all blocks (sleep may cross midnight — _createSpan splits it)
     final created = <int>[];
-    final now = DateTime.now();
     for (final b in blocks) {
-      final h = b['start_hour'] as int;
-      final m = b['start_minute'] as int;
-      final dur = b['duration_minutes'] as int;
-      final half = h < 12 ? AmPmHalf.am : AmPmHalf.pm;
-      final relStart = (h % 12) * 60 + m;
-      final a = Activity()
-        ..title = b['title'] as String
-        ..startMinute = relStart
-        ..endMinute = (relStart + dur).clamp(0, 720)
-        ..ampmHalf = half
-        ..date = dateOnly(date)
-        ..description = b['description'] as String
-        ..recurrence = 'none'
-        ..colorValue = b['color'] as int
-        ..createdAt = now
-        ..updatedAt = now;
-      final id = await _activityRepo.upsert(a);
+      final id = await _createSpan(
+        title: b['title'] as String,
+        date: date,
+        startHour: b['start_hour'] as int,
+        startMin: b['start_minute'] as int,
+        durationMinutes: b['duration_minutes'] as int,
+        description: b['description'] as String,
+        colorValue: b['color'] as int,
+      );
       created.add(id);
     }
 
