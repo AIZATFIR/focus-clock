@@ -54,6 +54,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
 
   late int _color;
   late String _recurrence;
+  late int _importance;
+  DateTime? _deadline;
   final _focusNode = FocusNode();
 
   @override
@@ -68,6 +70,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
     _color = a.colorValue;
     _recurrence = a.recurrence;
+    _importance = a.importance;
+    _deadline = a.deadline;
     if (a.groupId != null) _loadGroupSpan(a.groupId!);
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _focusNode.requestFocus());
@@ -107,6 +111,24 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   }
 
   bool get _overnight => dateOnly(_endDt) != dateOnly(_startDt);
+
+  Future<void> _pickDeadline(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deadline ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) setState(() => _deadline = dateOnly(picked));
+  }
+
+  String _deadlineLabel(DateTime dl) {
+    final diff = dl.difference(dateOnly(DateTime.now())).inDays;
+    if (diff < 0) return 'Overdue (${dl.day}/${dl.month})';
+    if (diff == 0) return 'Due today';
+    if (diff == 1) return 'Due tomorrow';
+    return 'Due ${dl.day}/${dl.month}/${dl.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +265,103 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               onChanged: (c) => setState(() => _color = c),
             ),
             const SizedBox(height: 12),
+            // Importance + Deadline row
+            Row(
+              children: [
+                // Importance toggle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Importance',
+                          style: TextStyle(
+                              color: AppPalette.textDim, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(
+                              value: 0,
+                              label: Text('Low'),
+                              icon: Icon(Icons.star_outline_rounded, size: 14)),
+                          ButtonSegment(
+                              value: 1,
+                              label: Text('High'),
+                              icon: Icon(Icons.star_rounded, size: 14)),
+                        ],
+                        selected: {_importance},
+                        onSelectionChanged: (s) =>
+                            setState(() => _importance = s.first),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Deadline picker
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Deadline',
+                          style: TextStyle(
+                              color: AppPalette.textDim, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () => _pickDeadline(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: _deadline != null && _deadline!
+                                          .difference(DateTime.now())
+                                          .inDays <=
+                                      3
+                                  ? AppPalette.danger
+                                  : AppPalette.stroke,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: _deadline != null
+                                    ? AppPalette.accent
+                                    : AppPalette.textDim,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  _deadline != null
+                                      ? '${_deadline!.day}/${_deadline!.month}/${_deadline!.year}'
+                                      : 'None',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _deadline != null
+                                        ? AppPalette.text
+                                        : AppPalette.textDim,
+                                  ),
+                                ),
+                              ),
+                              if (_deadline != null)
+                                GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _deadline = null),
+                                  child: const Icon(Icons.close_rounded,
+                                      size: 14,
+                                      color: AppPalette.textDim),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             const Text('Repeat', style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
             const SizedBox(height: 6),
             SegmentedButton<String>(
@@ -255,9 +374,50 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               onSelectionChanged: (s) =>
                   setState(() => _recurrence = s.first),
             ),
-          ] else if (_recurrence != 'none') ...[
-            const SizedBox(height: 8),
-            _RecurrenceInfo(_recurrence),
+          ] else ...[
+            // View mode: show importance/deadline if set
+            if (_importance >= 1 || _deadline != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (_importance >= 1) ...[
+                    const Icon(Icons.star_rounded,
+                        size: 14, color: AppPalette.accent),
+                    const SizedBox(width: 4),
+                    const Text('Important',
+                        style: TextStyle(
+                            color: AppPalette.accent, fontSize: 12)),
+                    const SizedBox(width: 12),
+                  ],
+                  if (_deadline != null) ...[
+                    Icon(Icons.calendar_today_outlined,
+                        size: 13,
+                        color: _deadline!
+                                    .difference(DateTime.now())
+                                    .inDays <=
+                                3
+                            ? AppPalette.danger
+                            : AppPalette.textDim),
+                    const SizedBox(width: 4),
+                    Text(
+                      _deadlineLabel(_deadline!),
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: _deadline!
+                                      .difference(DateTime.now())
+                                      .inDays <=
+                                  3
+                              ? AppPalette.danger
+                              : AppPalette.textDim),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+            if (_recurrence != 'none') ...[
+              const SizedBox(height: 8),
+              _RecurrenceInfo(_recurrence),
+            ],
           ],
           const SizedBox(height: 16),
           if (_mode != DetailMode.view)
@@ -304,6 +464,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       ..description = _descCtrl.text.trim()
       ..colorValue = _color
       ..recurrence = _recurrence
+      ..importance = _importance
+      ..deadline = _deadline
       ..groupId = groupId
       ..createdAt = src.createdAt
       ..updatedAt = DateTime.now();
@@ -389,6 +551,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       a.endMinute = seg.end;
       a.colorValue = _color;
       a.recurrence = _recurrence;
+      a.importance = _importance;
+      a.deadline = _deadline;
       await repo.upsert(a, notifLeadMinutes: lead);
     } else {
       final groupId =
