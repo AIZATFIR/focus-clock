@@ -163,6 +163,20 @@ class ActivityRepository {
 
   Future<Activity?> get(int id) => _isar.activitys.get(id);
 
+  /// Watch activities for a whole week (Mon–Sun containing [date]).
+  Stream<List<Activity>> watchWeek(DateTime date) {
+    final d = dateOnly(date);
+    final monday = d.subtract(Duration(days: d.weekday - 1));
+    final sunday = monday.add(const Duration(days: 6));
+    return _isar.activitys
+        .filter()
+        .dateBetween(monday, sunday)
+        .sortByDate()
+        .thenByAmpmHalf()
+        .thenByStartMinute()
+        .watch(fireImmediately: true);
+  }
+
   /// Watch all activities from today through the next [days] days (for Eisenhower).
   Stream<List<Activity>> watchUpcoming({int days = 14}) {
     final today = dateOnly(DateTime.now());

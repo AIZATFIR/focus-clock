@@ -72,6 +72,11 @@ final activitiesByDateProvider = StreamProvider<List<Activity>>((ref) {
 /// Bottom-nav selected index.
 final tabIndexProvider = StateProvider<int>((_) => 1);
 
+/// Activities for current week (Mon–Sun), used by Weekly Evaluator.
+final weekActivitiesProvider = StreamProvider<List<Activity>>((ref) {
+  return ref.watch(activityRepoProvider).watchWeek(DateTime.now());
+});
+
 /// Google Calendar service singleton.
 final gcalServiceProvider = Provider<GCalService>((_) => GCalService());
 

@@ -8,6 +8,7 @@ import '../eisenhower/eisenhower_tab.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
+import '../weekly_review/weekly_review_screen.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -71,6 +72,14 @@ class _HomeShellState extends ConsumerState<HomeShell>
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart_rounded),
+            tooltip: 'Weekly Review',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const WeeklyReviewScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
