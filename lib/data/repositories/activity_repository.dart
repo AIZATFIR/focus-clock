@@ -105,6 +105,57 @@ class ActivityRepository {
     return id;
   }
 
+  Future<List<Activity>> getGroup(String groupId) =>
+      _isar.activitys.filter().groupIdEqualTo(groupId).sortByDate().findAll();
+
+  /// Replace [original] (and its whole group, if any) with [segments]
+  /// in one transaction. Used for cross-midnight spans.
+  Future<void> replaceSpan({
+    required Activity original,
+    required List<Activity> segments,
+    int notifLeadMinutes = 1,
+  }) async {
+    final now = DateTime.now();
+    for (final s in segments) {
+      s.updatedAt = now;
+    }
+    final oldIds = <int>[];
+    await _isar.writeTxn(() async {
+      if (original.groupId != null) {
+        final olds = await _isar.activitys
+            .filter()
+            .groupIdEqualTo(original.groupId)
+            .findAll();
+        oldIds.addAll(olds.map((o) => o.id));
+        await _isar.activitys.deleteAll(oldIds);
+      } else if (original.id != Isar.autoIncrement) {
+        oldIds.add(original.id);
+        await _isar.activitys.delete(original.id);
+      }
+      await _isar.activitys.putAll(segments);
+    });
+    for (final id in oldIds) {
+      await _notifier.cancelForActivity(id);
+    }
+    // One reminder at the block's true start (first segment)
+    await _notifier.scheduleForActivity(segments.first,
+        leadMinutes: notifLeadMinutes);
+  }
+
+  /// Delete activity; if it belongs to a group, delete every segment.
+  Future<void> deleteGroupOf(Activity a) async {
+    if (a.groupId == null) {
+      await delete(a.id);
+      return;
+    }
+    final group = await getGroup(a.groupId!);
+    await _isar.writeTxn(
+        () => _isar.activitys.deleteAll(group.map((g) => g.id).toList()));
+    for (final g in group) {
+      await _notifier.cancelForActivity(g.id);
+    }
+  }
+
   Future<bool> delete(int id) async {
     await _notifier.cancelForActivity(id);
     return _isar.writeTxn(() => _isar.activitys.delete(id));

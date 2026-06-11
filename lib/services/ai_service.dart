@@ -6,7 +6,6 @@ import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../models/activity.dart';
-import '../models/preset.dart';
 
 // ── Tool schemas (OpenAI function calling format) ─────────────────────────────
 

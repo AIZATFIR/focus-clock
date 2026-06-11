@@ -316,7 +316,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
               borderRadius: BorderRadius.circular(5),
               border: Border(left: BorderSide(color: color, width: 3.5)),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
             child: Row(
               children: [
                 if (a.iconKey != null && a.iconKey!.isNotEmpty) ...[
@@ -326,6 +326,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
@@ -334,14 +335,16 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             fontSize: 12,
+                            height: 1.1,
                             fontWeight: FontWeight.w600,
                             color: fg),
                       ),
-                      if (height > 36)
+                      if (height > 40)
                         Text(
                           _timeRange(a),
                           style: TextStyle(
                               fontSize: 10,
+                              height: 1.1,
                               color: fg.withValues(alpha: 0.75)),
                         ),
                     ],

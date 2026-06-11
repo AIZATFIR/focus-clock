@@ -71,6 +71,11 @@ final activitiesByDateProvider = StreamProvider<List<Activity>>((ref) {
 /// Bottom-nav selected index.
 final tabIndexProvider = StateProvider<int>((_) => 1);
 
+/// Chat transcript — survives panel open/close so conversation continues.
+/// "New chat" replaces it with an empty list.
+final aiTranscriptProvider =
+    StateProvider<List<ChatMessage>>((_) => <ChatMessage>[]);
+
 /// AI service — lazily init on first use.
 /// AI service — recreated when settings change.
 final aiServiceProvider = Provider<AiService>((ref) {

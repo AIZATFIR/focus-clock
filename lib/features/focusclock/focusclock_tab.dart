@@ -9,6 +9,7 @@ import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
+import '../ai_chat/ai_chat_sheet.dart';
 import '../presets/presets_tab.dart';
 import 'analog_clock_face.dart';
 
@@ -179,12 +180,19 @@ class FocusClockTab extends ConsumerStatefulWidget {
 }
 
 class _FocusClockTabState extends ConsumerState<FocusClockTab>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   int? _dragStart;
-  int? _dragEnd;
+  int? _dragEnd; // may exceed 720 when drag crosses 12 into the next half
   Activity? _draggingActivity;
   bool _dragConflict = false;
+  int? _lastPanMinute; // raw minute of previous pan update (crossing detect)
+  bool _crossedHalf = false;
   late final AnimationController _pulseCtrl;
+  late final AnimationController _revealCtrl;
+  final _aiSheet = DraggableScrollableController();
+
+  /// Peek fraction of the AI sheet (shows handle + NOW & AROUND).
+  static const _peek = 0.16;
 
   @override
   void initState() {
@@ -193,12 +201,45 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     );
+    _revealCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 340),
+    );
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
+    _revealCtrl.dispose();
+    _aiSheet.dispose();
     super.dispose();
+  }
+
+  double get _reveal =>
+      Curves.easeOutCubic.transform(_revealCtrl.value);
+
+  /// Current geometry scale — keeps hit-testing in sync with the painter.
+  double get _grow => clockGrowFactor(_reveal);
+
+  void _toggleReveal() {
+    final opening = _revealCtrl.value < 0.5;
+    if (opening) {
+      _revealCtrl.forward();
+    } else {
+      _revealCtrl.reverse();
+    }
+    SystemSound.play(SystemSoundType.click);
+    HapticFeedback.lightImpact();
+  }
+
+  void _toggleAiSheet() {
+    final expanded = _aiSheet.isAttached && _aiSheet.size > 0.5;
+    _aiSheet.animateTo(
+      expanded ? _peek : 0.85,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+    HapticFeedback.selectionClick();
   }
 
   /// True if [start, end) overlaps any activity (excluding [excludeId]).
@@ -234,109 +275,143 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       _pulseCtrl.value = 0;
     }
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: SegmentedButton<AmPmHalf>(
-                  segments: const [
-                    ButtonSegment(value: AmPmHalf.am, label: Text('AM')),
-                    ButtonSegment(value: AmPmHalf.pm, label: Text('PM')),
-                  ],
-                  selected: {half},
-                  onSelectionChanged: (s) =>
-                      ref.read(ampmHalfProvider.notifier).state = s.first,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith(
-                      (states) => states.contains(WidgetState.selected)
-                          ? AppPalette.accent
-                          : AppPalette.card,
-                    ),
-                    foregroundColor: WidgetStateProperty.resolveWith(
-                      (states) => states.contains(WidgetState.selected)
-                          ? Colors.black
-                          : AppPalette.text,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                formatTimeOfDay(now, is24h: is24h),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppPalette.accent,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: LayoutBuilder(
-                  builder: (context, c) => DragTarget<Preset>(
-                    onAcceptWithDetails: (details) =>
-                        _onPresetDropped(details.data),
-                    builder: (ctx, candidate, rejected) {
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTapUp: (e) => _onTapUp(e.localPosition, c.biggest,
-                            activities, settings?.notifLeadMinutes ?? 1),
-                        onDoubleTapDown: (e) => _onDoubleTap(
-                            e.localPosition, c.biggest, activities),
-                        onLongPressStart: (e) => _onLongPressStart(
-                            e.localPosition, c.biggest, activities),
-                        onLongPressMoveUpdate: (e) => _onLongPressMove(
-                            e.localPosition, c.biggest, activities),
-                        onLongPressEnd: (_) => _onLongPressEnd(
-                            settings?.notifLeadMinutes ?? 1),
-                        onPanStart: (e) =>
-                            _onPanStart(e.localPosition, c.biggest),
-                        onPanUpdate: (e) => _onPanUpdate(
-                            e.localPosition, c.biggest, activities),
-                        onPanEnd: (_) => _onPanEnd(half),
-                        child: RepaintBoundary(
-                          child: AnimatedBuilder(
-                            animation: _pulseCtrl,
-                            builder: (_, __) => AnalogClockFace(
-                              now: now,
-                              activities: activities,
-                              viewHalf: half,
-                              previewStartMinute: _draggingActivity == null
-                                  ? _dragStart
-                                  : _draggingActivity!.startMinute,
-                              previewEndMinute: _draggingActivity == null
-                                  ? _dragEnd
-                                  : _draggingActivity!.endMinute,
-                              previewColor: candidate.isNotEmpty
-                                  ? Color(candidate.first!.colorValue)
-                                  : null,
-                              previewConflict: _dragConflict,
-                              pulse: _pulseCtrl.value,
-                              clockHandsMode: clockHandsMode,
-                              showMinuteLabels: showMinuteLabels,
+    return LayoutBuilder(builder: (context, cons) {
+      final peekPx = cons.maxHeight * _peek;
+      return Stack(
+        children: [
+          // Clock area (above the AI sheet peek)
+          Positioned.fill(
+            bottom: peekPx,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: LayoutBuilder(
+                    builder: (context, c) => DragTarget<Preset>(
+                      onAcceptWithDetails: (details) =>
+                          _onPresetDropped(details.data),
+                      builder: (ctx, candidate, rejected) {
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTapUp: (e) => _onTapUp(e.localPosition, c.biggest,
+                              activities, settings?.notifLeadMinutes ?? 1),
+                          onDoubleTapDown: (e) => _onDoubleTap(
+                              e.localPosition, c.biggest, activities),
+                          onLongPressStart: (e) => _onLongPressStart(
+                              e.localPosition, c.biggest, activities),
+                          onLongPressMoveUpdate: (e) => _onLongPressMove(
+                              e.localPosition, c.biggest, activities),
+                          onLongPressEnd: (_) => _onLongPressEnd(
+                              settings?.notifLeadMinutes ?? 1),
+                          onPanStart: (e) =>
+                              _onPanStart(e.localPosition, c.biggest),
+                          onPanUpdate: (e) => _onPanUpdate(
+                              e.localPosition, c.biggest, activities),
+                          onPanEnd: (_) => _onPanEnd(half),
+                          child: RepaintBoundary(
+                            child: AnimatedBuilder(
+                              animation:
+                                  Listenable.merge([_pulseCtrl, _revealCtrl]),
+                              builder: (_, __) => AnalogClockFace(
+                                now: now,
+                                activities: activities,
+                                viewHalf: half,
+                                previewStartMinute: _draggingActivity == null
+                                    ? _dragStart
+                                    : _draggingActivity!.startMinute,
+                                previewEndMinute: _draggingActivity == null
+                                    ? _dragEnd
+                                    : _draggingActivity!.endMinute,
+                                previewColor: candidate.isNotEmpty
+                                    ? Color(candidate.first!.colorValue)
+                                    : null,
+                                previewConflict: _dragConflict,
+                                pulse: _pulseCtrl.value,
+                                clockHandsMode: clockHandsMode,
+                                is24h: is24h,
+                                // Settings can pin the minute ring on
+                                outerReveal:
+                                    showMinuteLabels ? 1.0 : _reveal,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        _NowAround(activities: activities, now: now, half: half, is24h: is24h),
-      ],
-    );
+
+          // Current time — quiet chip, top right
+          Positioned(
+            top: 10,
+            right: 14,
+            child: Text(
+              formatTimeOfDay(now, is24h: is24h),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppPalette.accent,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+
+          // AM/PM — small toggle, bottom right of the clock
+          Positioned(
+            right: 14,
+            bottom: peekPx + 12,
+            child: _AmPmMini(
+              half: half,
+              onChanged: (h) {
+                HapticFeedback.selectionClick();
+                ref.read(ampmHalfProvider.notifier).state = h;
+              },
+            ),
+          ),
+
+          // AI assistant — pull-up sheet with NOW & AROUND in its header
+          DraggableScrollableSheet(
+            controller: _aiSheet,
+            initialChildSize: _peek,
+            minChildSize: _peek,
+            maxChildSize: 0.85,
+            snap: true,
+            builder: (ctx, scrollCtrl) => ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppPalette.card,
+                  border:
+                      Border(top: BorderSide(color: AppPalette.stroke)),
+                ),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggleAiSheet,
+                      child: _SheetHeader(
+                        activities: activities,
+                        now: now,
+                        half: half,
+                        is24h: is24h,
+                      ),
+                    ),
+                    Expanded(
+                      child: AiChatPanel(scrollController: scrollCtrl),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    });
   }
 
   Offset _toCenter(Offset local, Size size) => local - size.center(Offset.zero);
@@ -344,8 +419,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   int? _hitActivity(Offset local, Size size, List<Activity> activities) {
     final centered = _toCenter(local, size);
     final r = centered.distance;
-    final outer = size.shortestSide / 2 * 0.85;
-    final inner = size.shortestSide / 2 * 0.55;
+    final outer = size.shortestSide / 2 * 0.85 * _grow;
+    final inner = size.shortestSide / 2 * 0.55 * _grow;
     if (r < inner || r > outer) return null;
     final minute = offsetToMinute(centered);
     for (final a in activities) {
@@ -354,17 +429,26 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     return null;
   }
 
+  /// Tap landed on the rim band (ticks/numbers) outside the activity arcs.
+  bool _hitRim(Offset local, Size size) {
+    final r = _toCenter(local, size).distance;
+    final half = size.shortestSide / 2;
+    return r > half * 0.85 * _grow && r <= half * 1.1;
+  }
+
   // === Pan = drag-create new activity ===
   // Allow from anywhere within outer radius; snap to 5min
   void _onPanStart(Offset p, Size size) {
     if (_draggingActivity != null) return;
     final centered = _toCenter(p, size);
     final rDist = centered.distance;
-    final outer = size.shortestSide / 2 * 0.95;
+    final outer = size.shortestSide / 2 * 0.95 * _grow;
     if (rDist > outer) return;
     setState(() {
       _dragStart = snap5(offsetToMinute(centered));
       _dragEnd = _dragStart;
+      _lastPanMinute = offsetToMinute(centered);
+      _crossedHalf = false;
       _dragConflict = false;
     });
   }
@@ -372,23 +456,31 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   void _onPanUpdate(Offset p, Size size, List<Activity> activities) {
     if (_dragStart == null) return;
     final centered = _toCenter(p, size);
-    final m = snap5(offsetToMinute(centered));
+    final raw = offsetToMinute(centered);
+    final m = snap5(raw);
     final prevEnd = _dragEnd;
+
+    // Crossing 12 o'clock: top-of-dial jump between high and low minutes
+    final last = _lastPanMinute ?? raw;
+    if (!_crossedHalf && last > 540 && raw < 180) {
+      _crossedHalf = true; // continued into the next half (overnight feel)
+    } else if (_crossedHalf && last < 180 && raw > 540) {
+      _crossedHalf = false; // dragged back across 12
+    }
+    _lastPanMinute = raw;
+
     setState(() {
-      if (m >= _dragStart!) {
+      if (_crossedHalf) {
+        _dragEnd = 720 + m; // minute within the NEXT half
+      } else if (m >= _dragStart!) {
         _dragEnd = m;
       } else {
-        // m < dragStart: check if crossing 12 clockwise
-        final clockwiseDist = 720 - _dragStart! + m;
-        if (clockwiseDist <= 360) {
-          // Crossing 12 o'clock — cap at 720 (end of half)
-          _dragEnd = 720;
-        } else {
-          // Dragged backward — enforce minimum 5min
-          _dragEnd = (_dragStart! + 5).clamp(0, 720);
-        }
+        // Dragged backward — enforce minimum 5min
+        _dragEnd = (_dragStart! + 5).clamp(0, 720);
       }
-      _dragConflict = _hasConflict(_dragStart!, _dragEnd!, activities);
+      // Conflict check covers only this half; sheet validates full span on save
+      _dragConflict = _hasConflict(
+          _dragStart!, _dragEnd!.clamp(0, 720), activities);
     });
     if (_dragEnd != prevEnd) HapticFeedback.selectionClick();
   }
@@ -402,6 +494,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     setState(() {
       _dragStart = null;
       _dragEnd = null;
+      _crossedHalf = false;
+      _lastPanMinute = null;
       _dragConflict = false;
     });
     HapticFeedback.lightImpact();
@@ -411,6 +505,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final result = await _showPresetPicker(context);
     if (result == null || !mounted) return; // dismissed
 
+    // endMinute > 720 = span continues into next half; sheet normalizes it
     final Activity activity;
     if (result is Preset) {
       activity = await activityFromPreset(
@@ -418,14 +513,14 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         date: date,
         half: half,
         startMinute: start,
-        endMinute: end.clamp(0, 720),
+        endMinute: end,
       );
     } else {
       // 'custom'
       activity = Activity()
         ..title = ''
         ..startMinute = start
-        ..endMinute = end.clamp(0, 720)
+        ..endMinute = end
         ..ampmHalf = half
         ..date = date
         ..colorValue = AppPalette.accent.toARGB32()
@@ -439,12 +534,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         activity: activity, mode: DetailMode.create);
   }
 
-  // === Tap = view detail ===
+  // === Tap = view detail, or rim tap = reveal minute ring ===
   Future<void> _onTapUp(Offset p, Size size, List<Activity> activities,
       int leadMinutes) async {
     if (_draggingActivity != null) return; // ignore tap during drag
     final hit = _hitActivity(p, size, activities);
-    if (hit == null) return;
+    if (hit == null) {
+      if (_hitRim(p, size)) _toggleReveal();
+      return;
+    }
     final a = activities.firstWhere((x) => x.id == hit);
     await showActivityDetailSheet(context, activity: a, mode: DetailMode.view);
   }
@@ -528,8 +626,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   }
 }
 
-class _NowAround extends StatelessWidget {
-  const _NowAround({
+/// Header of the AI pull-up sheet: drag handle + NOW & AROUND summary.
+/// Tap to expand into the AI assistant.
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({
     required this.activities,
     required this.now,
     required this.half,
@@ -554,25 +654,49 @@ class _NowAround extends StatelessWidget {
     }
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppPalette.card,
-        border: Border(top: BorderSide(color: AppPalette.stroke)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'NOW & AROUND',
-            style: TextStyle(
-                fontSize: 11, letterSpacing: 1.5, color: AppPalette.textDim),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 6),
+              decoration: BoxDecoration(
+                color: AppPalette.stroke,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
-          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Text(
+                'NOW & AROUND',
+                style: TextStyle(
+                    fontSize: 11,
+                    letterSpacing: 1.5,
+                    color: AppPalette.textDim),
+              ),
+              const Spacer(),
+              Text('✨',
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: AppPalette.accent.withValues(alpha: 0.9))),
+              const Icon(Icons.keyboard_arrow_up,
+                  size: 16, color: AppPalette.textDim),
+            ],
+          ),
+          const SizedBox(height: 2),
           if (current != null)
             _row(current, label: 'Now', highlight: true)
           else
-            const Text('No active block',
-                style: TextStyle(color: AppPalette.textDim)),
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text('No active block',
+                  style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
+            ),
           if (next != null) _row(next, label: 'Next'),
         ],
       ),
@@ -581,7 +705,7 @@ class _NowAround extends StatelessWidget {
 
   Widget _row(Activity a, {required String label, bool highlight = false}) =>
       Padding(
-        padding: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.only(top: 5),
         child: Row(
           children: [
             if (a.iconKey != null && a.iconKey!.isNotEmpty)
@@ -613,4 +737,55 @@ class _NowAround extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Compact AM/PM toggle pinned at the clock's bottom-right corner.
+class _AmPmMini extends StatelessWidget {
+  const _AmPmMini({required this.half, required this.onChanged});
+  final AmPmHalf half;
+  final ValueChanged<AmPmHalf> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppPalette.card,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: AppPalette.stroke),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _seg(AmPmHalf.am),
+          const SizedBox(width: 2),
+          _seg(AmPmHalf.pm),
+        ],
+      ),
+    );
+  }
+
+  Widget _seg(AmPmHalf value) {
+    final active = half == value;
+    return GestureDetector(
+      onTap: active ? null : () => onChanged(value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? AppPalette.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          value.label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? Colors.black : AppPalette.textDim,
+          ),
+        ),
+      ),
+    );
+  }
 }

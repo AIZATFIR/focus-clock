@@ -3,11 +3,13 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/theme.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
+import '../../widgets/color_swatch_picker.dart';
 
 enum DetailMode { view, edit, create }
 
@@ -45,10 +47,12 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   late DetailMode _mode;
   late TextEditingController _titleCtrl;
   late TextEditingController _descCtrl;
-  late int _start;
-  late int _end;
+
+  /// Span as absolute datetimes — may cross noon/midnight.
+  late DateTime _startDt;
+  late DateTime _endDt;
+
   late int _color;
-  late AmPmHalf _half;
   late String _recurrence;
   final _focusNode = FocusNode();
 
@@ -58,14 +62,32 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _mode = widget.initialMode;
     _titleCtrl = TextEditingController(text: widget.initial.title);
     _descCtrl = TextEditingController(text: widget.initial.description);
-    _start = widget.initial.startMinute;
-    _end = widget.initial.endMinute;
-    _color = widget.initial.colorValue;
-    _half = widget.initial.ampmHalf;
-    _recurrence = widget.initial.recurrence;
-    // Request focus so keyboard shortcuts work immediately
+    final a = widget.initial;
+    _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
+    // toDateTime normalizes endMinute > 720 into the next half/day
+    _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
+    _color = a.colorValue;
+    _recurrence = a.recurrence;
+    if (a.groupId != null) _loadGroupSpan(a.groupId!);
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _focusNode.requestFocus());
+  }
+
+  /// Tapped segment is one slice — show the whole block's true span.
+  Future<void> _loadGroupSpan(String groupId) async {
+    final group = await ref.read(activityRepoProvider).getGroup(groupId);
+    if (group.isEmpty || !mounted) return;
+    group.sort((a, b) {
+      final d = a.date.compareTo(b.date);
+      if (d != 0) return d;
+      final h = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+      return h != 0 ? h : a.startMinute.compareTo(b.startMinute);
+    });
+    setState(() {
+      _startDt =
+          toDateTime(group.first.date, group.first.ampmHalf, group.first.startMinute);
+      _endDt = toDateTime(group.last.date, group.last.ampmHalf, group.last.endMinute);
+    });
   }
 
   @override
@@ -83,6 +105,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       _delete();
     }
   }
+
+  bool get _overnight => dateOnly(_endDt) != dateOnly(_startDt);
 
   @override
   Widget build(BuildContext context) {
@@ -140,11 +164,14 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               Expanded(
                 child: _TimeBlock(
                   label: 'Start',
-                  minute: _start,
-                  half: _half,
+                  value: _startDt,
                   is24h: is24h,
                   readOnly: readOnly,
-                  onChanged: (m) => setState(() => _start = m),
+                  onChanged: (dt) => setState(() {
+                    final dur = _endDt.difference(_startDt);
+                    _startDt = dt;
+                    _endDt = dt.add(dur); // keep duration when start moves
+                  }),
                 ),
               ),
               const SizedBox(width: 8),
@@ -153,15 +180,39 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               Expanded(
                 child: _TimeBlock(
                   label: 'End',
-                  minute: _end,
-                  half: _half,
+                  value: _endDt,
                   is24h: is24h,
+                  nextDay: _overnight,
                   readOnly: readOnly,
-                  onChanged: (m) => setState(() => _end = m),
+                  onChanged: (dt) => setState(() {
+                    // End at/before start = user means next day (overnight)
+                    var candidate =
+                        DateTime(_startDt.year, _startDt.month, _startDt.day,
+                            dt.hour, dt.minute);
+                    if (!candidate.isAfter(_startDt)) {
+                      candidate = candidate.add(const Duration(days: 1));
+                    }
+                    _endDt = candidate;
+                  }),
                 ),
               ),
             ],
           ),
+          if (_overnight) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.nightlight_round,
+                    size: 13, color: AppPalette.accent),
+                const SizedBox(width: 6),
+                Text(
+                  'Overnight — ends next day',
+                  style: const TextStyle(
+                      color: AppPalette.accent, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 14),
           TextField(
             controller: _titleCtrl,
@@ -183,6 +234,14 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             ),
           ),
           if (!readOnly) ...[
+            const SizedBox(height: 12),
+            const Text('Color',
+                style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
+            const SizedBox(height: 6),
+            ColorSwatchPicker(
+              value: _color,
+              onChanged: (c) => setState(() => _color = c),
+            ),
             const SizedBox(height: 12),
             const Text('Repeat', style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
             const SizedBox(height: 6),
@@ -232,9 +291,28 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
         DetailMode.create => 'New Activity',
       };
 
+  Activity _segmentActivity(SpanSegment seg, String? groupId) {
+    final src = widget.initial;
+    return Activity()
+      ..presetId = src.presetId
+      ..iconKey = src.iconKey
+      ..title = _titleCtrl.text.trim()
+      ..startMinute = seg.start
+      ..endMinute = seg.end
+      ..ampmHalf = seg.half
+      ..date = seg.date
+      ..description = _descCtrl.text.trim()
+      ..colorValue = _color
+      ..recurrence = _recurrence
+      ..groupId = groupId
+      ..createdAt = src.createdAt
+      ..updatedAt = DateTime.now();
+  }
+
   Future<void> _save() async {
-    if (_end <= _start) _end = _start + 5;
-    if (_end > 720) _end = 720;
+    if (!_endDt.isAfter(_startDt)) {
+      _endDt = _startDt.add(const Duration(minutes: 5));
+    }
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,26 +320,42 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       );
       return;
     }
-    final a = widget.initial;
 
-    // Conflict check before committing
+    final a = widget.initial;
     final repo = ref.read(activityRepoProvider);
-    final dayActivities = await repo.getByDate(widget.initial.date);
-    final clash = dayActivities
-        .where((x) =>
-            x.id != a.id &&
-            x.ampmHalf == _half &&
-            rangesOverlap(_start, _end, x.startMinute, x.endMinute))
-        .firstOrNull;
+    final segments = splitSpan(_startDt, _endDt);
+
+    // Ids belonging to this block (self or group) are exempt from conflicts
+    final selfIds = <int>{a.id};
+    if (a.groupId != null) {
+      selfIds.addAll((await repo.getGroup(a.groupId!)).map((g) => g.id));
+    }
+
+    Activity? clash;
+    AmPmHalf clashHalf = AmPmHalf.am;
+    for (final seg in segments) {
+      final dayActivities = await repo.getByDate(seg.date);
+      clash = dayActivities
+          .where((x) =>
+              !selfIds.contains(x.id) &&
+              x.ampmHalf == seg.half &&
+              rangesOverlap(seg.start, seg.end, x.startMinute, x.endMinute))
+          .firstOrNull;
+      if (clash != null) {
+        clashHalf = seg.half;
+        break;
+      }
+    }
     if (clash != null && mounted) {
+      final c = clash;
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Time conflict'),
           content: Text(
-              'Overlaps with "${clash.title}" '
-              '(${formatMinuteOfHalf(clash.startMinute, _half, is24h: false)}–'
-              '${formatMinuteOfHalf(clash.endMinute, _half, is24h: false)}).'),
+              'Overlaps with "${c.title}" '
+              '(${formatMinuteOfHalf(c.startMinute, clashHalf, is24h: false)}–'
+              '${formatMinuteOfHalf(c.endMinute, clashHalf, is24h: false)}).'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -281,22 +375,36 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       if (proceed != true) return;
     }
 
-    a.title = title;
-    a.description = _descCtrl.text.trim();
-    a.startMinute = _start;
-    a.endMinute = _end;
-    a.ampmHalf = _half;
-    a.colorValue = _color;
-    a.recurrence = _recurrence;
     final lead =
         ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-    await repo.upsert(a, notifLeadMinutes: lead);
+
+    if (segments.length == 1 && a.groupId == null) {
+      // Plain single-half block — keep the existing record/id
+      final seg = segments.first;
+      a.title = title;
+      a.description = _descCtrl.text.trim();
+      a.date = seg.date;
+      a.ampmHalf = seg.half;
+      a.startMinute = seg.start;
+      a.endMinute = seg.end;
+      a.colorValue = _color;
+      a.recurrence = _recurrence;
+      await repo.upsert(a, notifLeadMinutes: lead);
+    } else {
+      final groupId =
+          segments.length > 1 ? (a.groupId ?? const Uuid().v4()) : null;
+      await repo.replaceSpan(
+        original: a,
+        segments: [for (final s in segments) _segmentActivity(s, groupId)],
+        notifLeadMinutes: lead,
+      );
+    }
     HapticFeedback.lightImpact();
     if (mounted) Navigator.pop(context);
   }
 
   Future<void> _delete() async {
-    await ref.read(activityRepoProvider).delete(widget.initial.id);
+    await ref.read(activityRepoProvider).deleteGroupOf(widget.initial);
     if (mounted) Navigator.pop(context);
   }
 }
@@ -322,18 +430,18 @@ class _RecurrenceInfo extends StatelessWidget {
 class _TimeBlock extends StatelessWidget {
   const _TimeBlock({
     required this.label,
-    required this.minute,
-    required this.half,
+    required this.value,
     required this.is24h,
     required this.readOnly,
     required this.onChanged,
+    this.nextDay = false,
   });
   final String label;
-  final int minute;
-  final AmPmHalf half;
+  final DateTime value;
   final bool is24h;
   final bool readOnly;
-  final ValueChanged<int> onChanged;
+  final bool nextDay;
+  final ValueChanged<DateTime> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -352,10 +460,22 @@ class _TimeBlock extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 11, color: AppPalette.textDim)),
             const SizedBox(height: 4),
-            Text(
-              formatMinuteOfHalf(minute, half, is24h: is24h),
-              style:
-                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            Row(
+              children: [
+                Text(
+                  formatTimeOfDay(value, is24h: is24h),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+                if (nextDay) ...[
+                  const SizedBox(width: 5),
+                  const Text('+1',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppPalette.accent)),
+                ],
+              ],
             ),
           ],
         ),
@@ -364,15 +484,12 @@ class _TimeBlock extends StatelessWidget {
   }
 
   Future<void> _pick(BuildContext context) async {
-    final h12 = (minute ~/ 60) % 12;
-    final m = minute % 60;
-    final hour24 = (half == AmPmHalf.pm ? 12 : 0) + h12;
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay(hour: hour24, minute: m),
+      initialTime: TimeOfDay(hour: value.hour, minute: value.minute),
     );
     if (picked == null) return;
-    final pickedHour12 = picked.hour % 12;
-    onChanged(pickedHour12 * 60 + picked.minute);
+    onChanged(DateTime(
+        value.year, value.month, value.day, picked.hour, picked.minute));
   }
 }

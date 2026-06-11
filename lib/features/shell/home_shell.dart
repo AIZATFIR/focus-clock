@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../agenda/agenda_tab.dart';
-import '../ai_chat/ai_chat_sheet.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
@@ -15,24 +14,28 @@ class HomeShell extends ConsumerStatefulWidget {
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends ConsumerState<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell>
+    with SingleTickerProviderStateMixin {
   late final PageController _pc;
+  late final TabController _tc;
 
   @override
   void initState() {
     super.initState();
-    _pc = PageController(initialPage: ref.read(tabIndexProvider));
+    final initial = ref.read(tabIndexProvider);
+    _pc = PageController(initialPage: initial);
+    _tc = TabController(length: 3, vsync: this, initialIndex: initial);
   }
 
   @override
   void dispose() {
     _pc.dispose();
+    _tc.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final idx = ref.watch(tabIndexProvider);
     ref.listen<int>(tabIndexProvider, (_, next) {
       if (_pc.hasClients && _pc.page?.round() != next) {
         _pc.animateToPage(
@@ -41,6 +44,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           curve: Curves.easeOut,
         );
       }
+      if (_tc.index != next) _tc.animateTo(next);
     });
     return Scaffold(
       appBar: AppBar(
@@ -67,18 +71,31 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.auto_awesome_outlined),
-            color: AppPalette.accent,
-            tooltip: 'AI Assistant',
-            onPressed: () => showAiChatSheet(context),
-          ),
-          IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const SettingsScreen()),
             ),
           ),
         ],
+        bottom: TabBar(
+          controller: _tc,
+          onTap: (i) => ref.read(tabIndexProvider.notifier).state = i,
+          indicatorColor: AppPalette.accent,
+          indicatorSize: TabBarIndicatorSize.label,
+          labelColor: AppPalette.accent,
+          unselectedLabelColor: AppPalette.textDim,
+          labelStyle:
+              const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          dividerColor: Colors.transparent,
+          tabs: const [
+            Tab(icon: Icon(Icons.dashboard_customize_outlined, size: 20),
+                text: 'Presets', height: 56),
+            Tab(icon: Icon(Icons.access_time, size: 20),
+                text: 'Clock', height: 56),
+            Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
+                text: 'Agenda', height: 56),
+          ],
+        ),
       ),
       body: PageView(
         controller: _pc,
@@ -88,30 +105,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           PresetsTab(),
           FocusClockTab(),
           AgendaTab(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: idx,
-        onDestinationSelected: (i) =>
-            ref.read(tabIndexProvider.notifier).state = i,
-        height: 64,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_customize_outlined),
-            selectedIcon: Icon(Icons.dashboard_customize),
-            label: 'Presets',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.access_time),
-            selectedIcon: Icon(Icons.access_time_filled),
-            label: 'Clock',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.view_agenda_outlined),
-            selectedIcon: Icon(Icons.view_agenda),
-            label: 'Agenda',
-          ),
         ],
       ),
     );

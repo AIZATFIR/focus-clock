@@ -29,6 +29,10 @@ class Activity {
   /// Recurrence: 'none' | 'daily' | 'weekly'
   String recurrence = 'none';
 
+  /// Segments of one cross-midnight block share a groupId (null = standalone).
+  @Index()
+  String? groupId;
+
   late DateTime createdAt;
   late DateTime updatedAt;
 }

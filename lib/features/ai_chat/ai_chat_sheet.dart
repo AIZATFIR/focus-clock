@@ -5,36 +5,40 @@ import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../services/ai_service.dart';
 
-Future<void> showAiChatSheet(BuildContext context) => showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppPalette.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => const _AiChatSheet(),
-    );
-
-class _AiChatSheet extends ConsumerStatefulWidget {
-  const _AiChatSheet();
+/// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
+/// Transcript is provider-backed: conversation continues across open/close.
+class AiChatPanel extends ConsumerStatefulWidget {
+  const AiChatPanel({super.key, this.scrollController});
+  final ScrollController? scrollController;
 
   @override
-  ConsumerState<_AiChatSheet> createState() => _AiChatSheetState();
+  ConsumerState<AiChatPanel> createState() => _AiChatPanelState();
 }
 
-class _AiChatSheetState extends ConsumerState<_AiChatSheet> {
+class _AiChatPanelState extends ConsumerState<AiChatPanel> {
   final _ctrl = TextEditingController();
-  final _scroll = ScrollController();
   final _focus = FocusNode();
-  final _messages = <ChatMessage>[];
   bool _sending = false;
 
   @override
   void dispose() {
     _ctrl.dispose();
-    _scroll.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  void _append(ChatMessage m) {
+    ref.read(aiTranscriptProvider.notifier).state = [
+      ...ref.read(aiTranscriptProvider),
+      m,
+    ];
+  }
+
+  void _replaceLast(ChatMessage m) {
+    final list = [...ref.read(aiTranscriptProvider)];
+    if (list.isNotEmpty) list.removeLast();
+    list.add(m);
+    ref.read(aiTranscriptProvider.notifier).state = list;
   }
 
   Future<void> _send() async {
@@ -44,49 +48,45 @@ class _AiChatSheetState extends ConsumerState<_AiChatSheet> {
     final settings = ref.read(settingsProvider).valueOrNull;
     final apiKey = settings?.aiApiKey ?? '';
     if (apiKey.isEmpty) {
-      setState(() {
-        _messages.add(ChatMessage(
-          role: 'model',
-          text:
-              '⚠️ API key belum diset. Buka Settings → AI Assistant → masukkan API key.',
-        ));
-      });
+      _append(ChatMessage(
+        role: 'model',
+        text:
+            '⚠️ API key belum diset. Buka Settings → AI Assistant → masukkan API key.',
+      ));
       return;
     }
 
     _ctrl.clear();
-    setState(() {
-      _messages.add(ChatMessage(role: 'user', text: text));
-      _messages.add(ChatMessage(role: 'model', text: '', isLoading: true));
-      _sending = true;
-    });
+    _append(ChatMessage(role: 'user', text: text));
+    _append(ChatMessage(role: 'model', text: '', isLoading: true));
+    setState(() => _sending = true);
     _scrollToBottom();
 
     try {
       final ai = ref.read(aiServiceProvider);
       final reply = await ai.send(text);
-      setState(() {
-        _messages.removeLast(); // remove loading
-        _messages.add(ChatMessage(role: 'model', text: reply));
-      });
+      _replaceLast(ChatMessage(role: 'model', text: reply));
     } catch (e) {
-      setState(() {
-        _messages.removeLast();
-        _messages.add(ChatMessage(
-            role: 'model', text: '❌ Error: ${e.toString()}'));
-      });
+      _replaceLast(
+          ChatMessage(role: 'model', text: '❌ Error: ${e.toString()}'));
     } finally {
-      setState(() => _sending = false);
+      if (mounted) setState(() => _sending = false);
       _scrollToBottom();
       _focus.requestFocus();
     }
   }
 
+  void _newChat() {
+    ref.read(aiServiceProvider).reset();
+    ref.read(aiTranscriptProvider.notifier).state = <ChatMessage>[];
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
+      final s = widget.scrollController;
+      if (s != null && s.hasClients) {
+        s.animateTo(
+          s.position.maxScrollExtent,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
@@ -97,119 +97,103 @@ class _AiChatSheetState extends ConsumerState<_AiChatSheet> {
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.of(context).viewInsets.bottom;
-    final screenH = MediaQuery.of(context).size.height;
+    final messages = ref.watch(aiTranscriptProvider);
 
-    return SizedBox(
-      height: screenH * 0.75,
-      child: Column(
-        children: [
-          // Handle + header
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppPalette.stroke)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: AppPalette.stroke,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+    return Column(
+      children: [
+        // Panel header: title + new session
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
+          child: Row(
+            children: [
+              const Text('✨ ', style: TextStyle(fontSize: 16)),
+              const Text(
+                'AI Assistant',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: messages.isEmpty ? null : _newChat,
+                icon: const Icon(Icons.add_comment_outlined, size: 15),
+                label: const Text('New chat', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppPalette.textDim,
                 ),
-                const Text('✨ ', style: TextStyle(fontSize: 18)),
-                const Text(
-                  'AI Assistant',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    ref.read(aiServiceProvider).reset();
-                    setState(() => _messages.clear());
-                  },
-                  child: const Text('Clear',
-                      style: TextStyle(color: AppPalette.textDim, fontSize: 12)),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
 
-          // Messages
-          Expanded(
-            child: _messages.isEmpty
-                ? _EmptyState()
-                : ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                    itemCount: _messages.length,
-                    itemBuilder: (_, i) => _Bubble(msg: _messages[i]),
-                  ),
+        // Messages
+        Expanded(
+          child: messages.isEmpty
+              ? _EmptyState()
+              : ListView.builder(
+                  controller: widget.scrollController,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  itemCount: messages.length,
+                  itemBuilder: (_, i) => _Bubble(msg: messages[i]),
+                ),
+        ),
+
+        // Input bar
+        Container(
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + pad),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: AppPalette.stroke)),
           ),
-
-          // Input bar
-          Container(
-            padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + pad),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppPalette.stroke)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    autofocus: true,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                    maxLines: null,
-                    decoration: InputDecoration(
-                      hintText: 'Tambah gym jam 7 pagi...',
-                      hintStyle: const TextStyle(
-                          color: AppPalette.textDim, fontSize: 14),
-                      filled: true,
-                      fillColor: AppPalette.bg,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _send(),
+                  maxLines: null,
+                  decoration: InputDecoration(
+                    hintText: 'Tambah gym jam 7 pagi...',
+                    hintStyle: const TextStyle(
+                        color: AppPalette.textDim, fontSize: 14),
+                    filled: true,
+                    fillColor: AppPalette.bg,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  child: _sending
-                      ? const SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Padding(
-                            padding: EdgeInsets.all(10),
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: AppPalette.accent),
-                          ),
-                        )
-                      : IconButton(
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppPalette.accent,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.all(10),
-                          ),
-                          icon: const Icon(Icons.send_rounded, size: 20),
-                          onPressed: _send,
+              ),
+              const SizedBox(width: 8),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                child: _sending
+                    ? const SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: AppPalette.accent),
                         ),
-                ),
-              ],
-            ),
+                      )
+                    : IconButton(
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppPalette.accent,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.all(10),
+                        ),
+                        icon: const Icon(Icons.send_rounded, size: 20),
+                        onPressed: _send,
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -271,9 +255,9 @@ class _Bubble extends StatelessWidget {
                     )
                   : Text(
                       msg.text,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
-                        color: isUser ? AppPalette.text : AppPalette.text,
+                        color: AppPalette.text,
                       ),
                     ),
             ),

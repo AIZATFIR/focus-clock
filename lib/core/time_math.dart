@@ -72,6 +72,33 @@ double minuteToAngle(int minute) => (minute / 720.0) * 2 * math.pi;
 bool rangesOverlap(int aStart, int aEnd, int bStart, int bEnd) =>
     aStart < bEnd && bStart < aEnd;
 
+/// One piece of a (possibly cross-midnight) span, confined to a single half.
+typedef SpanSegment = ({DateTime date, AmPmHalf half, int start, int end});
+
+/// Split an absolute datetime range into per-half segments.
+/// Sleep 22:00→05:00 becomes [PM 600-720 today, AM 0-300 tomorrow].
+List<SpanSegment> splitSpan(DateTime startDt, DateTime endDt) {
+  assert(endDt.isAfter(startDt));
+  final segments = <SpanSegment>[];
+  var date = dateOnly(startDt);
+  var half = halfOfNow(startDt);
+  var minute = minuteOfHalf(startDt);
+  var remaining = endDt.difference(startDt).inMinutes;
+  while (remaining > 0) {
+    final segEnd = math.min(720, minute + remaining);
+    segments.add((date: date, half: half, start: minute, end: segEnd));
+    remaining -= segEnd - minute;
+    minute = 0;
+    if (half == AmPmHalf.am) {
+      half = AmPmHalf.pm;
+    } else {
+      half = AmPmHalf.am;
+      date = date.add(const Duration(days: 1));
+    }
+  }
+  return segments;
+}
+
 /// Combine date + half + minute to a real DateTime (for scheduling).
 DateTime toDateTime(DateTime date, AmPmHalf half, int minute) {
   final h12 = minute ~/ 60;

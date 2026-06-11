@@ -18,7 +18,8 @@ class AnalogClockFace extends StatelessWidget {
     this.previewConflict = false,
     this.pulse = 0,
     this.clockHandsMode = 1,
-    this.showMinuteLabels = false,
+    this.is24h = false,
+    this.outerReveal = 0,
   });
 
   final DateTime now;
@@ -35,7 +36,13 @@ class AnalogClockFace extends StatelessWidget {
   final double pulse;
 
   final int clockHandsMode;
-  final bool showMinuteLabels;
+
+  /// 24h dial: PM half shows 13–23 (12 at top), AM shows 0–11.
+  final bool is24h;
+
+  /// 0..1 — clock grows and the outer minute ring (5,10…60) fades in.
+  /// Toggled by tapping the rim.
+  final double outerReveal;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
@@ -49,10 +56,15 @@ class AnalogClockFace extends StatelessWidget {
           previewConflict: previewConflict,
           pulse: pulse,
           clockHandsMode: clockHandsMode,
-          showMinuteLabels: showMinuteLabels,
+          is24h: is24h,
+          outerReveal: outerReveal,
         ),
       );
 }
+
+/// Geometry scale shared with hit-testing: clock occupies 92% at rest,
+/// grows to 98% when the minute ring is revealed.
+double clockGrowFactor(double outerReveal) => 0.92 + 0.06 * outerReveal;
 
 class _ClockPainter extends CustomPainter {
   _ClockPainter({
@@ -65,7 +77,8 @@ class _ClockPainter extends CustomPainter {
     this.previewConflict = false,
     this.pulse = 0,
     this.clockHandsMode = 1,
-    this.showMinuteLabels = false,
+    this.is24h = false,
+    this.outerReveal = 0,
   });
 
   final DateTime now;
@@ -77,12 +90,14 @@ class _ClockPainter extends CustomPainter {
   final bool previewConflict;
   final double pulse;
   final int clockHandsMode;
-  final bool showMinuteLabels;
+  final bool is24h;
+  final double outerReveal;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final r = math.min(size.width, size.height) / 2;
+    final rBase = math.min(size.width, size.height) / 2;
+    final r = rBase * clockGrowFactor(outerReveal);
     final outerRadius = r * 0.95;
     final arcInner = r * 0.55;
     final arcOuter = r * 0.85;
@@ -123,9 +138,16 @@ class _ClockPainter extends CustomPainter {
       final base = previewConflict
           ? AppPalette.danger
           : (previewColor ?? AppPalette.accent);
-      _drawArc(canvas, center, arcInner, arcOuter, previewStart!, previewEnd!,
+      final endInHalf = math.min(previewEnd!, 720);
+      _drawArc(canvas, center, arcInner, arcOuter, previewStart!, endInHalf,
           base.withValues(alpha: 0.55),
           dashed: true);
+      // Span continues past 12 into the next half — hint it dimmer
+      if (previewEnd! > 720) {
+        _drawArc(canvas, center, arcInner, arcOuter, 0, previewEnd! - 720,
+            base.withValues(alpha: 0.28),
+            dashed: true);
+      }
     }
 
     // Tick marks
@@ -144,16 +166,24 @@ class _ClockPainter extends CustomPainter {
       canvas.drawLine(s, e, tickPaint..strokeWidth = isHour ? 3 : 1);
     }
 
-    // Hour numbers
+    // Hour numbers — 24h dial shows 13–23 on PM half, 0–11 on AM
     for (int h = 1; h <= 12; h++) {
       final angle = (h / 12) * 2 * math.pi - math.pi / 2;
       final pos = Offset(
         center.dx + math.cos(angle) * (outerRadius - 32),
         center.dy + math.sin(angle) * (outerRadius - 32),
       );
+      final String label;
+      if (is24h && viewHalf == AmPmHalf.pm) {
+        label = h == 12 ? '12' : '${h + 12}';
+      } else if (is24h && viewHalf == AmPmHalf.am) {
+        label = h == 12 ? '0' : '$h';
+      } else {
+        label = '$h';
+      }
       final tp = TextPainter(
         text: TextSpan(
-          text: '$h',
+          text: label,
           style: const TextStyle(
               color: AppPalette.text, fontSize: 18, fontWeight: FontWeight.w500),
         ),
@@ -162,9 +192,9 @@ class _ClockPainter extends CustomPainter {
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
-    // Minute labels (5,10,15…55) on inner ring
-    if (showMinuteLabels) {
-      _drawMinuteLabels(canvas, center, arcInner);
+    // Outer minute ring (5,10…60) — fades in as the clock expands
+    if (outerReveal > 0.01) {
+      _drawOuterMinuteRing(canvas, center, r);
     }
 
     // Hands only if viewing current half
@@ -195,21 +225,23 @@ class _ClockPainter extends CustomPainter {
     );
   }
 
-  void _drawMinuteLabels(Canvas canvas, Offset center, double inner) {
-    // Show 5,10,15…55 just inside the arc ring
-    for (int m = 5; m < 60; m += 5) {
+  /// Tiny minute numbers (5,10…60) on a ring OUTSIDE the dial,
+  /// like the seconds track on a chronograph. Opacity follows reveal.
+  void _drawOuterMinuteRing(Canvas canvas, Offset center, double r) {
+    final ringR = r * 1.035;
+    for (int m = 5; m <= 60; m += 5) {
       final angle = (m / 60) * 2 * math.pi - math.pi / 2;
-      final labelR = inner - 10;
       final pos = Offset(
-        center.dx + math.cos(angle) * labelR,
-        center.dy + math.sin(angle) * labelR,
+        center.dx + math.cos(angle) * ringR,
+        center.dy + math.sin(angle) * ringR,
       );
       final isQuarter = m % 15 == 0;
       final tp = TextPainter(
         text: TextSpan(
           text: '$m',
           style: TextStyle(
-            color: AppPalette.textDim.withValues(alpha: isQuarter ? 0.85 : 0.5),
+            color: AppPalette.accent.withValues(
+                alpha: outerReveal * (isQuarter ? 0.95 : 0.55)),
             fontSize: isQuarter ? 9.5 : 7.5,
             fontWeight: isQuarter ? FontWeight.w600 : FontWeight.w400,
           ),
@@ -350,5 +382,6 @@ class _ClockPainter extends CustomPainter {
       old.previewConflict != previewConflict ||
       old.pulse != pulse ||
       old.clockHandsMode != clockHandsMode ||
-      old.showMinuteLabels != showMinuteLabels;
+      old.is24h != is24h ||
+      old.outerReveal != outerReveal;
 }
