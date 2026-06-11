@@ -163,6 +163,43 @@ class ActivityRepository {
 
   Future<Activity?> get(int id) => _isar.activitys.get(id);
 
+  /// Watch all activities from today through the next [days] days (for Eisenhower).
+  Stream<List<Activity>> watchUpcoming({int days = 14}) {
+    final today = dateOnly(DateTime.now());
+    final end = today.add(Duration(days: days));
+    return _isar.activitys
+        .filter()
+        .dateBetween(today, end)
+        .sortByDate()
+        .thenByAmpmHalf()
+        .thenByStartMinute()
+        .watch(fireImmediately: true);
+  }
+
+  Future<void> markComplete(int id, bool done) async {
+    final a = await _isar.activitys.get(id);
+    if (a == null) return;
+    a.isCompleted = done;
+    a.updatedAt = DateTime.now();
+    await _isar.writeTxn(() => _isar.activitys.put(a));
+  }
+
+  Future<void> setImportance(int id, int importance) async {
+    final a = await _isar.activitys.get(id);
+    if (a == null) return;
+    a.importance = importance;
+    a.updatedAt = DateTime.now();
+    await _isar.writeTxn(() => _isar.activitys.put(a));
+  }
+
+  Future<void> setDeadline(int id, DateTime? deadline) async {
+    final a = await _isar.activitys.get(id);
+    if (a == null) return;
+    a.deadline = deadline;
+    a.updatedAt = DateTime.now();
+    await _isar.writeTxn(() => _isar.activitys.put(a));
+  }
+
   Future<List<Activity>> getByDate(DateTime date) async {
     final d = dateOnly(date);
     final direct = await _isar.activitys

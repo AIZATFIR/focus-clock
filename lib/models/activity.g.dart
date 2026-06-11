@@ -38,48 +38,73 @@ const ActivitySchema = CollectionSchema(
       name: r'date',
       type: IsarType.dateTime,
     ),
-    r'description': PropertySchema(
+    r'deadline': PropertySchema(
       id: 4,
+      name: r'deadline',
+      type: IsarType.dateTime,
+    ),
+    r'description': PropertySchema(
+      id: 5,
       name: r'description',
       type: IsarType.string,
     ),
+    r'eisenhowerQuadrant': PropertySchema(
+      id: 6,
+      name: r'eisenhowerQuadrant',
+      type: IsarType.long,
+    ),
     r'endMinute': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'endMinute',
       type: IsarType.long,
     ),
     r'groupId': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'groupId',
       type: IsarType.string,
     ),
     r'iconKey': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'iconKey',
       type: IsarType.string,
     ),
+    r'importance': PropertySchema(
+      id: 10,
+      name: r'importance',
+      type: IsarType.long,
+    ),
+    r'isCompleted': PropertySchema(
+      id: 11,
+      name: r'isCompleted',
+      type: IsarType.bool,
+    ),
+    r'isUrgent': PropertySchema(
+      id: 12,
+      name: r'isUrgent',
+      type: IsarType.bool,
+    ),
     r'presetId': PropertySchema(
-      id: 8,
+      id: 13,
       name: r'presetId',
       type: IsarType.long,
     ),
     r'recurrence': PropertySchema(
-      id: 9,
+      id: 14,
       name: r'recurrence',
       type: IsarType.string,
     ),
     r'startMinute': PropertySchema(
-      id: 10,
+      id: 15,
       name: r'startMinute',
       type: IsarType.long,
     ),
     r'title': PropertySchema(
-      id: 11,
+      id: 16,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 12,
+      id: 17,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -159,15 +184,20 @@ void _activitySerialize(
   writer.writeLong(offsets[1], object.colorValue);
   writer.writeDateTime(offsets[2], object.createdAt);
   writer.writeDateTime(offsets[3], object.date);
-  writer.writeString(offsets[4], object.description);
-  writer.writeLong(offsets[5], object.endMinute);
-  writer.writeString(offsets[6], object.groupId);
-  writer.writeString(offsets[7], object.iconKey);
-  writer.writeLong(offsets[8], object.presetId);
-  writer.writeString(offsets[9], object.recurrence);
-  writer.writeLong(offsets[10], object.startMinute);
-  writer.writeString(offsets[11], object.title);
-  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeDateTime(offsets[4], object.deadline);
+  writer.writeString(offsets[5], object.description);
+  writer.writeLong(offsets[6], object.eisenhowerQuadrant);
+  writer.writeLong(offsets[7], object.endMinute);
+  writer.writeString(offsets[8], object.groupId);
+  writer.writeString(offsets[9], object.iconKey);
+  writer.writeLong(offsets[10], object.importance);
+  writer.writeBool(offsets[11], object.isCompleted);
+  writer.writeBool(offsets[12], object.isUrgent);
+  writer.writeLong(offsets[13], object.presetId);
+  writer.writeString(offsets[14], object.recurrence);
+  writer.writeLong(offsets[15], object.startMinute);
+  writer.writeString(offsets[16], object.title);
+  writer.writeDateTime(offsets[17], object.updatedAt);
 }
 
 Activity _activityDeserialize(
@@ -183,16 +213,19 @@ Activity _activityDeserialize(
   object.colorValue = reader.readLong(offsets[1]);
   object.createdAt = reader.readDateTime(offsets[2]);
   object.date = reader.readDateTime(offsets[3]);
-  object.description = reader.readString(offsets[4]);
-  object.endMinute = reader.readLong(offsets[5]);
-  object.groupId = reader.readStringOrNull(offsets[6]);
-  object.iconKey = reader.readStringOrNull(offsets[7]);
+  object.deadline = reader.readDateTimeOrNull(offsets[4]);
+  object.description = reader.readString(offsets[5]);
+  object.endMinute = reader.readLong(offsets[7]);
+  object.groupId = reader.readStringOrNull(offsets[8]);
+  object.iconKey = reader.readStringOrNull(offsets[9]);
   object.id = id;
-  object.presetId = reader.readLongOrNull(offsets[8]);
-  object.recurrence = reader.readString(offsets[9]);
-  object.startMinute = reader.readLong(offsets[10]);
-  object.title = reader.readString(offsets[11]);
-  object.updatedAt = reader.readDateTime(offsets[12]);
+  object.importance = reader.readLong(offsets[10]);
+  object.isCompleted = reader.readBool(offsets[11]);
+  object.presetId = reader.readLongOrNull(offsets[13]);
+  object.recurrence = reader.readString(offsets[14]);
+  object.startMinute = reader.readLong(offsets[15]);
+  object.title = reader.readString(offsets[16]);
+  object.updatedAt = reader.readDateTime(offsets[17]);
   return object;
 }
 
@@ -213,22 +246,32 @@ P _activityDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
-      return (reader.readLong(offset)) as P;
-    case 6:
-      return (reader.readStringOrNull(offset)) as P;
-    case 7:
-      return (reader.readStringOrNull(offset)) as P;
-    case 8:
-      return (reader.readLongOrNull(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readLong(offset)) as P;
+    case 7:
+      return (reader.readLong(offset)) as P;
+    case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
     case 10:
       return (reader.readLong(offset)) as P;
     case 11:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readLongOrNull(offset)) as P;
+    case 14:
+      return (reader.readString(offset)) as P;
+    case 15:
+      return (reader.readLong(offset)) as P;
+    case 16:
+      return (reader.readString(offset)) as P;
+    case 17:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -708,6 +751,75 @@ extension ActivityQueryFilter
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deadline',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deadline',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> deadlineBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deadline',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> descriptionEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -836,6 +948,62 @@ extension ActivityQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'description',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      eisenhowerQuadrantEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'eisenhowerQuadrant',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      eisenhowerQuadrantGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'eisenhowerQuadrant',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      eisenhowerQuadrantLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'eisenhowerQuadrant',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      eisenhowerQuadrantBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'eisenhowerQuadrant',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -1233,6 +1401,79 @@ extension ActivityQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> importanceEqualTo(
+      int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'importance',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> importanceGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'importance',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> importanceLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'importance',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> importanceBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'importance',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> isCompletedEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isCompleted',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> isUrgentEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isUrgent',
+        value: value,
       ));
     });
   }
@@ -1730,6 +1971,18 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByDescription() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.asc);
@@ -1739,6 +1992,19 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByEisenhowerQuadrant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'eisenhowerQuadrant', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy>
+      sortByEisenhowerQuadrantDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'eisenhowerQuadrant', Sort.desc);
     });
   }
 
@@ -1775,6 +2041,42 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByIconKeyDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iconKey', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByImportance() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'importance', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByImportanceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'importance', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsCompleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCompleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsCompletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCompleted', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsUrgentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.desc);
     });
   }
 
@@ -1889,6 +2191,18 @@ extension ActivityQuerySortThenBy
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByDeadlineDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deadline', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByDescription() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.asc);
@@ -1898,6 +2212,19 @@ extension ActivityQuerySortThenBy
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByEisenhowerQuadrant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'eisenhowerQuadrant', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy>
+      thenByEisenhowerQuadrantDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'eisenhowerQuadrant', Sort.desc);
     });
   }
 
@@ -1946,6 +2273,42 @@ extension ActivityQuerySortThenBy
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByImportance() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'importance', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByImportanceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'importance', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsCompleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCompleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsCompletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isCompleted', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsUrgentDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isUrgent', Sort.desc);
     });
   }
 
@@ -2036,10 +2399,22 @@ extension ActivityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Activity, Activity, QDistinct> distinctByDeadline() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deadline');
+    });
+  }
+
   QueryBuilder<Activity, Activity, QDistinct> distinctByDescription(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByEisenhowerQuadrant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'eisenhowerQuadrant');
     });
   }
 
@@ -2060,6 +2435,24 @@ extension ActivityQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'iconKey', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByImportance() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'importance');
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByIsCompleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByIsUrgent() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isUrgent');
     });
   }
 
@@ -2128,9 +2521,21 @@ extension ActivityQueryProperty
     });
   }
 
+  QueryBuilder<Activity, DateTime?, QQueryOperations> deadlineProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deadline');
+    });
+  }
+
   QueryBuilder<Activity, String, QQueryOperations> descriptionProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'description');
+    });
+  }
+
+  QueryBuilder<Activity, int, QQueryOperations> eisenhowerQuadrantProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'eisenhowerQuadrant');
     });
   }
 
@@ -2149,6 +2554,24 @@ extension ActivityQueryProperty
   QueryBuilder<Activity, String?, QQueryOperations> iconKeyProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'iconKey');
+    });
+  }
+
+  QueryBuilder<Activity, int, QQueryOperations> importanceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'importance');
+    });
+  }
+
+  QueryBuilder<Activity, bool, QQueryOperations> isCompletedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Activity, bool, QQueryOperations> isUrgentProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isUrgent');
     });
   }
 

@@ -13,6 +13,63 @@ const _tools = [
   {
     'type': 'function',
     'function': {
+      'name': 'generate_blueprint',
+      'description':
+          'Generate a psychologically balanced full-day schedule (Fitrah Blueprint). '
+          'Creates Deep Work blocks, Intentional Rest, Active Rest, Wind Down, and Sleep blocks '
+          'based on circadian rhythm and ultradian cycle research. '
+          'Call this when user asks to generate, plan, or blueprint their day.',
+      'parameters': {
+        'type': 'object',
+        'required': ['date', 'wake_hour', 'sleep_hour'],
+        'properties': {
+          'date': {'type': 'string', 'description': 'ISO date yyyy-MM-dd'},
+          'wake_hour': {
+            'type': 'integer',
+            'description': 'Wake-up hour (0-23), e.g. 6 for 6am',
+          },
+          'sleep_hour': {
+            'type': 'integer',
+            'description': 'Target sleep hour (0-23), e.g. 22 for 10pm',
+          },
+          'goals': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description':
+                'Main goals/tasks for the day, e.g. ["Math study", "Exercise"]',
+          },
+        },
+      },
+    },
+  },
+  {
+    'type': 'function',
+    'function': {
+      'name': 'set_priority',
+      'description':
+          'Set importance level and/or deadline for an activity (for Eisenhower Matrix).',
+      'parameters': {
+        'type': 'object',
+        'required': ['id'],
+        'properties': {
+          'id': {'type': 'integer'},
+          'importance': {
+            'type': 'integer',
+            'description': '0 = low importance, 1 = high importance',
+            'enum': [0, 1],
+          },
+          'deadline': {
+            'type': 'string',
+            'description':
+                'ISO date yyyy-MM-dd for deadline. Null to clear.',
+          },
+        },
+      },
+    },
+  },
+  {
+    'type': 'function',
+    'function': {
       'name': 'list_activities',
       'description': 'List all activities for a given date.',
       'parameters': {
@@ -147,14 +204,38 @@ class AiService {
 Today: $dateStr. Current time: $timeStr.
 User presets: $presetList.
 
-Rules:
+## Core Rules
 - Call list_activities first if you need existing schedule before editing.
 - Times are 24h. Convert natural language: "7am"→7, "2pm"→14, "setengah 8"→7:30.
 - "move"/"pindah"/"geser": call update_activity with new start_hour.
 - "delete"/"hapus"/"cancel": call delete_activity.
 - After every tool call, summarise in 1 sentence.
 - If ambiguous (multiple matches), list IDs and ask.
-- Reply in the same language as the user. Be concise.''',
+- Reply in the same language as the user. Be concise.
+
+## Eisenhower Matrix
+- Use set_priority to classify tasks: importance=1 (important), importance=0 (not important).
+- Urgency is auto-computed from deadline (≤3 days = urgent).
+- Quadrants: urgent+important=DO, not urgent+important=SCHEDULE, urgent+not important=DELEGATE, not urgent+not important=ELIMINATE.
+- When user inputs multiple tasks at once, classify and set priorities before scheduling.
+
+## Fitrah Blueprint (generate_blueprint tool)
+When generating a day blueprint, follow this psychology-based structure:
+1. **Morning Routine** (wake_hour, 30min): Light planning, hydrate.
+2. **Deep Work Block 1** (wake_hour+0.5h, 90min): Main goal / highest-priority task. Peak cognitive energy.
+3. **Intentional Rest** (after DW1, 20min): Complete rest — NO screens, NO scrolling. Brain consolidates memory (DMN activation).
+4. **Deep Work Block 2** (if time permits, 90min): Second priority task.
+5. **Intentional Rest** (20min): Same — no screens.
+6. **Lunch + Active Rest** (90min): Eat + light exercise/social/hobbies. Restores dopamine.
+7. **Deep Work Block 3** (optional, 60-90min): Admin tasks, less demanding work.
+8. **Wind Down** (sleep_hour - 60min, 45min): Journal, reflect day, light plan tomorrow.
+9. **Sleep** (sleep_hour, 90-min cycle × n = ideal 7.5h or 9h): Use 90-min multiples to avoid sleep inertia.
+
+Key constraints:
+- Deep Work blocks: MAX 90-120 min each (ultradian rhythm).
+- Intentional Rest: NO cognitive activity. Schedule it explicitly.
+- Sleep: Always in 90-min multiples (4.5h, 6h, 7.5h, 9h). Count back from wake time.
+- Goals parameter → assign to Deep Work blocks in order of importance.''',
     });
     _initialized = true;
   }
@@ -232,6 +313,8 @@ Rules:
         'create_activity' => await _createActivity(args),
         'update_activity' => await _updateActivity(args),
         'delete_activity' => await _deleteActivity(args),
+        'set_priority' => await _setPriority(args),
+        'generate_blueprint' => await _generateBlueprint(args),
         _ => {'error': 'Unknown tool: $name'},
       };
     } catch (e) {
@@ -338,6 +421,156 @@ Rules:
     final id = (args['id'] as num).toInt();
     final ok = await _activityRepo.delete(id);
     return {'success': ok, 'id': id};
+  }
+
+  Future<Map<String, dynamic>> _setPriority(
+      Map<String, dynamic> args) async {
+    final id = (args['id'] as num).toInt();
+    final existing = await _activityRepo.get(id);
+    if (existing == null) return {'error': 'Activity $id not found'};
+
+    if (args['importance'] != null) {
+      await _activityRepo.setImportance(id, (args['importance'] as num).toInt());
+    }
+    if (args.containsKey('deadline')) {
+      final dl = args['deadline'] as String?;
+      await _activityRepo.setDeadline(
+          id, dl != null ? DateTime.parse(dl) : null);
+    }
+    return {'success': true, 'id': id};
+  }
+
+  /// Generates a Fitrah Blueprint — creates all blocks in one call.
+  /// The AI is responsible for computing timestamps from the system prompt rules,
+  /// but as a fallback this tool directly creates a hardcoded template.
+  Future<Map<String, dynamic>> _generateBlueprint(
+      Map<String, dynamic> args) async {
+    final dateStr = args['date'] as String;
+    final date = DateTime.parse(dateStr);
+    final wakeH = (args['wake_hour'] as num).toInt();
+    final sleepH = (args['sleep_hour'] as num).toInt();
+    final goals = (args['goals'] as List?)?.cast<String>() ?? [];
+
+    // Available work hours
+    final workStart = wakeH + 1; // after morning routine
+    // Build blueprint blocks
+    final blocks = <Map<String, dynamic>>[];
+
+    // Morning routine (30 min)
+    blocks.add({
+      'title': '🌅 Morning Routine',
+      'start_hour': wakeH,
+      'start_minute': 0,
+      'duration_minutes': 30,
+      'description': 'Hydrate, light stretch, review today\'s plan.',
+      'color': 0xFFFFD700,
+    });
+
+    int cursor = workStart * 60; // minutes from midnight
+
+    // Deep Work blocks for goals
+    final goalLabels = goals.isNotEmpty
+        ? goals
+        : ['Deep Work'];
+    for (int i = 0; i < goalLabels.length && i < 3; i++) {
+      final dwDur = 90;
+      // Don't schedule past sleepH - 2h
+      if (cursor + dwDur > sleepH * 60 - 120) break;
+
+      blocks.add({
+        'title': '🎯 Deep Work: ${goalLabels[i]}',
+        'start_hour': cursor ~/ 60,
+        'start_minute': cursor % 60,
+        'duration_minutes': dwDur,
+        'description': 'Full focus. No notifications, no interruptions.',
+        'color': 0xFF4A9EFF,
+      });
+      cursor += dwDur;
+
+      // Intentional Rest after each Deep Work
+      blocks.add({
+        'title': '🧠 Intentional Rest',
+        'start_hour': cursor ~/ 60,
+        'start_minute': cursor % 60,
+        'duration_minutes': 20,
+        'description':
+            'No screens. Let your mind wander — activates DMN for memory consolidation.',
+        'color': 0xFF6BCB77,
+      });
+      cursor += 20;
+
+      // Lunch break after first Deep Work (if ~noon)
+      if (i == 0 && cursor ~/ 60 >= 11) {
+        blocks.add({
+          'title': '🍱 Lunch + Active Rest',
+          'start_hour': cursor ~/ 60,
+          'start_minute': cursor % 60,
+          'duration_minutes': 90,
+          'description':
+              'Eat mindfully. Short walk, social time, or light hobby.',
+          'color': 0xFFFF9F40,
+        });
+        cursor += 90;
+      }
+    }
+
+    // Wind Down
+    final windDownStart = sleepH * 60 - 60;
+    if (windDownStart > cursor) {
+      blocks.add({
+        'title': '📓 Wind Down',
+        'start_hour': windDownStart ~/ 60,
+        'start_minute': windDownStart % 60,
+        'duration_minutes': 45,
+        'description':
+            'Journal, reflect on today, lightly plan tomorrow with AI.',
+        'color': 0xFF9B8FFF,
+      });
+    }
+
+    // Sleep (90-min cycle — round 7.5h back from wake)
+    blocks.add({
+      'title': '💤 Sleep',
+      'start_hour': sleepH,
+      'start_minute': 0,
+      'duration_minutes': ((wakeH + 24 - sleepH) * 60).clamp(270, 540),
+      'description':
+          '${(wakeH + 24 - sleepH)} hours = ${(wakeH + 24 - sleepH) ~/ 1.5} sleep cycles (90-min each). Wakes at end of cycle to avoid sleep inertia.',
+      'color': 0xFF2E2E4E,
+    });
+
+    // Create all blocks
+    final created = <int>[];
+    final now = DateTime.now();
+    for (final b in blocks) {
+      final h = b['start_hour'] as int;
+      final m = b['start_minute'] as int;
+      final dur = b['duration_minutes'] as int;
+      final half = h < 12 ? AmPmHalf.am : AmPmHalf.pm;
+      final relStart = (h % 12) * 60 + m;
+      final a = Activity()
+        ..title = b['title'] as String
+        ..startMinute = relStart
+        ..endMinute = (relStart + dur).clamp(0, 720)
+        ..ampmHalf = half
+        ..date = dateOnly(date)
+        ..description = b['description'] as String
+        ..recurrence = 'none'
+        ..colorValue = b['color'] as int
+        ..createdAt = now
+        ..updatedAt = now;
+      final id = await _activityRepo.upsert(a);
+      created.add(id);
+    }
+
+    return {
+      'success': true,
+      'blocks_created': created.length,
+      'message':
+          'Blueprint generated: ${created.length} blocks for $dateStr. '
+          'Deep Work at peak energy morning, Intentional Rest for memory consolidation, '
+          'Sleep at ${sleepH}:00 (90-min cycles).',
+    };
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -306,54 +306,79 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
         onVerticalDragUpdate: (d) =>
             setState(() => _dragDeltaY += d.delta.dy),
         onVerticalDragEnd: (_) => _commitBlockDrag(a),
-        child: Material(
-          elevation: isDragging ? 6 : 0,
-          borderRadius: BorderRadius.circular(5),
-          shadowColor: color.withValues(alpha: 0.4),
-          color: color.withValues(alpha: isDragging ? 0.95 : 0.88),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(5),
-              border: Border(left: BorderSide(color: color, width: 3.5)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            child: Row(
-              children: [
-                if (a.iconKey != null && a.iconKey!.isNotEmpty) ...[
-                  Text(a.iconKey!, style: const TextStyle(fontSize: 11)),
-                  const SizedBox(width: 4),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        a.title.isEmpty ? '(no title)' : a.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            height: 1.1,
-                            fontWeight: FontWeight.w600,
-                            color: fg),
-                      ),
-                      if (height > 40)
+        child: Opacity(
+          opacity: a.isCompleted ? 0.45 : 1.0,
+          child: Material(
+            elevation: isDragging ? 6 : 0,
+            borderRadius: BorderRadius.circular(5),
+            shadowColor: color.withValues(alpha: 0.4),
+            color: color.withValues(alpha: isDragging ? 0.95 : 0.88),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                border: Border(left: BorderSide(color: color, width: 3.5)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              child: Row(
+                children: [
+                  if (a.iconKey != null && a.iconKey!.isNotEmpty) ...[
+                    Text(a.iconKey!, style: const TextStyle(fontSize: 11)),
+                    const SizedBox(width: 4),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          _timeRange(a),
+                          a.title.isEmpty ? '(no title)' : a.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               height: 1.1,
-                              color: fg.withValues(alpha: 0.75)),
+                              fontWeight: FontWeight.w600,
+                              color: fg,
+                              decoration: a.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null),
                         ),
-                    ],
+                        if (height > 40)
+                          Text(
+                            _timeRange(a),
+                            style: TextStyle(
+                                fontSize: 10,
+                                height: 1.1,
+                                color: fg.withValues(alpha: 0.75)),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                if (a.recurrence != 'none')
-                  Icon(Icons.repeat,
-                      size: 11, color: fg.withValues(alpha: 0.6)),
-              ],
+                  if (a.recurrence != 'none')
+                    Icon(Icons.repeat,
+                        size: 11, color: fg.withValues(alpha: 0.6)),
+                  // Complete toggle
+                  if (!isDragging)
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        ref.read(activityRepoProvider).markComplete(
+                            a.id, !a.isCompleted);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(
+                          a.isCompleted
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          size: 14,
+                          color: fg.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

@@ -71,6 +71,11 @@ final activitiesByDateProvider = StreamProvider<List<Activity>>((ref) {
 /// Bottom-nav selected index.
 final tabIndexProvider = StateProvider<int>((_) => 1);
 
+/// Upcoming activities for Eisenhower Matrix (today + 14 days).
+final eisenhowerActivitiesProvider = StreamProvider<List<Activity>>((ref) {
+  return ref.watch(activityRepoProvider).watchUpcoming(days: 14);
+});
+
 /// Chat transcript — survives panel open/close so conversation continues.
 /// "New chat" replaces it with an empty list.
 final aiTranscriptProvider =

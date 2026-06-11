@@ -33,6 +33,33 @@ class Activity {
   @Index()
   String? groupId;
 
+  /// Eisenhower importance: 0 = low, 1 = high.
+  int importance = 0;
+
+  /// Optional deadline (date only, time zeroed).
+  DateTime? deadline;
+
+  /// Whether this activity has been completed.
+  bool isCompleted = false;
+
   late DateTime createdAt;
   late DateTime updatedAt;
+
+  /// Urgency: true if deadline is within 3 days or already past.
+  bool get isUrgent {
+    if (deadline == null) return false;
+    return deadline!.difference(DateTime.now()).inDays <= 3;
+  }
+
+  /// Eisenhower quadrant index 0-3.
+  /// 0 = Do (urgent+important), 1 = Schedule (not urgent+important),
+  /// 2 = Delegate (urgent+not important), 3 = Eliminate (not urgent+not important)
+  int get eisenhowerQuadrant {
+    final u = isUrgent;
+    final i = importance >= 1;
+    if (u && i) return 0;
+    if (!u && i) return 1;
+    if (u && !i) return 2;
+    return 3;
+  }
 }

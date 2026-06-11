@@ -81,6 +81,107 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     ref.read(aiTranscriptProvider.notifier).state = <ChatMessage>[];
   }
 
+  Future<void> _showBlueprintDialog(BuildContext context) async {
+    int wakeH = 6;
+    int sleepH = 22;
+    final goalCtrl = TextEditingController();
+    final now = DateTime.now();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('🌅 Fitrah Blueprint'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Generate a psychologically balanced day:\n'
+              'Deep Work → Intentional Rest → Active Rest → Sleep.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            StatefulBuilder(builder: (ctx, setS) => Column(
+              children: [
+                Row(children: [
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Wake up', style: TextStyle(fontSize: 12)),
+                      Slider(
+                        value: wakeH.toDouble(),
+                        min: 3, max: 10, divisions: 7,
+                        label: '${wakeH.toString().padLeft(2, '0')}:00',
+                        activeColor: AppPalette.accent,
+                        onChanged: (v) => setS(() => wakeH = v.toInt()),
+                      ),
+                    ],
+                  )),
+                  Text('${wakeH.toString().padLeft(2, '0')}:00',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ]),
+                Row(children: [
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Sleep at', style: TextStyle(fontSize: 12)),
+                      Slider(
+                        value: sleepH.toDouble(),
+                        min: 19, max: 26, divisions: 7,
+                        label: '${(sleepH % 24).toString().padLeft(2, '0')}:00',
+                        activeColor: AppPalette.accent,
+                        onChanged: (v) => setS(() => sleepH = v.toInt()),
+                      ),
+                    ],
+                  )),
+                  Text('${(sleepH % 24).toString().padLeft(2, '0')}:00',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ]),
+              ],
+            )),
+            TextField(
+              controller: goalCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Goals (comma separated)',
+                hintText: 'e.g. Math study, Gym, Project',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppPalette.accent,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              final goals = goalCtrl.text
+                  .split(',')
+                  .map((s) => s.trim())
+                  .where((s) => s.isNotEmpty)
+                  .toList();
+              final dateStr =
+                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+              final goalsStr =
+                  goals.isEmpty ? '' : ' Goals: ${goals.join(', ')}.';
+              _ctrl.text =
+                  'Generate Fitrah Blueprint for today ($dateStr). '
+                  'Wake: ${wakeH.toString().padLeft(2, '0')}:00, '
+                  'Sleep: ${(sleepH % 24).toString().padLeft(2, '0')}:00.$goalsStr';
+              _send();
+            },
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+    goalCtrl.dispose();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final s = widget.scrollController;
@@ -101,7 +202,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 
     return Column(
       children: [
-        // Panel header: title + new session
+        // Panel header: title + blueprint + new session
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
           child: Row(
@@ -112,6 +213,16 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               const Spacer(),
+              // Fitrah Blueprint quick launch
+              Tooltip(
+                message: 'Generate Fitrah Blueprint',
+                child: IconButton(
+                  onPressed: () => _showBlueprintDialog(context),
+                  icon: const Text('🌅', style: TextStyle(fontSize: 16)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+              ),
               TextButton.icon(
                 onPressed: messages.isEmpty ? null : _newChat,
                 icon: const Icon(Icons.add_comment_outlined, size: 15),
