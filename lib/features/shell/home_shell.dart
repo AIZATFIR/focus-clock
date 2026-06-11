@@ -90,20 +90,26 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           AgendaTab(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: idx,
-        onTap: (i) => ref.read(tabIndexProvider.notifier).state = i,
-        items: const [
-          BottomNavigationBarItem(
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: idx,
+        onDestinationSelected: (i) =>
+            ref.read(tabIndexProvider.notifier).state = i,
+        height: 64,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.dashboard_customize_outlined),
+            selectedIcon: Icon(Icons.dashboard_customize),
             label: 'Presets',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.access_time),
+            selectedIcon: Icon(Icons.access_time_filled),
             label: 'Clock',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.view_agenda_outlined),
+            selectedIcon: Icon(Icons.view_agenda),
             label: 'Agenda',
           ),
         ],

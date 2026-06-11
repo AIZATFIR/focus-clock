@@ -9,6 +9,7 @@ class AppSettings {
   bool is24h = false;
   int notifLeadMinutes = 1;
   String themeMode = 'dark'; // 'dark' | 'light' | 'system'
+  bool trueBlack = false; // AMOLED: pure black bg when dark theme active
   int clockHandsMode = 1; // 1=single precision, 2=hour+min, 3=hour+min+sec
   bool showMinuteLabels = false;
   String aiBaseUrl = 'https://openrouter.ai/api/v1';

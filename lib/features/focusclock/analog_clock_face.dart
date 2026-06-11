@@ -15,6 +15,8 @@ class AnalogClockFace extends StatelessWidget {
     this.previewStartMinute,
     this.previewEndMinute,
     this.previewColor,
+    this.previewConflict = false,
+    this.pulse = 0,
     this.clockHandsMode = 1,
     this.showMinuteLabels = false,
   });
@@ -25,6 +27,13 @@ class AnalogClockFace extends StatelessWidget {
   final int? previewStartMinute;
   final int? previewEndMinute;
   final Color? previewColor;
+
+  /// Preview arc overlaps an existing activity — render it red.
+  final bool previewConflict;
+
+  /// 0..1 phase for the "now" pulse ring around the current activity.
+  final double pulse;
+
   final int clockHandsMode;
   final bool showMinuteLabels;
 
@@ -37,6 +46,8 @@ class AnalogClockFace extends StatelessWidget {
           previewStart: previewStartMinute,
           previewEnd: previewEndMinute,
           previewColor: previewColor,
+          previewConflict: previewConflict,
+          pulse: pulse,
           clockHandsMode: clockHandsMode,
           showMinuteLabels: showMinuteLabels,
         ),
@@ -51,6 +62,8 @@ class _ClockPainter extends CustomPainter {
     this.previewStart,
     this.previewEnd,
     this.previewColor,
+    this.previewConflict = false,
+    this.pulse = 0,
     this.clockHandsMode = 1,
     this.showMinuteLabels = false,
   });
@@ -61,6 +74,8 @@ class _ClockPainter extends CustomPainter {
   final int? previewStart;
   final int? previewEnd;
   final Color? previewColor;
+  final bool previewConflict;
+  final double pulse;
   final int clockHandsMode;
   final bool showMinuteLabels;
 
@@ -93,9 +108,23 @@ class _ClockPainter extends CustomPainter {
           Color(a.colorValue),
           label: a.title, icon: a.iconKey);
     }
+    // Pulse ring on the activity happening right now
+    if (halfOfNow(now) == viewHalf) {
+      final m = minuteOfHalf(now);
+      for (final a in activities) {
+        if (m >= a.startMinute && m < a.endMinute) {
+          _drawPulseRing(canvas, center, arcOuter, a);
+          break;
+        }
+      }
+    }
+
     if (previewStart != null && previewEnd != null) {
+      final base = previewConflict
+          ? AppPalette.danger
+          : (previewColor ?? AppPalette.accent);
       _drawArc(canvas, center, arcInner, arcOuter, previewStart!, previewEnd!,
-          (previewColor ?? AppPalette.accent).withValues(alpha: 0.55),
+          base.withValues(alpha: 0.55),
           dashed: true);
     }
 
@@ -144,6 +173,26 @@ class _ClockPainter extends CustomPainter {
     }
 
     canvas.drawCircle(center, 6, Paint()..color = AppPalette.accent);
+  }
+
+  /// Soft breathing glow just outside the current activity's arc.
+  void _drawPulseRing(
+      Canvas canvas, Offset center, double arcOuter, Activity a) {
+    // Smooth in-out wave from linear 0..1 phase
+    final wave = 0.5 - 0.5 * math.cos(pulse * 2 * math.pi);
+    final startAngle = (a.startMinute / 720) * 2 * math.pi - math.pi / 2;
+    final sweep = ((a.endMinute - a.startMinute) / 720) * 2 * math.pi;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: arcOuter + 4),
+      startAngle,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5 + 1.5 * wave
+        ..strokeCap = StrokeCap.round
+        ..color = Color(a.colorValue).withValues(alpha: 0.30 + 0.45 * wave),
+    );
   }
 
   void _drawMinuteLabels(Canvas canvas, Offset center, double inner) {
@@ -298,6 +347,8 @@ class _ClockPainter extends CustomPainter {
       old.viewHalf != viewHalf ||
       old.previewStart != previewStart ||
       old.previewEnd != previewEnd ||
+      old.previewConflict != previewConflict ||
+      old.pulse != pulse ||
       old.clockHandsMode != clockHandsMode ||
       old.showMinuteLabels != showMinuteLabels;
 }

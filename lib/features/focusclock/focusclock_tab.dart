@@ -178,10 +178,38 @@ class FocusClockTab extends ConsumerStatefulWidget {
   ConsumerState<FocusClockTab> createState() => _FocusClockTabState();
 }
 
-class _FocusClockTabState extends ConsumerState<FocusClockTab> {
+class _FocusClockTabState extends ConsumerState<FocusClockTab>
+    with SingleTickerProviderStateMixin {
   int? _dragStart;
   int? _dragEnd;
   Activity? _draggingActivity;
+  bool _dragConflict = false;
+  late final AnimationController _pulseCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  /// True if [start, end) overlaps any activity (excluding [excludeId]).
+  bool _hasConflict(int start, int end, List<Activity> activities,
+      {int? excludeId}) {
+    for (final a in activities) {
+      if (excludeId != null && a.id == excludeId) continue;
+      if (rangesOverlap(start, end, a.startMinute, a.endMinute)) return true;
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +222,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
     final showMinuteLabels = settings?.showMinuteLabels ?? false;
     final now = nowAsync.valueOrNull ?? DateTime.now();
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
+
+    // Pulse only while an activity is live in the viewed half — saves battery.
+    final m = minuteOfHalf(now);
+    final hasCurrent = halfOfNow(now) == half &&
+        activities.any((a) => m >= a.startMinute && m < a.endMinute);
+    if (hasCurrent && !_pulseCtrl.isAnimating) {
+      _pulseCtrl.repeat();
+    } else if (!hasCurrent && _pulseCtrl.isAnimating) {
+      _pulseCtrl.stop();
+      _pulseCtrl.value = 0;
+    }
 
     return Column(
       children: [
@@ -256,29 +295,36 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
                         onLongPressStart: (e) => _onLongPressStart(
                             e.localPosition, c.biggest, activities),
                         onLongPressMoveUpdate: (e) => _onLongPressMove(
-                            e.localPosition, c.biggest),
+                            e.localPosition, c.biggest, activities),
                         onLongPressEnd: (_) => _onLongPressEnd(
                             settings?.notifLeadMinutes ?? 1),
                         onPanStart: (e) =>
                             _onPanStart(e.localPosition, c.biggest),
-                        onPanUpdate: (e) =>
-                            _onPanUpdate(e.localPosition, c.biggest),
+                        onPanUpdate: (e) => _onPanUpdate(
+                            e.localPosition, c.biggest, activities),
                         onPanEnd: (_) => _onPanEnd(half),
-                        child: AnalogClockFace(
-                          now: now,
-                          activities: activities,
-                          viewHalf: half,
-                          previewStartMinute: _draggingActivity == null
-                              ? _dragStart
-                              : _draggingActivity!.startMinute,
-                          previewEndMinute: _draggingActivity == null
-                              ? _dragEnd
-                              : _draggingActivity!.endMinute,
-                          previewColor: candidate.isNotEmpty
-                              ? Color(candidate.first!.colorValue)
-                              : null,
-                          clockHandsMode: clockHandsMode,
-                          showMinuteLabels: showMinuteLabels,
+                        child: RepaintBoundary(
+                          child: AnimatedBuilder(
+                            animation: _pulseCtrl,
+                            builder: (_, __) => AnalogClockFace(
+                              now: now,
+                              activities: activities,
+                              viewHalf: half,
+                              previewStartMinute: _draggingActivity == null
+                                  ? _dragStart
+                                  : _draggingActivity!.startMinute,
+                              previewEndMinute: _draggingActivity == null
+                                  ? _dragEnd
+                                  : _draggingActivity!.endMinute,
+                              previewColor: candidate.isNotEmpty
+                                  ? Color(candidate.first!.colorValue)
+                                  : null,
+                              previewConflict: _dragConflict,
+                              pulse: _pulseCtrl.value,
+                              clockHandsMode: clockHandsMode,
+                              showMinuteLabels: showMinuteLabels,
+                            ),
+                          ),
                         ),
                       );
                     },
@@ -319,13 +365,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
     setState(() {
       _dragStart = snap5(offsetToMinute(centered));
       _dragEnd = _dragStart;
+      _dragConflict = false;
     });
   }
 
-  void _onPanUpdate(Offset p, Size size) {
+  void _onPanUpdate(Offset p, Size size, List<Activity> activities) {
     if (_dragStart == null) return;
     final centered = _toCenter(p, size);
     final m = snap5(offsetToMinute(centered));
+    final prevEnd = _dragEnd;
     setState(() {
       if (m >= _dragStart!) {
         _dragEnd = m;
@@ -340,7 +388,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
           _dragEnd = (_dragStart! + 5).clamp(0, 720);
         }
       }
+      _dragConflict = _hasConflict(_dragStart!, _dragEnd!, activities);
     });
+    if (_dragEnd != prevEnd) HapticFeedback.selectionClick();
   }
 
   Future<void> _onPanEnd(AmPmHalf half) async {
@@ -352,7 +402,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
     setState(() {
       _dragStart = null;
       _dragEnd = null;
+      _dragConflict = false;
     });
+    HapticFeedback.lightImpact();
     if (!mounted) return;
 
     // Show preset picker first
@@ -423,17 +475,26 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
     final hit = _hitActivity(p, size, activities);
     if (hit == null) return;
     final a = activities.firstWhere((x) => x.id == hit);
+    HapticFeedback.mediumImpact();
     setState(() => _draggingActivity = a);
   }
 
-  void _onLongPressMove(Offset p, Size size) {
+  void _onLongPressMove(Offset p, Size size, List<Activity> activities) {
     if (_draggingActivity == null) return;
     final centered = _toCenter(p, size);
     final newStart = snap5(offsetToMinute(centered));
     final duration = _draggingActivity!.endMinute - _draggingActivity!.startMinute;
+    if (newStart == _draggingActivity!.startMinute) return;
+    HapticFeedback.selectionClick();
     setState(() {
       _draggingActivity!.startMinute = newStart;
       _draggingActivity!.endMinute = (newStart + duration).clamp(0, 720);
+      _dragConflict = _hasConflict(
+        _draggingActivity!.startMinute,
+        _draggingActivity!.endMinute,
+        activities,
+        excludeId: _draggingActivity!.id,
+      );
     });
   }
 
@@ -442,7 +503,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab> {
     await ref
         .read(activityRepoProvider)
         .upsert(_draggingActivity!, notifLeadMinutes: leadMinutes);
-    setState(() => _draggingActivity = null);
+    HapticFeedback.lightImpact();
+    setState(() {
+      _draggingActivity = null;
+      _dragConflict = false;
+    });
   }
 
   // === Preset dropped from drag ===

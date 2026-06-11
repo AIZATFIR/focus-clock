@@ -109,6 +109,13 @@ class SettingsScreen extends ConsumerWidget {
               activeColor: AppPalette.accent,
               onChanged: (v) => _save(ref, s, themeMode: v as String),
             ),
+            SwitchListTile(
+              title: const Text('True black (AMOLED)'),
+              subtitle: const Text('Pure black background in dark theme'),
+              value: s.trueBlack,
+              activeColor: AppPalette.accent,
+              onChanged: (v) => _save(ref, s, trueBlack: v),
+            ),
 
             // ── Notifications ───────────────────────────────────────────────
             const Divider(),
@@ -156,6 +163,7 @@ class SettingsScreen extends ConsumerWidget {
     bool? is24h,
     int? clockHandsMode,
     String? themeMode,
+    bool? trueBlack,
     int? notifLeadMinutes,
     bool? showMinuteLabels,
     String? aiBaseUrl,
@@ -166,6 +174,7 @@ class SettingsScreen extends ConsumerWidget {
       ..is24h = is24h ?? s.is24h
       ..clockHandsMode = clockHandsMode ?? s.clockHandsMode
       ..themeMode = themeMode ?? s.themeMode
+      ..trueBlack = trueBlack ?? s.trueBlack
       ..notifLeadMinutes = notifLeadMinutes ?? s.notifLeadMinutes
       ..showMinuteLabels = showMinuteLabels ?? s.showMinuteLabels
       ..aiBaseUrl = aiBaseUrl ?? s.aiBaseUrl

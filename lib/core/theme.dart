@@ -4,17 +4,23 @@ class AppPalette {
   // Dark
   static const bg = Color(0xFF1E1E1E);
   static const card = Color(0xFF2D2D2D);
-  static const accent = Color(0xFFFFD700);
+  static const accent = Color(0xFFE6B800); // muted gold
   static const text = Color(0xFFE0E0E0);
   static const textDim = Color(0xFF9A9A9A);
-  static const stroke = Color(0xFF3A3A3A);
+  static const stroke = Color(0xFF2A2A2A);
+  static const danger = Color(0xFFE5484D); // conflict / destructive
+  static const glassSurface = Color(0xD91A1A1A); // 85% opacity, frosted sheets
+
+  // True black (AMOLED)
+  static const blackBg = Color(0xFF000000);
+  static const blackCard = Color(0xFF141414);
 
   // Light equivalents (used inline in buildLightTheme)
   static const lightBg = Color(0xFFF5F5F5);
   static const lightCard = Color(0xFFFFFFFF);
   static const lightText = Color(0xFF1A1A1A);
   static const lightTextDim = Color(0xFF757575);
-  static const lightStroke = Color(0xFFDDDDDD);
+  static const lightStroke = Color(0xFFE8E8E8);
   static const lightAccent = Color(0xFFD4A800); // darker gold for light bg
 }
 
@@ -49,6 +55,44 @@ ThemeData buildDarkTheme() {
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: AppPalette.card,
       contentTextStyle: TextStyle(color: AppPalette.text),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppPalette.card,
+      indicatorColor: AppPalette.accent.withValues(alpha: 0.22),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w400,
+          color: states.contains(WidgetState.selected)
+              ? AppPalette.accent
+              : AppPalette.textDim,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? AppPalette.accent
+              : AppPalette.textDim,
+        ),
+      ),
+    ),
+  );
+}
+
+/// AMOLED variant: true black background, deep cards.
+ThemeData buildBlackTheme() {
+  final base = buildDarkTheme();
+  return base.copyWith(
+    scaffoldBackgroundColor: AppPalette.blackBg,
+    colorScheme: base.colorScheme.copyWith(surface: AppPalette.blackBg),
+    appBarTheme: base.appBarTheme.copyWith(
+      backgroundColor: AppPalette.blackBg,
+    ),
+    cardColor: AppPalette.blackCard,
+    navigationBarTheme: base.navigationBarTheme.copyWith(
+      backgroundColor: AppPalette.blackCard,
     ),
   );
 }
@@ -104,6 +148,28 @@ ThemeData buildLightTheme() {
           (states) => states.contains(WidgetState.selected)
               ? Colors.white
               : AppPalette.lightText,
+        ),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: AppPalette.lightCard,
+      indicatorColor: AppPalette.lightAccent.withValues(alpha: 0.18),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => TextStyle(
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w400,
+          color: states.contains(WidgetState.selected)
+              ? AppPalette.lightAccent
+              : AppPalette.lightTextDim,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? AppPalette.lightAccent
+              : AppPalette.lightTextDim,
         ),
       ),
     ),

@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,11 +19,17 @@ Future<void> showActivityDetailSheet(
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppPalette.card,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      backgroundColor: Colors.transparent,
+      builder: (_) => ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            color: AppPalette.glassSurface,
+            child: _DetailSheet(initial: activity, initialMode: mode),
+          ),
+        ),
       ),
-      builder: (_) => _DetailSheet(initial: activity, initialMode: mode),
     );
 
 class _DetailSheet extends ConsumerStatefulWidget {
@@ -235,6 +243,44 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       return;
     }
     final a = widget.initial;
+
+    // Conflict check before committing
+    final repo = ref.read(activityRepoProvider);
+    final dayActivities = await repo.getByDate(widget.initial.date);
+    final clash = dayActivities
+        .where((x) =>
+            x.id != a.id &&
+            x.ampmHalf == _half &&
+            rangesOverlap(_start, _end, x.startMinute, x.endMinute))
+        .firstOrNull;
+    if (clash != null && mounted) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Time conflict'),
+          content: Text(
+              'Overlaps with "${clash.title}" '
+              '(${formatMinuteOfHalf(clash.startMinute, _half, is24h: false)}–'
+              '${formatMinuteOfHalf(clash.endMinute, _half, is24h: false)}).'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppPalette.danger,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save anyway'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
+
     a.title = title;
     a.description = _descCtrl.text.trim();
     a.startMinute = _start;
@@ -244,7 +290,8 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     a.recurrence = _recurrence;
     final lead =
         ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-    await ref.read(activityRepoProvider).upsert(a, notifLeadMinutes: lead);
+    await repo.upsert(a, notifLeadMinutes: lead);
+    HapticFeedback.lightImpact();
     if (mounted) Navigator.pop(context);
   }
 

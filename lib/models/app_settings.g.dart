@@ -56,6 +56,11 @@ const AppSettingsSchema = CollectionSchema(
       id: 7,
       name: r'themeMode',
       type: IsarType.string,
+    ),
+    r'trueBlack': PropertySchema(
+      id: 8,
+      name: r'trueBlack',
+      type: IsarType.bool,
     )
   },
   estimateSize: _appSettingsEstimateSize,
@@ -99,6 +104,7 @@ void _appSettingsSerialize(
   writer.writeLong(offsets[5], object.notifLeadMinutes);
   writer.writeBool(offsets[6], object.showMinuteLabels);
   writer.writeString(offsets[7], object.themeMode);
+  writer.writeBool(offsets[8], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -117,6 +123,7 @@ AppSettings _appSettingsDeserialize(
   object.notifLeadMinutes = reader.readLong(offsets[5]);
   object.showMinuteLabels = reader.readBool(offsets[6]);
   object.themeMode = reader.readString(offsets[7]);
+  object.trueBlack = reader.readBool(offsets[8]);
   return object;
 }
 
@@ -143,6 +150,8 @@ P _appSettingsDeserializeProp<P>(
       return (reader.readBool(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -966,6 +975,16 @@ extension AppSettingsQueryFilter
       ));
     });
   }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      trueBlackEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'trueBlack',
+        value: value,
+      ));
+    });
+  }
 }
 
 extension AppSettingsQueryObject
@@ -1074,6 +1093,18 @@ extension AppSettingsQuerySortBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByThemeModeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'themeMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByTrueBlack() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'trueBlack', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByTrueBlackDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'trueBlack', Sort.desc);
     });
   }
 }
@@ -1192,6 +1223,18 @@ extension AppSettingsQuerySortThenBy
       return query.addSortBy(r'themeMode', Sort.desc);
     });
   }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByTrueBlack() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'trueBlack', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByTrueBlackDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'trueBlack', Sort.desc);
+    });
+  }
 }
 
 extension AppSettingsQueryWhereDistinct
@@ -1249,6 +1292,12 @@ extension AppSettingsQueryWhereDistinct
       return query.addDistinctBy(r'themeMode', caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByTrueBlack() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'trueBlack');
+    });
+  }
 }
 
 extension AppSettingsQueryProperty
@@ -1304,6 +1353,12 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, String, QQueryOperations> themeModeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'themeMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> trueBlackProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'trueBlack');
     });
   }
 }

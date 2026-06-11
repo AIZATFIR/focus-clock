@@ -19,10 +19,11 @@ class FocusClockApp extends ConsumerWidget {
       },
       orElse: () => ThemeMode.dark,
     );
+    final trueBlack = settingsAsync.valueOrNull?.trueBlack ?? false;
     return MaterialApp(
       title: 'Focus Clock',
       theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
+      darkTheme: trueBlack ? buildBlackTheme() : buildDarkTheme(),
       themeMode: mode,
       home: const HomeShell(),
       debugShowCheckedModeBanner: false,

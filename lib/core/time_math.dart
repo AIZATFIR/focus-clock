@@ -68,6 +68,10 @@ int offsetToMinute(Offset offset) {
 
 double minuteToAngle(int minute) => (minute / 720.0) * 2 * math.pi;
 
+/// True if [aStart, aEnd) overlaps [bStart, bEnd).
+bool rangesOverlap(int aStart, int aEnd, int bStart, int bEnd) =>
+    aStart < bEnd && bStart < aEnd;
+
 /// Combine date + half + minute to a real DateTime (for scheduling).
 DateTime toDateTime(DateTime date, AmPmHalf half, int minute) {
   final h12 = minute ~/ 60;
