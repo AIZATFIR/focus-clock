@@ -233,6 +233,34 @@ class _ClockPainter extends CustomPainter {
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
+    // Outer minute ring (5, 10... 55) shown OUTSIDE the dial.
+    // 60 minutes = 360 degrees.
+    if (outerReveal > 0.01) {
+      final ringR = r * 1.045; // slightly outside the dial
+      for (int m = 5; m <= 60; m += 5) {
+        if (m == 60) continue; // Skip 60/12 top to avoid clash with pulse
+        final angle = (m / 60) * 2 * math.pi - math.pi / 2;
+        final pos = Offset(
+          center.dx + math.cos(angle) * ringR,
+          center.dy + math.sin(angle) * ringR,
+        );
+        final isQuarter = m % 15 == 0;
+        final tp = TextPainter(
+          text: TextSpan(
+            text: '$m',
+            style: TextStyle(
+              color: AppPalette.accent.withValues(
+                  alpha: outerReveal * (isQuarter ? 0.95 : 0.55)),
+              fontSize: isQuarter ? 10.0 : 8.0,
+              fontWeight: isQuarter ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
+      }
+    }
+
     // Hands only if viewing current half
     if (halfOfNow(now) == viewHalf) {
       _drawHands(canvas, center, r);
