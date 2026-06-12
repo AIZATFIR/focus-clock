@@ -233,11 +233,6 @@ class _ClockPainter extends CustomPainter {
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
-    // Outer minute ring (5,10…60) — fades in as the clock expands
-    if (outerReveal > 0.01) {
-      _drawOuterMinuteRing(canvas, center, r);
-    }
-
     // Hands only if viewing current half
     if (halfOfNow(now) == viewHalf) {
       _drawHands(canvas, center, r);
@@ -264,35 +259,6 @@ class _ClockPainter extends CustomPainter {
         ..strokeCap = StrokeCap.round
         ..color = Color(a.colorValue).withValues(alpha: 0.30 + 0.45 * wave),
     );
-  }
-
-  /// Tiny minute numbers (15/30/45) between each hour on a ring OUTSIDE
-  /// the dial. The dial spans 720 minutes, so each hour segment gets its
-  /// own quarter labels. Opacity follows reveal.
-  void _drawOuterMinuteRing(Canvas canvas, Offset center, double r) {
-    final ringR = r * 1.035;
-    for (int m = 15; m < 720; m += 15) {
-      if (m % 60 == 0) continue; // hour positions labeled on the dial
-      final angle = (m / 720) * 2 * math.pi - math.pi / 2;
-      final pos = Offset(
-        center.dx + math.cos(angle) * ringR,
-        center.dy + math.sin(angle) * ringR,
-      );
-      final is30 = m % 30 == 0;
-      final tp = TextPainter(
-        text: TextSpan(
-          text: '${m % 60}',
-          style: TextStyle(
-            color: AppPalette.accent.withValues(
-                alpha: outerReveal * (is30 ? 0.95 : 0.55)),
-            fontSize: is30 ? 9.0 : 7.0,
-            fontWeight: is30 ? FontWeight.w600 : FontWeight.w400,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
-    }
   }
 
   void _drawGridLines(Canvas canvas, Offset center, double inner, double outer) {
