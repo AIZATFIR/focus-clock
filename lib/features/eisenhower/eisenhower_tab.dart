@@ -378,6 +378,22 @@ class _TaskTile extends StatelessWidget {
               ],
             ),
           ),
+          // Schedule button
+          GestureDetector(
+            onTap: () {
+              ref.read(schedulingTaskProvider.notifier).state = t;
+              Navigator.of(context).pop(); // Close bottom sheet
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.transparent,
+              child: Icon(
+                Icons.calendar_today_rounded,
+                size: 18,
+                color: AppPalette.accent.withValues(alpha: 0.8),
+              ),
+            ),
+          ),
           // Complete toggle
           GestureDetector(
             onTap: () => ref.read(taskRepoProvider).toggleCompletion(t.id),

@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
+import '../../models/task.dart';
 
 class AnalogClockFace extends StatelessWidget {
   const AnalogClockFace({
     super.key,
     required this.now,
     required this.activities,
+    this.tasks = const [],
     required this.viewHalf,
     this.previewStartMinute,
     this.previewEndMinute,
@@ -20,11 +22,13 @@ class AnalogClockFace extends StatelessWidget {
     this.pulse = 0,
     this.clockHandsMode = 1,
     this.is24h = false,
+    this.hoverMinute,
     this.outerReveal = 0,
   });
 
   final DateTime now;
   final List<Activity> activities;
+  final List<Task> tasks;
   final AmPmHalf viewHalf;
   final int? previewStartMinute;
   final int? previewEndMinute;
@@ -45,6 +49,8 @@ class AnalogClockFace extends StatelessWidget {
   /// Toggled by tapping the rim.
   final double outerReveal;
 
+  final int? hoverMinute;
+
   @override
   Widget build(BuildContext context) => CustomPaint(
         painter: _ClockPainter(
@@ -59,6 +65,8 @@ class AnalogClockFace extends StatelessWidget {
           clockHandsMode: clockHandsMode,
           is24h: is24h,
           outerReveal: outerReveal,
+          tasks: tasks,
+          hoverMinute: hoverMinute,
         ),
       );
 }
@@ -80,10 +88,13 @@ class _ClockPainter extends CustomPainter {
     this.clockHandsMode = 1,
     this.is24h = false,
     this.outerReveal = 0,
+    this.tasks = const [],
+    this.hoverMinute,
   });
 
   final DateTime now;
   final List<Activity> activities;
+  final List<Task> tasks;
   final AmPmHalf viewHalf;
   final int? previewStart;
   final int? previewEnd;
@@ -92,6 +103,7 @@ class _ClockPainter extends CustomPainter {
   final double pulse;
   final int clockHandsMode;
   final bool is24h;
+  final int? hoverMinute;
   final double outerReveal;
 
   @override
@@ -146,6 +158,42 @@ class _ClockPainter extends CustomPainter {
           Color(a.colorValue),
           label: a.title, icon: a.iconKey);
     }
+    
+    // Task arcs (inside activities)
+    final taskInner = r * 0.42;
+    final taskOuter = r * 0.52;
+    for (final t in tasks) {
+      if (t.startMinute != null && t.endMinute != null) {
+        final pCv = activities.where((a) => a.id == t.activityId).firstOrNull?.colorValue;
+        final pC = pCv != null ? Color(pCv) : AppPalette.accent;
+        _drawArc(canvas, center, taskInner, taskOuter, t.startMinute!, t.endMinute!,
+            pC.withValues(alpha: 0.95),
+            label: t.title);
+      }
+    }
+
+    // Ghost Line & Knob
+    if (hoverMinute != null) {
+      final angle = (hoverMinute! / 720) * 2 * math.pi - math.pi / 2;
+      final knobRadius = r * 1.08;
+      
+      // Draw ghost line
+      canvas.drawLine(
+        center, 
+        Offset(center.dx + math.cos(angle) * outerRadius, center.dy + math.sin(angle) * outerRadius),
+        Paint()
+          ..color = AppPalette.accent.withValues(alpha: 0.6)
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+      );
+
+      // Draw knob outside the clock
+      final knobCenter = Offset(center.dx + math.cos(angle) * knobRadius, center.dy + math.sin(angle) * knobRadius);
+      canvas.drawCircle(knobCenter, 10, Paint()..color = AppPalette.accent);
+      canvas.drawCircle(knobCenter, 4, Paint()..color = AppPalette.bg);
+    }
+
     // Pulse ring on the activity happening right now
     if (halfOfNow(now) == viewHalf) {
       final m = minuteOfHalf(now);

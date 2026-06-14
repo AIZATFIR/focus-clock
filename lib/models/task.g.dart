@@ -17,38 +17,53 @@ const TaskSchema = CollectionSchema(
   name: r'Task',
   id: 2998003626758701373,
   properties: {
-    r'createdAt': PropertySchema(
+    r'activityId': PropertySchema(
       id: 0,
+      name: r'activityId',
+      type: IsarType.long,
+    ),
+    r'createdAt': PropertySchema(
+      id: 1,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'deadline': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'deadline',
       type: IsarType.dateTime,
     ),
     r'description': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'description',
       type: IsarType.string,
     ),
+    r'endMinute': PropertySchema(
+      id: 4,
+      name: r'endMinute',
+      type: IsarType.long,
+    ),
     r'importance': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'importance',
       type: IsarType.int,
     ),
     r'isCompleted': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
+    r'startMinute': PropertySchema(
+      id: 7,
+      name: r'startMinute',
+      type: IsarType.long,
+    ),
     r'title': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -89,13 +104,16 @@ void _taskSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.createdAt);
-  writer.writeDateTime(offsets[1], object.deadline);
-  writer.writeString(offsets[2], object.description);
-  writer.writeInt(offsets[3], object.importance);
-  writer.writeBool(offsets[4], object.isCompleted);
-  writer.writeString(offsets[5], object.title);
-  writer.writeDateTime(offsets[6], object.updatedAt);
+  writer.writeLong(offsets[0], object.activityId);
+  writer.writeDateTime(offsets[1], object.createdAt);
+  writer.writeDateTime(offsets[2], object.deadline);
+  writer.writeString(offsets[3], object.description);
+  writer.writeLong(offsets[4], object.endMinute);
+  writer.writeInt(offsets[5], object.importance);
+  writer.writeBool(offsets[6], object.isCompleted);
+  writer.writeLong(offsets[7], object.startMinute);
+  writer.writeString(offsets[8], object.title);
+  writer.writeDateTime(offsets[9], object.updatedAt);
 }
 
 Task _taskDeserialize(
@@ -105,14 +123,17 @@ Task _taskDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = Task();
-  object.createdAt = reader.readDateTime(offsets[0]);
-  object.deadline = reader.readDateTimeOrNull(offsets[1]);
-  object.description = reader.readStringOrNull(offsets[2]);
+  object.activityId = reader.readLongOrNull(offsets[0]);
+  object.createdAt = reader.readDateTime(offsets[1]);
+  object.deadline = reader.readDateTimeOrNull(offsets[2]);
+  object.description = reader.readStringOrNull(offsets[3]);
+  object.endMinute = reader.readLongOrNull(offsets[4]);
   object.id = id;
-  object.importance = reader.readInt(offsets[3]);
-  object.isCompleted = reader.readBool(offsets[4]);
-  object.title = reader.readString(offsets[5]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[6]);
+  object.importance = reader.readInt(offsets[5]);
+  object.isCompleted = reader.readBool(offsets[6]);
+  object.startMinute = reader.readLongOrNull(offsets[7]);
+  object.title = reader.readString(offsets[8]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[9]);
   return object;
 }
 
@@ -124,18 +145,24 @@ P _taskDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 1:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 2:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
-      return (reader.readInt(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readInt(offset)) as P;
     case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
+      return (reader.readLongOrNull(offset)) as P;
+    case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -230,6 +257,75 @@ extension TaskQueryWhere on QueryBuilder<Task, Task, QWhereClause> {
 }
 
 extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'activityId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'activityId',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdEqualTo(
+      int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'activityId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'activityId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'activityId',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> activityIdBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'activityId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterFilterCondition> createdAtEqualTo(
       DateTime value) {
     return QueryBuilder.apply(this, (query) {
@@ -498,6 +594,74 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'endMinute',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'endMinute',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteEqualTo(int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'endMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'endMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'endMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> endMinuteBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'endMinute',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterFilterCondition> idEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -608,6 +772,75 @@ extension TaskQueryFilter on QueryBuilder<Task, Task, QFilterCondition> {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isCompleted',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'startMinute',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'startMinute',
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteEqualTo(
+      int? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'startMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteGreaterThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'startMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteLessThan(
+    int? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'startMinute',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterFilterCondition> startMinuteBetween(
+    int? lower,
+    int? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'startMinute',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -815,6 +1048,18 @@ extension TaskQueryObject on QueryBuilder<Task, Task, QFilterCondition> {}
 extension TaskQueryLinks on QueryBuilder<Task, Task, QFilterCondition> {}
 
 extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
+  QueryBuilder<Task, Task, QAfterSortBy> sortByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByActivityIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> sortByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
@@ -851,6 +1096,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> sortByEndMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'endMinute', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByEndMinuteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'endMinute', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> sortByImportance() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'importance', Sort.asc);
@@ -872,6 +1129,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
   QueryBuilder<Task, Task, QAfterSortBy> sortByIsCompletedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isCompleted', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByStartMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'startMinute', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> sortByStartMinuteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'startMinute', Sort.desc);
     });
   }
 
@@ -901,6 +1170,18 @@ extension TaskQuerySortBy on QueryBuilder<Task, Task, QSortBy> {
 }
 
 extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
+  QueryBuilder<Task, Task, QAfterSortBy> thenByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByActivityIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'activityId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> thenByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'createdAt', Sort.asc);
@@ -934,6 +1215,18 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
   QueryBuilder<Task, Task, QAfterSortBy> thenByDescriptionDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByEndMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'endMinute', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByEndMinuteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'endMinute', Sort.desc);
     });
   }
 
@@ -973,6 +1266,18 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
     });
   }
 
+  QueryBuilder<Task, Task, QAfterSortBy> thenByStartMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'startMinute', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Task, Task, QAfterSortBy> thenByStartMinuteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'startMinute', Sort.desc);
+    });
+  }
+
   QueryBuilder<Task, Task, QAfterSortBy> thenByTitle() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'title', Sort.asc);
@@ -999,6 +1304,12 @@ extension TaskQuerySortThenBy on QueryBuilder<Task, Task, QSortThenBy> {
 }
 
 extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
+  QueryBuilder<Task, Task, QDistinct> distinctByActivityId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'activityId');
+    });
+  }
+
   QueryBuilder<Task, Task, QDistinct> distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
@@ -1018,6 +1329,12 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
     });
   }
 
+  QueryBuilder<Task, Task, QDistinct> distinctByEndMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'endMinute');
+    });
+  }
+
   QueryBuilder<Task, Task, QDistinct> distinctByImportance() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'importance');
@@ -1027,6 +1344,12 @@ extension TaskQueryWhereDistinct on QueryBuilder<Task, Task, QDistinct> {
   QueryBuilder<Task, Task, QDistinct> distinctByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Task, Task, QDistinct> distinctByStartMinute() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'startMinute');
     });
   }
 
@@ -1051,6 +1374,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Task, int?, QQueryOperations> activityIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'activityId');
+    });
+  }
+
   QueryBuilder<Task, DateTime, QQueryOperations> createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'createdAt');
@@ -1069,6 +1398,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
     });
   }
 
+  QueryBuilder<Task, int?, QQueryOperations> endMinuteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'endMinute');
+    });
+  }
+
   QueryBuilder<Task, int, QQueryOperations> importanceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'importance');
@@ -1078,6 +1413,12 @@ extension TaskQueryProperty on QueryBuilder<Task, Task, QQueryProperty> {
   QueryBuilder<Task, bool, QQueryOperations> isCompletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Task, int?, QQueryOperations> startMinuteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'startMinute');
     });
   }
 

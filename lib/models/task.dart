@@ -21,6 +21,17 @@ class Task {
 
   DateTime? updatedAt;
 
+  // ── Scheduling inside Clock ───────────────────────────────────────────────
+  
+  /// The ID of the Activity block this task is assigned to
+  int? activityId;
+
+  /// The start minute of this task within the clock face
+  int? startMinute;
+
+  /// The end minute of this task within the clock face
+  int? endMinute;
+
   /// Returns Eisenhower quadrant:
   /// 0: DO FIRST (Urgent & Important)
   /// 1: SCHEDULE (Not Urgent & Important)

@@ -94,6 +94,9 @@ final eisenhowerTasksProvider = StreamProvider<List<Task>>((ref) {
   return ref.watch(taskRepoProvider).watchAll();
 });
 
+/// The task currently being scheduled into the clock.
+final schedulingTaskProvider = StateProvider<Task?>((_) => null);
+
 /// Chat transcript — survives panel open/close so conversation continues.
 /// "New chat" replaces it with an empty list.
 final aiTranscriptProvider =

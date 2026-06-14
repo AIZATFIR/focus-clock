@@ -187,6 +187,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   bool _dragConflict = false;
   int? _lastPanMinute; // raw minute of previous pan update (crossing detect)
   bool _crossedHalf = false;
+  late final AnimationController _revealCtrl; // Used for slight immersive expand now
   late final AnimationController _pulseCtrl;
 
   int? _hoverMinute;
@@ -221,14 +222,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   @override
   void initState() {
     super.initState();
+    _revealCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 300));
     _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    );
+        vsync: this, duration: const Duration(milliseconds: 2000));
   }
 
   @override
   void dispose() {
+    _revealCtrl.dispose();
     _pulseCtrl.dispose();
     super.dispose();
   }
@@ -256,6 +258,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final clockHandsMode = settings?.clockHandsMode ?? 1;
     final now = nowAsync.valueOrNull ?? DateTime.now();
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
+    final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
+    final schedulingTask = ref.watch(schedulingTaskProvider);
 
     // Pulse only while an activity is live in the viewed half — saves battery.
     final m = minuteOfHalf(now);
@@ -291,17 +295,20 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       onHover: (e) {
                         final centered = _toCenter(e.localPosition, c.biggest);
                         final rDist = centered.distance;
-                        final outer = c.biggest.shortestSide / 2 * 0.95 * _grow;
+                        final outer = c.biggest.shortestSide / 2 * 0.95 * _grow * 1.15; // Include knob radius
                         if (rDist <= outer) {
+                          _revealCtrl.forward();
                           setState(() {
                             _hoverMinute = offsetToMinute(centered);
                             _hoverPos = e.localPosition;
                           });
                         } else {
+                          _revealCtrl.reverse();
                           if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
                         }
                       },
                       onExit: (_) {
+                        _revealCtrl.reverse();
                         if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
                       },
                       child: Stack(
@@ -330,10 +337,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           onPanEnd: (_) => _onPanEnd(half),
                           child: RepaintBoundary(
                             child: AnimatedBuilder(
-                              animation: _pulseCtrl,
+                              animation: Listenable.merge([_pulseCtrl, _revealCtrl]),
                               builder: (context, child) => AnalogClockFace(
                                 now: now,
                                 activities: activities,
+                                tasks: tasks,
                                 viewHalf: half,
                                 previewStartMinute: _draggingActivity == null
                                     ? _dragStart
@@ -348,8 +356,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 pulse: _pulseCtrl.value,
                                 clockHandsMode: clockHandsMode,
                                 is24h: is24h,
-                                // Always expanded now
-                                outerReveal: 1.0,
+                                hoverMinute: _hoverMinute,
+                                // Immerse expand: base 1.0 + up to 0.04 extra
+                                outerReveal: 1.0 + (_revealCtrl.value * 0.04),
                               ),
                             ),
                           ),
@@ -377,6 +386,43 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             _formatHoverMinute(_hoverMinute!, half, is24h),
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.accent),
                           ),
+                        ),
+                      ),
+                    ),
+                  
+                  // Banner for Scheduling
+                  if (schedulingTask != null)
+                    Positioned(
+                      top: 10,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppPalette.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6)),
+                          boxShadow: [
+                            BoxShadow(color: AppPalette.accent.withValues(alpha: 0.2), blurRadius: 12),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline, size: 20, color: AppPalette.accent),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Tap an activity to schedule "${schedulingTask.title}"',
+                                style: const TextStyle(fontSize: 13, color: AppPalette.accent, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18, color: AppPalette.textDim),
+                              onPressed: () => ref.read(schedulingTaskProvider.notifier).state = null,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -608,10 +654,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       int leadMinutes) async {
     if (_draggingActivity != null) return; // ignore tap during drag
     final hit = _hitActivity(p, size, activities);
-    if (hit == null) {
+    if (hit == null) return;
+
+    final a = activities.firstWhere((x) => x.id == hit);
+
+    final schedulingTask = ref.read(schedulingTaskProvider);
+    if (schedulingTask != null) {
+      schedulingTask.activityId = a.id;
+      schedulingTask.startMinute = a.startMinute;
+      schedulingTask.endMinute = a.endMinute;
+      await ref.read(taskRepoProvider).update(schedulingTask);
+      ref.read(schedulingTaskProvider.notifier).state = null;
+      HapticFeedback.lightImpact();
       return;
     }
-    final a = activities.firstWhere((x) => x.id == hit);
+
     await showActivityDetailSheet(context, activity: a, mode: DetailMode.view);
   }
 
@@ -671,6 +728,25 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     await ref
         .read(activityRepoProvider)
         .upsert(_draggingActivity!, notifLeadMinutes: leadMinutes);
+    
+    // Sync child tasks to stay within bounds
+    final tasks = ref.read(eisenhowerTasksProvider).valueOrNull ?? const [];
+    final childTasks = tasks.where((t) => t.activityId == _draggingActivity!.id).toList();
+    for (final t in childTasks) {
+      bool changed = false;
+      if (t.startMinute != null && t.startMinute! < _draggingActivity!.startMinute) {
+        t.startMinute = _draggingActivity!.startMinute;
+        changed = true;
+      }
+      if (t.endMinute != null && t.endMinute! > _draggingActivity!.endMinute) {
+        t.endMinute = _draggingActivity!.endMinute;
+        changed = true;
+      }
+      if (changed) {
+        await ref.read(taskRepoProvider).update(t);
+      }
+    }
+
     HapticFeedback.lightImpact();
     setState(() {
       _draggingActivity = null;

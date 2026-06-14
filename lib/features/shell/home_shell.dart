@@ -8,7 +8,6 @@ import '../../providers/providers.dart';
 import '../../services/ai_service.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
-import '../eisenhower/eisenhower_tab.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
@@ -21,35 +20,44 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final PageController _pc;
   late final TabController _tc;
   bool _showAi = false;
 
+  late final AnimationController _aiAnim;
+
   @override
   void initState() {
     super.initState();
-    final initial = ref.read(tabIndexProvider).clamp(0, 3);
+    final initial = ref.read(tabIndexProvider).clamp(0, 2);
     _pc = PageController(initialPage: initial);
-    _tc = TabController(length: 4, vsync: this, initialIndex: initial);
+    _tc = TabController(length: 3, vsync: this, initialIndex: initial);
+    _aiAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
   }
 
   @override
   void dispose() {
+    _aiAnim.dispose();
     _pc.dispose();
     _tc.dispose();
     super.dispose();
   }
 
-  void _openAi() => setState(() => _showAi = true);
-  void _closeAi() => setState(() => _showAi = false);
+  void _openAi() {
+    setState(() => _showAi = true);
+    _aiAnim.forward();
+  }
+
+  void _closeAi() async {
+    await _aiAnim.reverse();
+    if (mounted) setState(() => _showAi = false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (_showAi) return _AiPage(onClose: _closeAi);
-
     ref.listen<int>(tabIndexProvider, (_, next) {
-      final i = next.clamp(0, 3);
+      final i = next.clamp(0, 2);
       if (_pc.hasClients && _pc.page?.round() != i) {
         _pc.animateToPage(
           i,
@@ -115,48 +123,63 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 text: 'Clock', height: 52),
             Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
                 text: 'Agenda', height: 52),
-            Tab(icon: Icon(Icons.grid_view_rounded, size: 20),
-                text: 'Matrix', height: 52),
           ],
         ),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: PageView(
-              controller: _pc,
-              onPageChanged: (i) =>
-                  ref.read(tabIndexProvider.notifier).state = i,
-              children: const [
-                PresetsTab(),
-                FocusClockTab(),
-                AgendaTab(),
-                EisenhowerTab(),
-              ],
-            ),
-          ),
-          // Wide AI assistant button
-          _WideButton(
-            onTap: _openAi,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _ClockDotsIcon(size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'AI Assistant',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppPalette.accent,
-                  ),
+          Column(
+            children: [
+              Expanded(
+                child: PageView(
+                  controller: _pc,
+                  onPageChanged: (i) =>
+                      ref.read(tabIndexProvider.notifier).state = i,
+                  children: const [
+                    PresetsTab(),
+                    FocusClockTab(),
+                    AgendaTab(),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                const Icon(Icons.keyboard_arrow_up_rounded,
-                    size: 17, color: AppPalette.textDim),
-              ],
-            ),
+              ),
+              // Wide AI assistant button
+              _WideButton(
+                onTap: _openAi,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const _ClockDotsIcon(size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'AI Assistant',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppPalette.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.keyboard_arrow_up_rounded,
+                        size: 17, color: AppPalette.textDim),
+                  ],
+                ),
+              ),
+            ],
           ),
+          
+          if (_showAi || _aiAnim.isAnimating)
+            AnimatedBuilder(
+              animation: _aiAnim,
+              builder: (context, child) {
+                return FractionalTranslation(
+                  translation: Offset(0, 1.0 - _aiAnim.value),
+                  child: ClipPath(
+                    clipper: const RippedPaperClipper(),
+                    child: _AiPage(onClose: _closeAi),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -204,6 +227,39 @@ class _AiPage extends ConsumerWidget {
       body: const AiChatPanel(),
     );
   }
+}
+
+class RippedPaperClipper extends CustomClipper<Path> {
+  const RippedPaperClipper();
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    const double ripHeight = 16.0;
+    path.lineTo(0, ripHeight); // Start slightly below top-left
+    
+    // Create jagged edge along the top
+    const int segments = 40;
+    final double segmentWidth = size.width / segments;
+    
+    for (int i = 0; i < segments; i++) {
+      final x1 = segmentWidth * i + (segmentWidth / 2);
+      final y1 = ripHeight + (i % 2 == 0 ? -6.0 : 8.0); // Jagged up and down
+      final x2 = segmentWidth * (i + 1);
+      final y2 = ripHeight + (i % 3 == 0 ? -3.0 : 3.0);
+      
+      path.quadraticBezierTo(x1, y1, x2, y2);
+    }
+    
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
 // ── Shared wide bottom button ─────────────────────────────────────────────────
