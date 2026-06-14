@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
+import '../models/task.dart';
 import '../core/theme.dart';
 
 class IsarService {
@@ -13,7 +14,7 @@ class IsarService {
   static Future<IsarService> open() async {
     final dir = await getApplicationDocumentsDirectory();
     final isar = await Isar.open(
-      [PresetSchema, ActivitySchema, AppSettingsSchema],
+      [PresetSchema, ActivitySchema, AppSettingsSchema, TaskSchema],
       directory: dir.path,
       inspector: true,
     );

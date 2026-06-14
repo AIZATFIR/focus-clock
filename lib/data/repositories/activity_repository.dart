@@ -190,28 +190,65 @@ class ActivityRepository {
         .watch(fireImmediately: true);
   }
 
-  Future<void> markComplete(int id, bool done) async {
-    final a = await _isar.activitys.get(id);
-    if (a == null) return;
-    a.isCompleted = done;
-    a.updatedAt = DateTime.now();
-    await _isar.writeTxn(() => _isar.activitys.put(a));
+  Future<void> markComplete(Activity activity, bool done) async {
+    final dbActivity = await _isar.activitys.get(activity.id);
+    if (dbActivity == null) return;
+    
+    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)..isCompleted = done;
+      await _isar.writeTxn(() => _isar.activitys.put(clone));
+    } else {
+      dbActivity.isCompleted = done;
+      dbActivity.updatedAt = DateTime.now();
+      await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
+    }
   }
 
-  Future<void> setImportance(int id, int importance) async {
-    final a = await _isar.activitys.get(id);
-    if (a == null) return;
-    a.importance = importance;
-    a.updatedAt = DateTime.now();
-    await _isar.writeTxn(() => _isar.activitys.put(a));
+  Future<void> setImportance(Activity activity, int importance) async {
+    final dbActivity = await _isar.activitys.get(activity.id);
+    if (dbActivity == null) return;
+
+    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)..importance = importance;
+      await _isar.writeTxn(() => _isar.activitys.put(clone));
+    } else {
+      dbActivity.importance = importance;
+      dbActivity.updatedAt = DateTime.now();
+      await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
+    }
   }
 
-  Future<void> setDeadline(int id, DateTime? deadline) async {
-    final a = await _isar.activitys.get(id);
-    if (a == null) return;
-    a.deadline = deadline;
-    a.updatedAt = DateTime.now();
-    await _isar.writeTxn(() => _isar.activitys.put(a));
+  Future<void> setDeadline(Activity activity, DateTime? deadline) async {
+    final dbActivity = await _isar.activitys.get(activity.id);
+    if (dbActivity == null) return;
+
+    if (dbActivity.recurrence != 'none' && dateOnly(dbActivity.date) != dateOnly(activity.date)) {
+      final clone = _cloneForSpecificDate(dbActivity, activity.date)..deadline = deadline;
+      await _isar.writeTxn(() => _isar.activitys.put(clone));
+    } else {
+      dbActivity.deadline = deadline;
+      dbActivity.updatedAt = DateTime.now();
+      await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
+    }
+  }
+
+  Activity _cloneForSpecificDate(Activity dbActivity, DateTime targetDate) {
+    return Activity()
+      ..presetId = dbActivity.presetId
+      ..iconKey = dbActivity.iconKey
+      ..title = dbActivity.title
+      ..startMinute = dbActivity.startMinute
+      ..endMinute = dbActivity.endMinute
+      ..ampmHalf = dbActivity.ampmHalf
+      ..date = dateOnly(targetDate)
+      ..description = dbActivity.description
+      ..colorValue = dbActivity.colorValue
+      ..recurrence = 'none' // Break recurrence for this specific instance
+      ..importance = dbActivity.importance
+      ..deadline = dbActivity.deadline
+      ..isCompleted = dbActivity.isCompleted
+      ..createdAt = DateTime.now()
+      ..updatedAt = DateTime.now();
   }
 
   Future<List<Activity>> getByDate(DateTime date) async {

@@ -546,12 +546,12 @@ Key constraints:
     if (existing == null) return {'error': 'Activity $id not found'};
 
     if (args['importance'] != null) {
-      await _activityRepo.setImportance(id, (args['importance'] as num).toInt());
+      await _activityRepo.setImportance(existing, (args['importance'] as num).toInt());
     }
     if (args.containsKey('deadline')) {
       final dl = args['deadline'] as String?;
       await _activityRepo.setDeadline(
-          id, dl != null ? DateTime.parse(dl) : null);
+          existing, dl != null ? DateTime.parse(dl) : null);
     }
     return {'success': true, 'id': id};
   }
@@ -676,7 +676,7 @@ Key constraints:
       'message':
           'Blueprint generated: ${created.length} blocks for $dateStr. '
           'Deep Work at peak energy morning, Intentional Rest for memory consolidation, '
-          'Sleep at ${sleepH}:00 (90-min cycles).',
+          'Sleep at $sleepH:00 (90-min cycles).',
     };
   }
 

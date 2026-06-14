@@ -46,8 +46,8 @@ class PresetsTab extends ConsumerWidget {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 96),
                     itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (_, i) => _PresetCard(preset: list[i]),
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) => _PresetCard(preset: list[i]),
                   ),
                 ),
               ],

@@ -55,7 +55,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
       _append(ChatMessage(
         role: 'model',
         text:
-            '⚠️ API key belum diset. Buka Settings → AI Assistant → masukkan API key.',
+            'Mode AI sedang offline. Silakan masukkan API Key Google Gemini di menu Settings.',
       ));
       return;
     }
@@ -419,7 +419,7 @@ class _ThreeDotsState extends State<_ThreeDots>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _c,
-      builder: (_, __) {
+      builder: (context, child) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {

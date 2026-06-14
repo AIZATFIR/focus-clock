@@ -5,9 +5,11 @@ import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../data/repositories/settings_repository.dart';
+import '../data/repositories/task_repository.dart';
 import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
+import '../models/task.dart';
 import '../services/ai_service.dart';
 import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
@@ -26,6 +28,10 @@ final activityRepoProvider = Provider<ActivityRepository>(
     ref.watch(isarProvider),
     ref.watch(notificationServiceProvider),
   ),
+);
+
+final taskRepoProvider = Provider<TaskRepository>(
+  (ref) => TaskRepository(ref.watch(isarProvider)),
 );
 
 final settingsRepoProvider = Provider<SettingsRepository>(
@@ -83,9 +89,9 @@ final gcalServiceProvider = Provider<GCalService>((_) => GCalService());
 /// Whether the user is currently signed into GCal (updated after sign-in/out).
 final gcalSignedInProvider = StateProvider<bool>((_) => false);
 
-/// Upcoming activities for Eisenhower Matrix (today + 14 days).
-final eisenhowerActivitiesProvider = StreamProvider<List<Activity>>((ref) {
-  return ref.watch(activityRepoProvider).watchUpcoming(days: 14);
+/// Tasks for Eisenhower Matrix.
+final eisenhowerTasksProvider = StreamProvider<List<Task>>((ref) {
+  return ref.watch(taskRepoProvider).watchAll();
 });
 
 /// Chat transcript — survives panel open/close so conversation continues.

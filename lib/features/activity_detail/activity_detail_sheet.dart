@@ -10,7 +10,6 @@ import '../../core/theme.dart';
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../providers/providers.dart';
-import '../../services/gcal_service.dart';
 import '../../widgets/color_swatch_picker.dart';
 
 enum DetailMode { view, edit, create }

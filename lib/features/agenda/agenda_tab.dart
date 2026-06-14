@@ -241,22 +241,23 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   // ── Grid ──────────────────────────────────────────────────────────────────
 
   Widget _buildGrid(List<Activity> activities) {
-    // Create-preview overlay
-    Widget? createPreview;
+    final createPreviews = <Widget>[];
     if (_createStartMin != null && _createEndMin != null) {
       final top = _createStartMin! / 60 * _hourH;
       final h = ((_createEndMin! - _createStartMin!) / 60 * _hourH)
           .clamp(20.0, double.infinity);
-      createPreview = Positioned(
-        top: top,
-        left: 2,
-        right: 4,
-        height: h,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppPalette.accent.withValues(alpha: 0.25),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: AppPalette.accent, width: 1.5),
+      createPreviews.add(
+        Positioned(
+          top: top,
+          left: 2,
+          right: 4,
+          height: h,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppPalette.accent.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppPalette.accent, width: 1.5),
+            ),
           ),
         ),
       );
@@ -269,7 +270,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
           painter: _GridPainter(hourH: _hourH),
         ),
         ...activities.map((a) => _buildBlock(a)),
-        if (createPreview != null) createPreview,
+        ...createPreviews,
       ],
     );
   }
@@ -364,7 +365,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         ref.read(activityRepoProvider).markComplete(
-                            a.id, !a.isCompleted);
+                            a, !a.isCompleted);
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(left: 4),
@@ -425,7 +426,6 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
 
   void _onCreateDragUpdate(DragUpdateDetails d) {
     if (_createStartMin == null) return;
-    final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
     // accumulate dy from start position
     final newEndMin = (_createStartMin! + d.localPosition.dy / _hourH * 60)
         .round()

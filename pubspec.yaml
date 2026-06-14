@@ -27,6 +27,8 @@ dependencies:
   googleapis: ^13.2.0
   flutter_markdown: ^0.7.7+1
   google_fonts: ^8.1.0
+  window_manager: ^0.5.1
+  tray_manager: ^0.5.3
 
 dev_dependencies:
   flutter_test:
@@ -34,6 +36,27 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
   isar_generator: ^3.1.0+1
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  web:
+    generate: true
+    image_path: "assets/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/app_icon.png"
+  macos:
+    generate: true
+    image_path: "assets/app_icon.png"
+  linux:
+    generate: true
+    image_path: "assets/app_icon.png"
+  image_path: "assets/app_icon.png"
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/app_icon.png
+    - assets/app_icon.ico

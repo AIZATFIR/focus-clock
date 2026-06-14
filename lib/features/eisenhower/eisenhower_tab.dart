@@ -3,42 +3,101 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../core/time_math.dart';
-import '../../models/activity.dart';
+import '../../models/task.dart';
 import '../../providers/providers.dart';
-import '../activity_detail/activity_detail_sheet.dart';
 
-class EisenhowerTab extends ConsumerWidget {
+class EisenhowerTab extends ConsumerStatefulWidget {
   const EisenhowerTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(eisenhowerActivitiesProvider);
-    return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
-      data: (activities) => _MatrixView(activities: activities),
+  ConsumerState<EisenhowerTab> createState() => _EisenhowerTabState();
+}
+
+class _EisenhowerTabState extends ConsumerState<EisenhowerTab> {
+  final _textCtrl = TextEditingController();
+
+  void _addTask() {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty) return;
+    final t = Task()..title = text;
+    ref.read(taskRepoProvider).add(t);
+    _textCtrl.clear();
+  }
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(eisenhowerTasksProvider);
+    return Column(
+      children: [
+        // Quick add task
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _textCtrl,
+                  onSubmitted: (_) => _addTask(),
+                  decoration: InputDecoration(
+                    hintText: 'Add a new task...',
+                    filled: true,
+                    fillColor: AppPalette.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FloatingActionButton(
+                onPressed: _addTask,
+                elevation: 0,
+                mini: true,
+                backgroundColor: AppPalette.accent,
+                child: const Icon(Icons.add, color: AppPalette.bg),
+              ),
+            ],
+          ),
+        ),
+        // Matrix
+        Expanded(
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+            data: (tasks) => _MatrixView(tasks: tasks),
+          ),
+        ),
+      ],
     );
   }
 }
 
 class _MatrixView extends ConsumerWidget {
-  const _MatrixView({required this.activities});
-  final List<Activity> activities;
+  const _MatrixView({required this.tasks});
+  final List<Task> tasks;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending = activities.where((a) => !a.isCompleted).toList();
+    final pending = tasks.where((t) => !t.isCompleted).toList();
 
     // Classify into quadrants
-    final q = List.generate(4, (_) => <Activity>[]);
-    for (final a in pending) {
-      q[a.eisenhowerQuadrant].add(a);
+    final q = List.generate(4, (_) => <Task>[]);
+    for (final t in pending) {
+      q[t.eisenhowerQuadrant].add(t);
     }
 
-    final completed = activities.where((a) => a.isCompleted).toList();
+    final completed = tasks.where((t) => t.isCompleted).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
         _header(),
         const SizedBox(height: 16),
@@ -47,7 +106,7 @@ class _MatrixView extends ConsumerWidget {
           title: 'DO FIRST',
           subtitle: 'Urgent + Important',
           color: const Color(0xFFE5484D),
-          activities: q[0],
+          tasks: q[0],
           ref: ref,
         ),
         const SizedBox(height: 16),
@@ -56,7 +115,7 @@ class _MatrixView extends ConsumerWidget {
           title: 'SCHEDULE',
           subtitle: 'Not Urgent + Important',
           color: AppPalette.accent,
-          activities: q[1],
+          tasks: q[1],
           ref: ref,
         ),
         const SizedBox(height: 16),
@@ -65,7 +124,7 @@ class _MatrixView extends ConsumerWidget {
           title: 'DELEGATE',
           subtitle: 'Urgent + Not Important',
           color: const Color(0xFFE6B800),
-          activities: q[2],
+          tasks: q[2],
           ref: ref,
         ),
         const SizedBox(height: 16),
@@ -74,7 +133,7 @@ class _MatrixView extends ConsumerWidget {
           title: 'ELIMINATE',
           subtitle: 'Not Urgent + Not Important',
           color: AppPalette.textDim,
-          activities: q[3],
+          tasks: q[3],
           ref: ref,
         ),
         if (completed.isNotEmpty) ...[
@@ -99,14 +158,14 @@ class _MatrixView extends ConsumerWidget {
     );
   }
 
-  Widget _completedSection(BuildContext context, List<Activity> done, WidgetRef ref) {
+  Widget _completedSection(BuildContext context, List<Task> done, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Completed',
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppPalette.textDim)),
         const SizedBox(height: 12),
-        ...done.map((a) => _ActivityTile(activity: a, ref: ref, dimmed: true)),
+        ...done.map((t) => _TaskTile(task: t, ref: ref, dimmed: true)),
       ],
     );
   }
@@ -120,7 +179,7 @@ class _Quadrant extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.color,
-    required this.activities,
+    required this.tasks,
     required this.ref,
   });
   
@@ -128,26 +187,16 @@ class _Quadrant extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
-  final List<Activity> activities;
+  final List<Task> tasks;
   final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
-    return DragTarget<Activity>(
+    return DragTarget<Task>(
       onWillAcceptWithDetails: (details) => details.data.eisenhowerQuadrant != index,
       onAcceptWithDetails: (details) async {
-        final a = details.data;
-        final isImportant = index == 0 || index == 1;
-        final isUrgent = index == 0 || index == 2;
-
-        final repo = ref.read(activityRepoProvider);
-        await repo.setImportance(a.id, isImportant ? 1 : 0);
-        
-        if (isUrgent && !a.isUrgent) {
-          await repo.setDeadline(a.id, dateOnly(DateTime.now())); // make urgent
-        } else if (!isUrgent && a.isUrgent) {
-          await repo.setDeadline(a.id, null); // remove urgency
-        }
+        final t = details.data;
+        await ref.read(taskRepoProvider).updateEisenhower(t.id, index);
       },
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
@@ -196,21 +245,21 @@ class _Quadrant extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (activities.isNotEmpty)
+                    if (tasks.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text('${activities.length}',
+                        child: Text('${tasks.length}',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color)),
                       ),
                   ],
                 ),
               ),
-              // Activities
-              if (activities.isEmpty)
+              // Tasks
+              if (tasks.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Center(
@@ -222,7 +271,7 @@ class _Quadrant extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Column(
-                    children: activities.map((a) => _DraggableActivityTile(activity: a, ref: ref)).toList(),
+                    children: tasks.map((t) => _DraggableTaskTile(task: t, ref: ref)).toList(),
                   ),
                 ),
             ],
@@ -233,26 +282,26 @@ class _Quadrant extends StatelessWidget {
   }
 }
 
-// ── Draggable Activity tile ─────────────────────────────────────────────────────────────
+// ── Draggable Task tile ─────────────────────────────────────────────────────────────
 
-class _DraggableActivityTile extends StatelessWidget {
-  const _DraggableActivityTile({required this.activity, required this.ref});
+class _DraggableTaskTile extends StatelessWidget {
+  const _DraggableTaskTile({required this.task, required this.ref});
   
-  final Activity activity;
+  final Task task;
   final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
-    final tile = _ActivityTile(activity: activity, ref: ref);
+    final tile = _TaskTile(task: task, ref: ref);
     
-    return LongPressDraggable<Activity>(
-      data: activity,
+    return LongPressDraggable<Task>(
+      data: task,
       hapticFeedbackOnStart: true,
       delay: const Duration(milliseconds: 200),
       feedback: Material(
         color: Colors.transparent,
         child: Container(
-          width: MediaQuery.of(context).size.width - 32, // Match list width minus padding
+          width: MediaQuery.of(context).size.width - 32,
           decoration: BoxDecoration(
             color: AppPalette.card,
             borderRadius: BorderRadius.circular(12),
@@ -272,113 +321,92 @@ class _DraggableActivityTile extends StatelessWidget {
   }
 }
 
-
-class _ActivityTile extends StatelessWidget {
-  const _ActivityTile({required this.activity, required this.ref, this.dimmed = false});
+class _TaskTile extends StatelessWidget {
+  const _TaskTile({required this.task, required this.ref, this.dimmed = false});
   
-  final Activity activity;
+  final Task task;
   final WidgetRef ref;
   final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
-    final a = activity;
-    final deadlineStr = a.deadline != null ? _deadlineLabel(a.deadline!) : null;
+    final t = task;
+    final deadlineStr = t.deadline != null ? _deadlineLabel(t.deadline!) : null;
 
-    return InkWell(
-      onTap: () => showActivityDetailSheet(context, activity: a),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // Color dot
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: Color(a.colorValue).withValues(alpha: dimmed ? 0.4 : 1),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Title + deadline
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    a.title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: dimmed ? AppPalette.textDim : AppPalette.text,
-                      decoration: dimmed ? TextDecoration.lineThrough : null,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          // Drag handle
+          Icon(Icons.drag_indicator, size: 16, color: AppPalette.textDim.withValues(alpha: 0.5)),
+          const SizedBox(width: 8),
+          // Title + deadline
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t.title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: dimmed ? AppPalette.textDim : AppPalette.text,
+                    decoration: dimmed ? TextDecoration.lineThrough : null,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(
-                        _timeLabel(a),
-                        style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
-                      ),
-                      if (deadlineStr != null) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: a.isUrgent
-                                ? AppPalette.danger.withValues(alpha: 0.15)
-                                : AppPalette.accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            deadlineStr,
-                            style: TextStyle(
-                                fontSize: 10,
-                                color: a.isUrgent ? AppPalette.danger : AppPalette.accent,
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (deadlineStr != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: t.isUrgent
+                          ? AppPalette.danger.withValues(alpha: 0.15)
+                          : AppPalette.accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      deadlineStr,
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: t.isUrgent ? AppPalette.danger : AppPalette.accent,
+                          fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ],
+              ],
+            ),
+          ),
+          // Complete toggle
+          GestureDetector(
+            onTap: () => ref.read(taskRepoProvider).toggleCompletion(t.id),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.transparent,
+              child: Icon(
+                t.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                size: 22,
+                color: t.isCompleted ? Colors.greenAccent.shade400 : AppPalette.textDim,
               ),
             ),
-            // Complete toggle
-            GestureDetector(
-              onTap: () => ref.read(activityRepoProvider).markComplete(a.id, !a.isCompleted),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.transparent,
-                child: Icon(
-                  a.isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                  size: 22,
-                  color: a.isCompleted ? Colors.greenAccent.shade400 : AppPalette.textDim,
-                ),
+          ),
+          // Delete task button
+          GestureDetector(
+            onTap: () => ref.read(taskRepoProvider).delete(t.id),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.transparent,
+              child: Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: AppPalette.textDim.withValues(alpha: 0.5),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  String _timeLabel(Activity a) {
-    final h = (a.ampmHalf == AmPmHalf.pm ? 12 : 0) + a.startMinute ~/ 60;
-    final m = (a.startMinute % 60).toString().padLeft(2, '0');
-    final suffix = a.ampmHalf == AmPmHalf.pm ? 'PM' : 'AM';
-    return '${h.toString().padLeft(2, '0')}:$m $suffix ${_dateShort(a.date)}';
-  }
-
-  String _dateShort(DateTime d) {
-    final now = dateOnly(DateTime.now());
-    if (d == now) return '· Today';
-    if (d == now.add(const Duration(days: 1))) return '· Tomorrow';
-    return '· ${d.day}/${d.month}';
   }
 
   String _deadlineLabel(DateTime dl) {

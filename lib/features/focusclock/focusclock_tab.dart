@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/theme.dart';
@@ -27,7 +27,7 @@ Future<Object?> _showPresetPicker(BuildContext context) async {
 }
 
 class _PresetPickerSheet extends ConsumerStatefulWidget {
-  const _PresetPickerSheet({super.key});
+  const _PresetPickerSheet();
 
   @override
   ConsumerState<_PresetPickerSheet> createState() => _PresetPickerSheetState();
@@ -188,7 +188,35 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   int? _lastPanMinute; // raw minute of previous pan update (crossing detect)
   bool _crossedHalf = false;
   late final AnimationController _pulseCtrl;
-  late final AnimationController _revealCtrl;
+
+  int? _hoverMinute;
+  Offset? _hoverPos;
+
+  void _snapToNextAvailable(DateTime now, List<Activity> activities) {
+    if (_draggingActivity != null) return;
+    int targetMinute = snap5(minuteOfHalf(now));
+    setState(() {
+      _dragStart = targetMinute;
+      _dragEnd = (targetMinute + 15).clamp(0, 720);
+      _dragConflict = _hasConflict(_dragStart!, _dragEnd!, activities);
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  String _formatHoverMinute(int minute, AmPmHalf half, bool is24h) {
+    final m = minute % 60;
+    var h = (minute ~/ 60);
+    if (half == AmPmHalf.pm) {
+      if (is24h) {
+        h += 12;
+      } else if (h == 0) {
+        h = 12;
+      }
+    } else {
+      if (!is24h && h == 0) h = 12;
+    }
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
 
   @override
   void initState() {
@@ -197,35 +225,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     );
-    _revealCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 340),
-    );
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    _revealCtrl.dispose();
     super.dispose();
   }
 
-  double get _reveal =>
-      Curves.easeOutCubic.transform(_revealCtrl.value);
-
   /// Current geometry scale — keeps hit-testing in sync with the painter.
-  double get _grow => clockGrowFactor(_reveal);
-
-  void _toggleReveal() {
-    final opening = _revealCtrl.value < 0.5;
-    if (opening) {
-      _revealCtrl.forward();
-    } else {
-      _revealCtrl.reverse();
-    }
-    SystemSound.play(SystemSoundType.click);
-    HapticFeedback.lightImpact();
-  }
+  double get _grow => clockGrowFactor(1.0);
 
   /// True if [start, end) overlaps any activity (excluding [excludeId]).
   bool _hasConflict(int start, int end, List<Activity> activities,
@@ -245,7 +254,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final settings = ref.watch(settingsProvider).valueOrNull;
     final is24h = settings?.is24h ?? false;
     final clockHandsMode = settings?.clockHandsMode ?? 1;
-    final showMinuteLabels = settings?.showMinuteLabels ?? false;
     final now = nowAsync.valueOrNull ?? DateTime.now();
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
 
@@ -260,7 +268,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       _pulseCtrl.value = 0;
     }
 
-    return LayoutBuilder(builder: (context, _) {
+    return Listener(
+      onPointerSignal: (e) {
+        if (e is PointerScrollEvent) {
+          if (e.scrollDelta.dy < 0) {
+            _snapToNextAvailable(now, activities);
+          }
+        }
+      },
+      child: LayoutBuilder(builder: (context, _) {
       return Stack(
         children: [
           // Clock area — full height (AI is now a separate page)
@@ -271,11 +287,31 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 child: Padding(
                   padding: const EdgeInsets.all(4),
                   child: LayoutBuilder(
-                    builder: (context, c) => DragTarget<Preset>(
-                      onAcceptWithDetails: (details) =>
-                          _onPresetDropped(details.data),
-                      builder: (ctx, candidate, rejected) {
-                        return GestureDetector(
+                    builder: (context, c) => MouseRegion(
+                      onHover: (e) {
+                        final centered = _toCenter(e.localPosition, c.biggest);
+                        final rDist = centered.distance;
+                        final outer = c.biggest.shortestSide / 2 * 0.95 * _grow;
+                        if (rDist <= outer) {
+                          setState(() {
+                            _hoverMinute = offsetToMinute(centered);
+                            _hoverPos = e.localPosition;
+                          });
+                        } else {
+                          if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
+                        }
+                      },
+                      onExit: (_) {
+                        if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
+                      },
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: DragTarget<Preset>(
+                              onAcceptWithDetails: (details) =>
+                                  _onPresetDropped(details.data),
+                              builder: (ctx, candidate, rejected) {
+                                return GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTapUp: (e) => _onTapUp(e.localPosition, c.biggest,
                               activities, settings?.notifLeadMinutes ?? 1),
@@ -294,9 +330,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           onPanEnd: (_) => _onPanEnd(half),
                           child: RepaintBoundary(
                             child: AnimatedBuilder(
-                              animation:
-                                  Listenable.merge([_pulseCtrl, _revealCtrl]),
-                              builder: (_, __) => AnalogClockFace(
+                              animation: _pulseCtrl,
+                              builder: (context, child) => AnalogClockFace(
                                 now: now,
                                 activities: activities,
                                 viewHalf: half,
@@ -313,9 +348,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 pulse: _pulseCtrl.value,
                                 clockHandsMode: clockHandsMode,
                                 is24h: is24h,
-                                // Settings can pin the minute ring on
-                                outerReveal:
-                                    showMinuteLabels ? 1.0 : _reveal,
+                                // Always expanded now
+                                outerReveal: 1.0,
                               ),
                             ),
                           ),
@@ -323,10 +357,37 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       },
                     ),
                   ),
-                ),
+                  if (_hoverMinute != null && _hoverPos != null)
+                    Positioned(
+                      left: _hoverPos!.dx,
+                      top: _hoverPos!.dy - 30,
+                      child: FractionalTranslation(
+                        translation: const Offset(-0.5, -1.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppPalette.stroke),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: Text(
+                            _formatHoverMinute(_hoverMinute!, half, is24h),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.accent),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
+        ),
+      ),
+    ),
+  ),
 
           // Current time — quiet chip, top right
           Positioned(
@@ -422,7 +483,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
         ],
       );
-    });
+    }),
+    );
   }
 
   Offset _toCenter(Offset local, Size size) => local - size.center(Offset.zero);
@@ -438,13 +500,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       if (minute >= a.startMinute && minute < a.endMinute) return a.id;
     }
     return null;
-  }
-
-  /// Tap landed on the rim band (ticks/numbers) outside the activity arcs.
-  bool _hitRim(Offset local, Size size) {
-    final r = _toCenter(local, size).distance;
-    final half = size.shortestSide / 2;
-    return r > half * 0.85 * _grow && r <= half * 1.1;
   }
 
   // === Pan = drag-create new activity ===
@@ -489,9 +544,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         // Dragged backward — enforce minimum 5min
         _dragEnd = (_dragStart! + 5).clamp(0, 720);
       }
-      // Conflict check covers only this half; sheet validates full span on save
       _dragConflict = _hasConflict(
           _dragStart!, _dragEnd!.clamp(0, 720), activities);
+      _hoverPos = p;
+      _hoverMinute = raw;
     });
     if (_dragEnd != prevEnd) HapticFeedback.selectionClick();
   }
@@ -503,6 +559,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final date = ref.read(currentDateProvider);
     final now = DateTime.now();
     setState(() {
+      _hoverPos = null;
+      _hoverMinute = null;
       _dragStart = null;
       _dragEnd = null;
       _crossedHalf = false;
@@ -551,7 +609,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (_draggingActivity != null) return; // ignore tap during drag
     final hit = _hitActivity(p, size, activities);
     if (hit == null) {
-      if (_hitRim(p, size)) _toggleReveal();
       return;
     }
     final a = activities.firstWhere((x) => x.id == hit);
@@ -598,6 +655,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     setState(() {
       _draggingActivity!.startMinute = newStart;
       _draggingActivity!.endMinute = (newStart + duration).clamp(0, 720);
+      _hoverPos = p;
+      _hoverMinute = offsetToMinute(centered);
       _dragConflict = _hasConflict(
         _draggingActivity!.startMinute,
         _draggingActivity!.endMinute,

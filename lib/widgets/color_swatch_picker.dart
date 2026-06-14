@@ -14,22 +14,31 @@ class ColorSwatchPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: 8,
+        runSpacing: 8,
         children: presetColors.map((c) {
           final selected = c == value;
           return GestureDetector(
             onTap: () => onChanged(c),
             child: Container(
-              width: 36,
-              height: 36,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: Color(c),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: selected ? AppPalette.accent : Colors.transparent,
-                  width: 3,
+                  color: selected ? Colors.white : Colors.transparent,
+                  width: selected ? 2.5 : 0,
                 ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: Color(c).withValues(alpha: 0.5),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
               ),
             ),
           );
