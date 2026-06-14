@@ -12,6 +12,8 @@ import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
 import '../weekly_review/weekly_review_screen.dart';
+import 'left_panel.dart';
+import 'right_panel.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
@@ -128,42 +130,52 @@ class _HomeShellState extends ConsumerState<HomeShell>
       ),
       body: Stack(
         children: [
-          Column(
+          Row(
             children: [
+              if (MediaQuery.of(context).size.width >= 900)
+                const LeftPanel(),
               Expanded(
-                child: PageView(
-                  controller: _pc,
-                  onPageChanged: (i) =>
-                      ref.read(tabIndexProvider.notifier).state = i,
-                  children: const [
-                    PresetsTab(),
-                    FocusClockTab(),
-                    AgendaTab(),
-                  ],
-                ),
-              ),
-              // Wide AI assistant button
-              _WideButton(
-                onTap: _openAi,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
                   children: [
-                    const _ClockDotsIcon(size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'AI Assistant',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppPalette.accent,
+                    Expanded(
+                      child: PageView(
+                        controller: _pc,
+                        onPageChanged: (i) =>
+                            ref.read(tabIndexProvider.notifier).state = i,
+                        children: const [
+                          PresetsTab(),
+                          FocusClockTab(),
+                          AgendaTab(),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.keyboard_arrow_up_rounded,
-                        size: 17, color: AppPalette.textDim),
+                    // Wide AI assistant button
+                    _WideButton(
+                      onTap: _openAi,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const _ClockDotsIcon(size: 16),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'AI Assistant',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppPalette.accent,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.keyboard_arrow_up_rounded,
+                              size: 17, color: AppPalette.textDim),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
+              if (MediaQuery.of(context).size.width >= 900)
+                const RightPanel(),
             ],
           ),
           
@@ -204,7 +216,7 @@ class _AiPage extends ConsumerWidget {
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ClockDotsIcon(size: 18),
+            Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
             SizedBox(width: 8),
             Text('AI Assistant',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
@@ -284,18 +296,21 @@ class _WideButtonState extends State<_WideButton> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 80),
-        curve: Curves.easeOut,
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(16, 13, 16, 13 + bottom),
-        decoration: BoxDecoration(
-          color: _pressed
-              ? AppPalette.accent.withValues(alpha: 0.06)
-              : AppPalette.card,
-          border: const Border(top: BorderSide(color: AppPalette.stroke)),
+      child: ClipPath(
+        clipper: const RippedPaperClipper(),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          curve: Curves.easeOut,
+          width: double.infinity,
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 13 + bottom), // increased top padding for clip
+          decoration: BoxDecoration(
+            color: _pressed
+                ? AppPalette.accent.withValues(alpha: 0.06)
+                : AppPalette.card,
+            border: const Border(top: BorderSide(color: AppPalette.stroke)),
+          ),
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     );
   }

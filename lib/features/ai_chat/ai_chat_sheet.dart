@@ -212,7 +212,8 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
           child: Row(
             children: [
-              const Text('✨ ', style: TextStyle(fontSize: 16)),
+              const Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
+              const SizedBox(width: 8),
               const Text(
                 'AI Assistant',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
@@ -223,7 +224,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                 message: 'Generate Fitrah Blueprint',
                 child: IconButton(
                   onPressed: () => _showBlueprintDialog(context),
-                  icon: const Text('🌅', style: TextStyle(fontSize: 16)),
+                  icon: const Icon(Icons.psychology, size: 20, color: AppPalette.accent),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
@@ -340,7 +341,7 @@ class _Bubble extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: const Center(
-                  child: Text('✨', style: TextStyle(fontSize: 14))),
+                  child: Icon(Icons.auto_awesome, size: 14, color: AppPalette.accent)),
             ),
           ],
           Flexible(

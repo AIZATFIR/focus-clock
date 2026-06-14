@@ -292,53 +292,53 @@ class _DraggableTaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tile = _TaskTile(task: task, ref: ref);
-    
-    return LongPressDraggable<Task>(
-      data: task,
-      hapticFeedbackOnStart: true,
-      delay: const Duration(milliseconds: 200),
-      feedback: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: MediaQuery.of(context).size.width - 32,
-          decoration: BoxDecoration(
-            color: AppPalette.card,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, spreadRadius: 4),
-            ],
-          ),
-          child: tile,
-        ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: tile,
-      ),
-      child: tile,
-    );
+    return _TaskTile(task: task, ref: ref, isDraggable: true);
   }
 }
 
 class _TaskTile extends StatelessWidget {
-  const _TaskTile({required this.task, required this.ref, this.dimmed = false});
+  const _TaskTile({required this.task, required this.ref, this.dimmed = false, this.isDraggable = false});
   
   final Task task;
   final WidgetRef ref;
   final bool dimmed;
+  final bool isDraggable;
 
   @override
   Widget build(BuildContext context) {
     final t = task;
     final deadlineStr = t.deadline != null ? _deadlineLabel(t.deadline!) : null;
 
+    final handle = Icon(Icons.drag_indicator, size: 20, color: AppPalette.textDim.withValues(alpha: 0.5));
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           // Drag handle
-          Icon(Icons.drag_indicator, size: 16, color: AppPalette.textDim.withValues(alpha: 0.5)),
+          if (isDraggable)
+            Draggable<Task>(
+              data: t,
+              feedback: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: MediaQuery.of(context).size.width - 32,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppPalette.card,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, spreadRadius: 4),
+                    ],
+                  ),
+                  child: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                ),
+              ),
+              childWhenDragging: const Opacity(opacity: 0.3, child: Icon(Icons.drag_indicator, size: 20, color: AppPalette.textDim)),
+              child: MouseRegion(cursor: SystemMouseCursors.grab, child: handle),
+            )
+          else
+            handle,
           const SizedBox(width: 8),
           // Title + deadline
           Expanded(

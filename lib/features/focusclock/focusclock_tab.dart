@@ -187,6 +187,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   bool _dragConflict = false;
   int? _lastPanMinute; // raw minute of previous pan update (crossing detect)
   bool _crossedHalf = false;
+  bool _isPrecisionMode = true;
   late final AnimationController _revealCtrl; // Used for slight immersive expand now
   late final AnimationController _pulseCtrl;
 
@@ -293,6 +294,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                   child: LayoutBuilder(
                     builder: (context, c) => MouseRegion(
                       onHover: (e) {
+                        if (!_isPrecisionMode) return;
                         final centered = _toCenter(e.localPosition, c.biggest);
                         final rDist = centered.distance;
                         final outer = c.biggest.shortestSide / 2 * 0.95 * _grow * 1.15; // Include knob radius
@@ -320,6 +322,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                               builder: (ctx, candidate, rejected) {
                                 return GestureDetector(
                           behavior: HitTestBehavior.opaque,
+                          onSecondaryTap: () => setState(() {
+                            _isPrecisionMode = !_isPrecisionMode;
+                            if (!_isPrecisionMode) {
+                              _hoverMinute = null;
+                              _hoverPos = null;
+                            }
+                          }),
                           onTapUp: (e) => _onTapUp(e.localPosition, c.biggest,
                               activities, settings?.notifLeadMinutes ?? 1),
                           onDoubleTapDown: (e) => _onDoubleTap(
@@ -514,16 +523,48 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
             ),
           ),
 
-          // AM/PM — small toggle, bottom right of the clock
+          // AM/PM & Precision Mode — bottom right
           Positioned(
             right: 14,
             bottom: 12,
-            child: _AmPmMini(
-              half: half,
-              onChanged: (h) {
-                HapticFeedback.selectionClick();
-                ref.read(ampmHalfProvider.notifier).state = h;
-              },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Precision Mode Toggle
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      _isPrecisionMode = !_isPrecisionMode;
+                      if (!_isPrecisionMode) {
+                        _hoverMinute = null;
+                        _hoverPos = null;
+                      }
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: AppPalette.card,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _isPrecisionMode ? AppPalette.accent : AppPalette.stroke),
+                    ),
+                    child: Icon(
+                      Icons.my_location_rounded,
+                      size: 16,
+                      color: _isPrecisionMode ? AppPalette.accent : AppPalette.textDim,
+                    ),
+                  ),
+                ),
+                _AmPmMini(
+                  half: half,
+                  onChanged: (h) {
+                    HapticFeedback.selectionClick();
+                    ref.read(ampmHalfProvider.notifier).state = h;
+                  },
+                ),
+              ],
             ),
           ),
 
