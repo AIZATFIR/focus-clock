@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/shell/home_shell.dart';
 import 'providers/providers.dart';
 
@@ -25,7 +26,22 @@ class FocusClockApp extends ConsumerWidget {
       theme: buildLightTheme(),
       darkTheme: trueBlack ? buildBlackTheme() : buildDarkTheme(),
       themeMode: mode,
-      home: const HomeShell(),
+      home: settingsAsync.when(
+        data: (s) => s.hasCompletedOnboarding ? const HomeShell() : const OnboardingScreen(),
+        loading: () => const Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.schedule, size: 72, color: AppPalette.accent),
+                SizedBox(height: 24),
+                Text('FOCUS CLOCK', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4)),
+              ],
+            ),
+          ),
+        ),
+        error: (e, st) => Scaffold(body: Center(child: Text('Error loading settings: $e'))),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }

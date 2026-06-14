@@ -234,4 +234,21 @@ class ActivityRepository {
     });
     return all;
   }
+
+  /// Find activities that overlap with [start..end) on [date]+[half].
+  /// Optionally exclude one activity by [excludeId] (for updates).
+  Future<List<Activity>> getConflicting(
+    DateTime date,
+    AmPmHalf half,
+    int start,
+    int end, {
+    int? excludeId,
+  }) async {
+    final all = await getByDate(date);
+    return all.where((a) {
+      if (excludeId != null && a.id == excludeId) return false;
+      if (a.ampmHalf != half) return false;
+      return rangesOverlap(a.startMinute, a.endMinute, start, end);
+    }).toList();
+  }
 }

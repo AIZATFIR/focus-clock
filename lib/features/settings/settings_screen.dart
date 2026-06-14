@@ -512,6 +512,13 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                 const Text('Connected',
                     style: TextStyle(fontSize: 12, color: Colors.green)),
                 const Spacer(),
+              ] else if (const String.fromEnvironment('DEMO_AI_KEY').isNotEmpty) ...[
+                const Icon(Icons.stars,
+                    size: 14, color: AppPalette.accent),
+                const SizedBox(width: 4),
+                const Text('Demo Mode Active',
+                    style: TextStyle(fontSize: 12, color: AppPalette.accent)),
+                const Spacer(),
               ] else
                 const Spacer(),
               FilledButton(

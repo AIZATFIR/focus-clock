@@ -15,4 +15,5 @@ class AppSettings {
   String aiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
   String aiApiKey = '';
   String aiModel = 'gemini-2.5-flash';
+  bool hasCompletedOnboarding = false;
 }

@@ -37,28 +37,33 @@ const AppSettingsSchema = CollectionSchema(
       name: r'clockHandsMode',
       type: IsarType.long,
     ),
-    r'is24h': PropertySchema(
+    r'hasCompletedOnboarding': PropertySchema(
       id: 4,
+      name: r'hasCompletedOnboarding',
+      type: IsarType.bool,
+    ),
+    r'is24h': PropertySchema(
+      id: 5,
       name: r'is24h',
       type: IsarType.bool,
     ),
     r'notifLeadMinutes': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'notifLeadMinutes',
       type: IsarType.long,
     ),
     r'showMinuteLabels': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'showMinuteLabels',
       type: IsarType.bool,
     ),
     r'themeMode': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'themeMode',
       type: IsarType.string,
     ),
     r'trueBlack': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'trueBlack',
       type: IsarType.bool,
     )
@@ -100,11 +105,12 @@ void _appSettingsSerialize(
   writer.writeString(offsets[1], object.aiBaseUrl);
   writer.writeString(offsets[2], object.aiModel);
   writer.writeLong(offsets[3], object.clockHandsMode);
-  writer.writeBool(offsets[4], object.is24h);
-  writer.writeLong(offsets[5], object.notifLeadMinutes);
-  writer.writeBool(offsets[6], object.showMinuteLabels);
-  writer.writeString(offsets[7], object.themeMode);
-  writer.writeBool(offsets[8], object.trueBlack);
+  writer.writeBool(offsets[4], object.hasCompletedOnboarding);
+  writer.writeBool(offsets[5], object.is24h);
+  writer.writeLong(offsets[6], object.notifLeadMinutes);
+  writer.writeBool(offsets[7], object.showMinuteLabels);
+  writer.writeString(offsets[8], object.themeMode);
+  writer.writeBool(offsets[9], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -118,12 +124,13 @@ AppSettings _appSettingsDeserialize(
   object.aiBaseUrl = reader.readString(offsets[1]);
   object.aiModel = reader.readString(offsets[2]);
   object.clockHandsMode = reader.readLong(offsets[3]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[4]);
   object.id = id;
-  object.is24h = reader.readBool(offsets[4]);
-  object.notifLeadMinutes = reader.readLong(offsets[5]);
-  object.showMinuteLabels = reader.readBool(offsets[6]);
-  object.themeMode = reader.readString(offsets[7]);
-  object.trueBlack = reader.readBool(offsets[8]);
+  object.is24h = reader.readBool(offsets[5]);
+  object.notifLeadMinutes = reader.readLong(offsets[6]);
+  object.showMinuteLabels = reader.readBool(offsets[7]);
+  object.themeMode = reader.readString(offsets[8]);
+  object.trueBlack = reader.readBool(offsets[9]);
   return object;
 }
 
@@ -145,12 +152,14 @@ P _appSettingsDeserializeProp<P>(
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readLong(offset)) as P;
-    case 6:
       return (reader.readBool(offset)) as P;
+    case 6:
+      return (reader.readLong(offset)) as P;
     case 7:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -711,6 +720,16 @@ extension AppSettingsQueryFilter
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      hasCompletedOnboardingEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'hasCompletedOnboarding',
+        value: value,
+      ));
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition> idEqualTo(
       Id value) {
     return QueryBuilder.apply(this, (query) {
@@ -1044,6 +1063,20 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByHasCompletedOnboardingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24h() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'is24h', Sort.asc);
@@ -1160,6 +1193,20 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByHasCompletedOnboardingDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'hasCompletedOnboarding', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1266,6 +1313,13 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByHasCompletedOnboarding() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'hasCompletedOnboarding');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIs24h() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'is24h');
@@ -1329,6 +1383,13 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> clockHandsModeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'clockHandsMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations>
+      hasCompletedOnboardingProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'hasCompletedOnboarding');
     });
   }
 

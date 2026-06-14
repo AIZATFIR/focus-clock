@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppPalette {
   // Dark
@@ -45,7 +46,7 @@ ThemeData buildDarkTheme() {
     ),
     cardColor: AppPalette.card,
     dividerColor: AppPalette.stroke,
-    textTheme: base.textTheme.apply(
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
       bodyColor: AppPalette.text,
       displayColor: AppPalette.text,
     ),
@@ -121,7 +122,7 @@ ThemeData buildLightTheme() {
     ),
     cardColor: AppPalette.lightCard,
     dividerColor: AppPalette.lightStroke,
-    textTheme: base.textTheme.apply(
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
       bodyColor: AppPalette.lightText,
       displayColor: AppPalette.lightText,
     ),

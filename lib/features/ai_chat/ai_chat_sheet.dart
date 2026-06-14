@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
@@ -368,11 +369,13 @@ class _Bubble extends StatelessWidget {
                       height: 16,
                       child: _ThreeDots(),
                     )
-                  : Text(
-                      msg.text,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppPalette.text,
+                  : MarkdownBody(
+                      data: msg.text,
+                      styleSheet: MarkdownStyleSheet(
+                        p: const TextStyle(fontSize: 14, color: AppPalette.text),
+                        strong: const TextStyle(fontWeight: FontWeight.w600, color: AppPalette.text),
+                        em: const TextStyle(fontStyle: FontStyle.italic, color: AppPalette.text),
+                        listBullet: const TextStyle(color: AppPalette.text),
                       ),
                     ),
             ),

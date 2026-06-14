@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -123,27 +124,18 @@ class _ClockPainter extends CustomPainter {
       );
     }
 
+    // Face Drop shadow
+    canvas.drawCircle(
+      center,
+      outerRadius - 2,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24),
+    );
+
     // Face
     canvas.drawCircle(
-        center, outerRadius, Paint()..color = AppPalette.card.withValues(alpha: 0.6));
-
-    // Outer ring — two-layer: accent shimmer inner + stroke outer
-    canvas.drawCircle(
-      center,
-      outerRadius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = AppPalette.accent.withValues(alpha: 0.18 + outerReveal * 0.12),
-    );
-    canvas.drawCircle(
-      center,
-      outerRadius + 1,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1
-        ..color = AppPalette.stroke.withValues(alpha: 0.7),
-    );
+        center, outerRadius, Paint()..color = AppPalette.card.withValues(alpha: 0.75));
 
     // 5-min grid lines in arc band
     _drawGridLines(canvas, center, arcInner, arcOuter);
@@ -182,20 +174,21 @@ class _ClockPainter extends CustomPainter {
     }
 
     // Tick marks — every 5 minutes (144 ticks for 720-min clock)
-    // Hour marks (m%60==0) have labels drawn below, skip here.
-    // 30-min: prominent, 15-min: medium, 5-min: small.
+    // Refined for Apple-like seamless aesthetic
     final tickPaint = Paint()..strokeCap = StrokeCap.round;
     for (int m = 0; m < 720; m += 5) {
-      if (m % 60 == 0) continue; // hour label handles these
       final angle = (m / 720) * 2 * math.pi - math.pi / 2;
+      final isHour = m % 60 == 0;
       final is30 = m % 30 == 0;
       final is15 = m % 15 == 0;
-      final tickLen = is30 ? 13.0 : is15 ? 9.0 : 5.0;
-      final sw = is30 ? 2.0 : is15 ? 1.5 : 0.8;
-      final opacity = is30 ? 0.85 : is15 ? 0.65 : 0.35;
+      
+      final tickLen = isHour ? 14.0 : is30 ? 10.0 : is15 ? 7.0 : 4.0;
+      final sw = isHour ? 2.5 : is30 ? 1.8 : is15 ? 1.2 : 0.8;
+      final opacity = isHour ? 0.9 : is30 ? 0.6 : is15 ? 0.4 : 0.25;
+      
       final s = Offset(
-        center.dx + math.cos(angle) * (outerRadius - tickLen),
-        center.dy + math.sin(angle) * (outerRadius - tickLen),
+        center.dx + math.cos(angle) * (outerRadius - 2 - tickLen),
+        center.dy + math.sin(angle) * (outerRadius - 2 - tickLen),
       );
       final e = Offset(
         center.dx + math.cos(angle) * (outerRadius - 2),
@@ -211,8 +204,8 @@ class _ClockPainter extends CustomPainter {
     for (int h = 1; h <= 12; h++) {
       final angle = (h / 12) * 2 * math.pi - math.pi / 2;
       final pos = Offset(
-        center.dx + math.cos(angle) * (outerRadius - 32),
-        center.dy + math.sin(angle) * (outerRadius - 32),
+        center.dx + math.cos(angle) * (outerRadius - 38),
+        center.dy + math.sin(angle) * (outerRadius - 38),
       );
       final String label;
       if (is24h && viewHalf == AmPmHalf.pm) {
@@ -226,7 +219,10 @@ class _ClockPainter extends CustomPainter {
         text: TextSpan(
           text: label,
           style: const TextStyle(
-              color: AppPalette.text, fontSize: 18, fontWeight: FontWeight.w500),
+              color: AppPalette.text, 
+              fontSize: 19, 
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.5),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -266,7 +262,9 @@ class _ClockPainter extends CustomPainter {
       _drawHands(canvas, center, r);
     }
 
-    canvas.drawCircle(center, 6, Paint()..color = AppPalette.accent);
+    // Elegant center pin
+    canvas.drawCircle(center, 6.5, Paint()..color = AppPalette.text);
+    canvas.drawCircle(center, 2.5, Paint()..color = AppPalette.accent);
   }
 
   /// Soft breathing glow just outside the current activity's arc.
@@ -402,11 +400,30 @@ class _ClockPainter extends CustomPainter {
 
   void _hand(Canvas canvas, Offset center, double angle, double len,
       double width, Color color) {
+    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
+    
+    // Hand drop shadow
     canvas.drawLine(
       center,
-      Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len),
-      Paint()..color = color..strokeWidth = width..strokeCap = StrokeCap.round,
+      Offset(end.dx + 1.5, end.dy + 3),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.3)
+        ..strokeWidth = width
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
+
+    // Elegant gradient hand
+    final paint = Paint()
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round
+      ..shader = ui.Gradient.linear(
+        center,
+        end,
+        [color.withValues(alpha: 0.5), color],
+        [0.0, 1.0],
+      );
+    canvas.drawLine(center, end, paint);
   }
 
   @override

@@ -28,6 +28,14 @@ class NotificationService {
     const linux = LinuxInitializationSettings(defaultActionName: 'Open');
     const init = InitializationSettings(android: android, linux: linux);
     await _plugin.initialize(init);
+
+    // Request POST_NOTIFICATIONS permission on Android 13+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidImpl?.requestNotificationsPermission();
+    }
+
     _ready = true;
   }
 

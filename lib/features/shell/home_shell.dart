@@ -8,6 +8,7 @@ import '../../providers/providers.dart';
 import '../../services/ai_service.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
+import '../eisenhower/eisenhower_tab.dart';
 import '../focusclock/focusclock_tab.dart';
 import '../presets/presets_tab.dart';
 import '../settings/settings_screen.dart';
@@ -28,9 +29,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   void initState() {
     super.initState();
-    final initial = ref.read(tabIndexProvider).clamp(0, 2);
+    final initial = ref.read(tabIndexProvider).clamp(0, 3);
     _pc = PageController(initialPage: initial);
-    _tc = TabController(length: 3, vsync: this, initialIndex: initial);
+    _tc = TabController(length: 4, vsync: this, initialIndex: initial);
   }
 
   @override
@@ -48,7 +49,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
     if (_showAi) return _AiPage(onClose: _closeAi);
 
     ref.listen<int>(tabIndexProvider, (_, next) {
-      final i = next.clamp(0, 2);
+      final i = next.clamp(0, 3);
       if (_pc.hasClients && _pc.page?.round() != i) {
         _pc.animateToPage(
           i,
@@ -77,11 +78,17 @@ class _HomeShellState extends ConsumerState<HomeShell>
           ]),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart_rounded),
-            tooltip: 'Weekly Review',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WeeklyReviewScreen()),
+          Padding(
+            padding: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+            child: ActionChip(
+              avatar: const Icon(Icons.bar_chart_rounded, size: 16),
+              label: const Text('Weekly Review', style: TextStyle(fontSize: 12)),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const WeeklyReviewScreen()),
+              ),
+              backgroundColor: AppPalette.accent.withValues(alpha: 0.1),
+              side: BorderSide(color: AppPalette.accent.withValues(alpha: 0.3)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             ),
           ),
           IconButton(
@@ -108,6 +115,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 text: 'Clock', height: 52),
             Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
                 text: 'Agenda', height: 52),
+            Tab(icon: Icon(Icons.grid_view_rounded, size: 20),
+                text: 'Matrix', height: 52),
           ],
         ),
       ),
@@ -122,6 +131,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 PresetsTab(),
                 FocusClockTab(),
                 AgendaTab(),
+                EisenhowerTab(),
               ],
             ),
           ),
@@ -163,7 +173,11 @@ class _AiPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
+          tooltip: 'Back to Clock',
+          onPressed: onClose,
+        ),
         title: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -187,26 +201,7 @@ class _AiPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          const Expanded(child: AiChatPanel()),
-          _WideButton(
-            onTap: onClose,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    size: 17, color: AppPalette.textDim),
-                SizedBox(width: 8),
-                Text(
-                  'Back to Clock',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: const AiChatPanel(),
     );
   }
 }

@@ -282,9 +282,22 @@ Key constraints:
   }
 
   Future<Map<String, dynamic>> _callApi() async {
-    final uri = Uri.parse('$baseUrl/chat/completions');
+    const demoUrl = String.fromEnvironment('DEMO_AI_URL', defaultValue: 'https://generativelanguage.googleapis.com/v1beta/openai');
+    const demoKey = String.fromEnvironment('DEMO_AI_KEY');
+    const demoModel = String.fromEnvironment('DEMO_AI_MODEL', defaultValue: 'gemini-2.5-flash');
+
+    final bool useDemo = apiKey.isEmpty && demoKey.isNotEmpty;
+    final effectiveUrl = useDemo ? demoUrl : baseUrl;
+    final effectiveKey = useDemo ? demoKey : apiKey;
+    final effectiveModel = useDemo ? demoModel : model;
+
+    if (effectiveKey.isEmpty) {
+      throw Exception('API Key is missing. Please set it in Settings or provide DEMO_AI_KEY.');
+    }
+
+    final uri = Uri.parse('$effectiveUrl/chat/completions');
     final body = jsonEncode({
-      'model': model,
+      'model': effectiveModel,
       'messages': _history,
       'tools': _tools,
       'tool_choice': 'auto',
@@ -294,8 +307,8 @@ Key constraints:
       uri,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-        if (baseUrl.contains('openrouter'))
+        'Authorization': 'Bearer $effectiveKey',
+        if (effectiveUrl.contains('openrouter'))
           'HTTP-Referer': 'https://focusclock.app',
       },
       body: body,
@@ -363,6 +376,24 @@ Key constraints:
     final endDt = startDt.add(Duration(minutes: durationMinutes));
     final segments = splitSpan(startDt, endDt);
     final groupId = segments.length > 1 ? const Uuid().v4() : null;
+
+    // ── Conflict check ──────────────────────────────────────────────────
+    for (final s in segments) {
+      final conflicts = await _activityRepo.getConflicting(
+        s.date, s.half, s.start, s.end,
+      );
+      if (conflicts.isNotEmpty) {
+        final c = conflicts.first;
+        final cStart = _fmtTime(c.ampmHalf, c.startMinute);
+        final cEnd = _fmtTime(c.ampmHalf, c.endMinute);
+        throw Exception(
+          'Time conflict with "${c.title}" ($cStart\u2013$cEnd). '
+          'Choose a different time, shorten the duration, or delete the '
+          'conflicting activity first.',
+        );
+      }
+    }
+
     final now = DateTime.now();
     final acts = [
       for (final s in segments)
@@ -459,6 +490,22 @@ Key constraints:
     final groupId = segments.length > 1
         ? (existing.groupId ?? const Uuid().v4())
         : null;
+    // ── Conflict check (exclude self) ──────────────────────────────────
+    for (final s in segments) {
+      final conflicts = await _activityRepo.getConflicting(
+        s.date, s.half, s.start, s.end, excludeId: id,
+      );
+      if (conflicts.isNotEmpty) {
+        final c = conflicts.first;
+        final cStart = _fmtTime(c.ampmHalf, c.startMinute);
+        final cEnd = _fmtTime(c.ampmHalf, c.endMinute);
+        throw Exception(
+          'Time conflict with "${c.title}" ($cStart\u2013$cEnd). '
+          'Choose a different time or delete the conflicting activity first.',
+        );
+      }
+    }
+
     final now = DateTime.now();
     await _activityRepo.replaceSpan(
       original: existing,
