@@ -193,6 +193,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   int? _hoverMinute;
 
+  int _snap(int m) => _isPrecisionMode ? m : snap5(m);
+
   void _snapToNextAvailable(DateTime now, List<Activity> activities) {
     if (_draggingActivity != null) return;
     int targetMinute = snap5(minuteOfHalf(now));
@@ -278,7 +280,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 child: LayoutBuilder(
                   builder: (context, c) => MouseRegion(
                       onHover: (e) {
-                        if (!_isPrecisionMode) return;
                         final centered = _toCenter(e.localPosition, c.biggest);
                         final rDist = centered.distance;
                         final outer = c.biggest.shortestSide / 2 * 0.95 * _grow * 1.15; // Include knob radius
@@ -286,7 +287,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           _revealCtrl.forward();
                           setState(() {
                             _hoverMinute = offsetToMinute(centered);
-
                           });
                         } else {
                           _revealCtrl.reverse();
@@ -349,7 +349,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 clockHandsMode: clockHandsMode,
                                 is24h: is24h,
                                 hoverMinute: _hoverMinute,
-                                // Immerse expand: base 1.0 + up to 0.04 extra
+                                isPrecisionMode: _isPrecisionMode,
                                 outerReveal: 1.0 + (_revealCtrl.value * 0.04),
                               ),
                             ),
@@ -557,7 +557,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final outer = size.shortestSide / 2 * 0.95 * _grow;
     if (rDist > outer) return;
     setState(() {
-      _dragStart = snap5(offsetToMinute(centered));
+      _dragStart = _snap(offsetToMinute(centered));
       _dragEnd = _dragStart;
       _lastPanMinute = offsetToMinute(centered);
       _crossedHalf = false;
@@ -569,7 +569,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (_dragStart == null) return;
     final centered = _toCenter(p, size);
     final raw = offsetToMinute(centered);
-    final m = snap5(raw);
+    final m = _snap(raw);
     final prevEnd = _dragEnd;
 
     // Crossing 12 o'clock: top-of-dial jump between high and low minutes
@@ -705,7 +705,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   void _onLongPressMove(Offset p, Size size, List<Activity> activities) {
     if (_draggingActivity == null) return;
     final centered = _toCenter(p, size);
-    final newStart = snap5(offsetToMinute(centered));
+    final newStart = _snap(offsetToMinute(centered));
     final duration = _draggingActivity!.endMinute - _draggingActivity!.startMinute;
     if (newStart == _draggingActivity!.startMinute) return;
     HapticFeedback.selectionClick();

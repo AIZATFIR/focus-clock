@@ -24,6 +24,7 @@ class AnalogClockFace extends StatelessWidget {
     this.is24h = false,
     this.hoverMinute,
     this.outerReveal = 0,
+    this.isPrecisionMode = false,
   });
 
   final DateTime now;
@@ -50,6 +51,7 @@ class AnalogClockFace extends StatelessWidget {
   final double outerReveal;
 
   final int? hoverMinute;
+  final bool isPrecisionMode;
 
   @override
   Widget build(BuildContext context) => CustomPaint(
@@ -67,6 +69,7 @@ class AnalogClockFace extends StatelessWidget {
           outerReveal: outerReveal,
           tasks: tasks,
           hoverMinute: hoverMinute,
+          isPrecisionMode: isPrecisionMode,
         ),
       );
 }
@@ -90,6 +93,7 @@ class _ClockPainter extends CustomPainter {
     this.outerReveal = 0,
     this.tasks = const [],
     this.hoverMinute,
+    this.isPrecisionMode = false,
   });
 
   final DateTime now;
@@ -105,6 +109,7 @@ class _ClockPainter extends CustomPainter {
   final bool is24h;
   final int? hoverMinute;
   final double outerReveal;
+  final bool isPrecisionMode;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -173,7 +178,7 @@ class _ClockPainter extends CustomPainter {
     }
 
     // Ghost Line & Knob
-    if (hoverMinute != null) {
+    if (hoverMinute != null && isPrecisionMode) {
       final angle = (hoverMinute! / 720) * 2 * math.pi - math.pi / 2;
       final knobRadius = r * 1.08;
       
@@ -274,22 +279,32 @@ class _ClockPainter extends CustomPainter {
 
     // Draw expanding minute labels (05, 10, 15...) when outerReveal > 1.0 (hovered)
     if (outerReveal > 1.0) {
-      final alpha = ((outerReveal - 1.0) / 0.04).clamp(0.0, 1.0);
-      if (alpha > 0.01) {
+      final baseAlpha = ((outerReveal - 1.0) / 0.04).clamp(0.0, 1.0);
+      if (baseAlpha > 0.01) {
         for (int m = 0; m < 720; m += 5) {
-          final angle = (m / 720) * 2 * math.pi - math.pi / 2;
-          final minVal = m % 60;
-          final label = minVal == 0 ? '60' : minVal.toString().padLeft(2, '0');
-          final span = TextSpan(
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.textDim.withValues(alpha: alpha * 0.8)), 
-            text: label,
-          );
-          final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
-          tp.layout();
-          // Position outside the tick marks
-          final textRadius = outerRadius + 16;
-          final txtCenter = Offset(center.dx + math.cos(angle) * textRadius, center.dy + math.sin(angle) * textRadius);
-          tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+          double distanceAlpha = 1.0;
+          if (hoverMinute != null) {
+            final delta = (m - hoverMinute!).abs();
+            final circularDelta = math.min(delta, 720 - delta);
+            distanceAlpha = math.max(0.0, 1.0 - (circularDelta / 60.0)); // Fade out over 60 minutes
+          }
+          final alpha = baseAlpha * distanceAlpha;
+          
+          if (alpha > 0.01) {
+            final angle = (m / 720) * 2 * math.pi - math.pi / 2;
+            final minVal = m % 60;
+            final label = minVal == 0 ? '60' : minVal.toString().padLeft(2, '0');
+            final span = TextSpan(
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.textDim.withValues(alpha: alpha * 0.8)), 
+              text: label,
+            );
+            final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
+            tp.layout();
+            // Position outside the tick marks
+            final textRadius = outerRadius + 16;
+            final txtCenter = Offset(center.dx + math.cos(angle) * textRadius, center.dy + math.sin(angle) * textRadius);
+            tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+          }
         }
       }
     }
