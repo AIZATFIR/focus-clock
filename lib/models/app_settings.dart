@@ -12,6 +12,12 @@ class AppSettings {
   bool trueBlack = false; // AMOLED: pure black bg when dark theme active
   int clockHandsMode = 1; // 1=single precision, 2=hour+min, 3=hour+min+sec
   bool showMinuteLabels = false;
+  
+  // UI Toggles
+  bool enableAiAssistant = true;
+  bool enableLeftPanel = true;
+  bool enableRightPanel = true;
+
   String aiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
   String aiApiKey = '';
   String aiModel = 'gemini-2.5-flash';

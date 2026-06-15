@@ -177,13 +177,13 @@ class _ClockPainter extends CustomPainter {
       final angle = (hoverMinute! / 720) * 2 * math.pi - math.pi / 2;
       final knobRadius = r * 1.08;
       
-      // Draw ghost line
+      // Draw ghost line (more transparent & smooth)
       canvas.drawLine(
         center, 
         Offset(center.dx + math.cos(angle) * outerRadius, center.dy + math.sin(angle) * outerRadius),
         Paint()
-          ..color = AppPalette.accent.withValues(alpha: 0.6)
-          ..strokeWidth = 2
+          ..color = AppPalette.accent.withValues(alpha: 0.25)
+          ..strokeWidth = 1.5
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
       );
@@ -192,6 +192,30 @@ class _ClockPainter extends CustomPainter {
       final knobCenter = Offset(center.dx + math.cos(angle) * knobRadius, center.dy + math.sin(angle) * knobRadius);
       canvas.drawCircle(knobCenter, 10, Paint()..color = AppPalette.accent);
       canvas.drawCircle(knobCenter, 4, Paint()..color = AppPalette.bg);
+
+      // Draw precision tooltip directly on canvas for 0-lag sync
+      final m = hoverMinute! % 60;
+      var h = (hoverMinute! ~/ 60);
+      if (viewHalf == AmPmHalf.pm) {
+        if (is24h) h += 12;
+        else if (h == 0) h = 12;
+      } else {
+        if (!is24h && h == 0) h = 12;
+      }
+      final txt = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+      
+      final span = TextSpan(style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.accent), text: txt);
+      final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
+      tp.layout();
+      
+      final txtOffset = Offset(knobCenter.dx - tp.width / 2, knobCenter.dy - 26);
+      final bgRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(txtOffset.dx - 8, txtOffset.dy - 4, tp.width + 16, tp.height + 8),
+        const Radius.circular(8)
+      );
+      canvas.drawRRect(bgRect, Paint()..color = AppPalette.card);
+      canvas.drawRRect(bgRect, Paint()..color = AppPalette.stroke..style = PaintingStyle.stroke);
+      tp.paint(canvas, txtOffset);
     }
 
     // Pulse ring on the activity happening right now
@@ -247,6 +271,29 @@ class _ClockPainter extends CustomPainter {
             ..color = AppPalette.text.withValues(alpha: opacity)
             ..strokeWidth = sw);
     }
+
+    // Draw expanding minute labels (05, 10, 15...) when outerReveal > 1.0 (hovered)
+    if (outerReveal > 1.0) {
+      final alpha = ((outerReveal - 1.0) / 0.04).clamp(0.0, 1.0);
+      if (alpha > 0.01) {
+        for (int m = 0; m < 720; m += 5) {
+          final angle = (m / 720) * 2 * math.pi - math.pi / 2;
+          final minVal = m % 60;
+          final label = minVal == 0 ? '60' : minVal.toString().padLeft(2, '0');
+          final span = TextSpan(
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.textDim.withValues(alpha: alpha * 0.8)), 
+            text: label,
+          );
+          final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
+          tp.layout();
+          // Position outside the tick marks
+          final textRadius = outerRadius + 16;
+          final txtCenter = Offset(center.dx + math.cos(angle) * textRadius, center.dy + math.sin(angle) * textRadius);
+          tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+        }
+      }
+    }
+
 
     // Hour numbers — 24h dial shows 13–23 on PM half, 0–11 on AM
     for (int h = 1; h <= 12; h++) {

@@ -192,7 +192,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   late final AnimationController _pulseCtrl;
 
   int? _hoverMinute;
-  Offset? _hoverPos;
 
   void _snapToNextAvailable(DateTime now, List<Activity> activities) {
     if (_draggingActivity != null) return;
@@ -205,20 +204,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     HapticFeedback.lightImpact();
   }
 
-  String _formatHoverMinute(int minute, AmPmHalf half, bool is24h) {
-    final m = minute % 60;
-    var h = (minute ~/ 60);
-    if (half == AmPmHalf.pm) {
-      if (is24h) {
-        h += 12;
-      } else if (h == 0) {
-        h = 12;
-      }
-    } else {
-      if (!is24h && h == 0) h = 12;
-    }
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
-  }
+
 
   @override
   void initState() {
@@ -289,10 +275,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: LayoutBuilder(
-                    builder: (context, c) => MouseRegion(
+                child: LayoutBuilder(
+                  builder: (context, c) => MouseRegion(
                       onHover: (e) {
                         if (!_isPrecisionMode) return;
                         final centered = _toCenter(e.localPosition, c.biggest);
@@ -302,16 +286,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           _revealCtrl.forward();
                           setState(() {
                             _hoverMinute = offsetToMinute(centered);
-                            _hoverPos = e.localPosition;
+
                           });
                         } else {
                           _revealCtrl.reverse();
-                          if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
+                          if (_hoverMinute != null) setState(() { _hoverMinute = null; });
                         }
                       },
                       onExit: (_) {
                         _revealCtrl.reverse();
-                        if (_hoverMinute != null) setState(() { _hoverMinute = null; _hoverPos = null; });
+                        if (_hoverMinute != null) setState(() { _hoverMinute = null; });
                       },
                       child: Stack(
                         children: [
@@ -326,7 +310,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             _isPrecisionMode = !_isPrecisionMode;
                             if (!_isPrecisionMode) {
                               _hoverMinute = null;
-                              _hoverPos = null;
                             }
                           }),
                           onTapUp: (e) => _onTapUp(e.localPosition, c.biggest,
@@ -375,29 +358,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       },
                     ),
                   ),
-                  if (_hoverMinute != null && _hoverPos != null)
-                    Positioned(
-                      left: _hoverPos!.dx,
-                      top: _hoverPos!.dy - 30,
-                      child: FractionalTranslation(
-                        translation: const Offset(-0.5, -1.0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppPalette.stroke),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2)),
-                            ],
-                          ),
-                          child: Text(
-                            _formatHoverMinute(_hoverMinute!, half, is24h),
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.accent),
-                          ),
-                        ),
-                      ),
-                    ),
                   
                   // Banner for Scheduling
                   if (schedulingTask != null)
@@ -442,7 +402,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         ),
       ),
     ),
-  ),
 
           // Current time — quiet chip, top right
           Positioned(
@@ -538,7 +497,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       _isPrecisionMode = !_isPrecisionMode;
                       if (!_isPrecisionMode) {
                         _hoverMinute = null;
-                        _hoverPos = null;
+
                       }
                     });
                   },
@@ -633,7 +592,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
       _dragConflict = _hasConflict(
           _dragStart!, _dragEnd!.clamp(0, 720), activities);
-      _hoverPos = p;
+
       _hoverMinute = raw;
     });
     if (_dragEnd != prevEnd) HapticFeedback.selectionClick();
@@ -646,7 +605,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final date = ref.read(currentDateProvider);
     final now = DateTime.now();
     setState(() {
-      _hoverPos = null;
+
       _hoverMinute = null;
       _dragStart = null;
       _dragEnd = null;
@@ -753,7 +712,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     setState(() {
       _draggingActivity!.startMinute = newStart;
       _draggingActivity!.endMinute = (newStart + duration).clamp(0, 720);
-      _hoverPos = p;
+
       _hoverMinute = offsetToMinute(centered);
       _dragConflict = _hasConflict(
         _draggingActivity!.startMinute,

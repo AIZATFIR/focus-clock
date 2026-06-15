@@ -143,6 +143,31 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) => _save(ref, s, showMinuteLabels: v),
             ),
 
+            // ── UI Panels ───────────────────────────────────────────────
+            const Divider(),
+            const _Section(title: 'UI Layout'),
+            SwitchListTile(
+              title: const Text('AI Assistant'),
+              subtitle: const Text('Show bottom AI trigger button'),
+              value: s.enableAiAssistant,
+              activeColor: AppPalette.accent,
+              onChanged: (v) => _save(ref, s, enableAiAssistant: v),
+            ),
+            SwitchListTile(
+              title: const Text('Left Panel (Current Focus)'),
+              subtitle: const Text('Show left sidebar on wide screens'),
+              value: s.enableLeftPanel,
+              activeColor: AppPalette.accent,
+              onChanged: (v) => _save(ref, s, enableLeftPanel: v),
+            ),
+            SwitchListTile(
+              title: const Text('Right Panel (Timeline)'),
+              subtitle: const Text('Show right sidebar on wide screens'),
+              value: s.enableRightPanel,
+              activeColor: AppPalette.accent,
+              onChanged: (v) => _save(ref, s, enableRightPanel: v),
+            ),
+
             // ── Theme ───────────────────────────────────────────────────────
             const Divider(),
             const _Section(title: 'Theme'),
@@ -232,6 +257,9 @@ class SettingsScreen extends ConsumerWidget {
     String? aiBaseUrl,
     String? aiApiKey,
     String? aiModel,
+    bool? enableAiAssistant,
+    bool? enableLeftPanel,
+    bool? enableRightPanel,
   }) {
     final next = AppSettings()
       ..is24h = is24h ?? s.is24h
@@ -242,7 +270,10 @@ class SettingsScreen extends ConsumerWidget {
       ..showMinuteLabels = showMinuteLabels ?? s.showMinuteLabels
       ..aiBaseUrl = aiBaseUrl ?? s.aiBaseUrl
       ..aiApiKey = aiApiKey ?? s.aiApiKey
-      ..aiModel = aiModel ?? s.aiModel;
+      ..aiModel = aiModel ?? s.aiModel
+      ..enableAiAssistant = enableAiAssistant ?? s.enableAiAssistant
+      ..enableLeftPanel = enableLeftPanel ?? s.enableLeftPanel
+      ..enableRightPanel = enableRightPanel ?? s.enableRightPanel;
     ref.read(settingsRepoProvider).update(next);
   }
 }

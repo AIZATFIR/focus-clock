@@ -37,33 +37,48 @@ const AppSettingsSchema = CollectionSchema(
       name: r'clockHandsMode',
       type: IsarType.long,
     ),
-    r'hasCompletedOnboarding': PropertySchema(
+    r'enableAiAssistant': PropertySchema(
       id: 4,
+      name: r'enableAiAssistant',
+      type: IsarType.bool,
+    ),
+    r'enableLeftPanel': PropertySchema(
+      id: 5,
+      name: r'enableLeftPanel',
+      type: IsarType.bool,
+    ),
+    r'enableRightPanel': PropertySchema(
+      id: 6,
+      name: r'enableRightPanel',
+      type: IsarType.bool,
+    ),
+    r'hasCompletedOnboarding': PropertySchema(
+      id: 7,
       name: r'hasCompletedOnboarding',
       type: IsarType.bool,
     ),
     r'is24h': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'is24h',
       type: IsarType.bool,
     ),
     r'notifLeadMinutes': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'notifLeadMinutes',
       type: IsarType.long,
     ),
     r'showMinuteLabels': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'showMinuteLabels',
       type: IsarType.bool,
     ),
     r'themeMode': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'themeMode',
       type: IsarType.string,
     ),
     r'trueBlack': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'trueBlack',
       type: IsarType.bool,
     )
@@ -105,12 +120,15 @@ void _appSettingsSerialize(
   writer.writeString(offsets[1], object.aiBaseUrl);
   writer.writeString(offsets[2], object.aiModel);
   writer.writeLong(offsets[3], object.clockHandsMode);
-  writer.writeBool(offsets[4], object.hasCompletedOnboarding);
-  writer.writeBool(offsets[5], object.is24h);
-  writer.writeLong(offsets[6], object.notifLeadMinutes);
-  writer.writeBool(offsets[7], object.showMinuteLabels);
-  writer.writeString(offsets[8], object.themeMode);
-  writer.writeBool(offsets[9], object.trueBlack);
+  writer.writeBool(offsets[4], object.enableAiAssistant);
+  writer.writeBool(offsets[5], object.enableLeftPanel);
+  writer.writeBool(offsets[6], object.enableRightPanel);
+  writer.writeBool(offsets[7], object.hasCompletedOnboarding);
+  writer.writeBool(offsets[8], object.is24h);
+  writer.writeLong(offsets[9], object.notifLeadMinutes);
+  writer.writeBool(offsets[10], object.showMinuteLabels);
+  writer.writeString(offsets[11], object.themeMode);
+  writer.writeBool(offsets[12], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -124,13 +142,16 @@ AppSettings _appSettingsDeserialize(
   object.aiBaseUrl = reader.readString(offsets[1]);
   object.aiModel = reader.readString(offsets[2]);
   object.clockHandsMode = reader.readLong(offsets[3]);
-  object.hasCompletedOnboarding = reader.readBool(offsets[4]);
+  object.enableAiAssistant = reader.readBool(offsets[4]);
+  object.enableLeftPanel = reader.readBool(offsets[5]);
+  object.enableRightPanel = reader.readBool(offsets[6]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[7]);
   object.id = id;
-  object.is24h = reader.readBool(offsets[5]);
-  object.notifLeadMinutes = reader.readLong(offsets[6]);
-  object.showMinuteLabels = reader.readBool(offsets[7]);
-  object.themeMode = reader.readString(offsets[8]);
-  object.trueBlack = reader.readBool(offsets[9]);
+  object.is24h = reader.readBool(offsets[8]);
+  object.notifLeadMinutes = reader.readLong(offsets[9]);
+  object.showMinuteLabels = reader.readBool(offsets[10]);
+  object.themeMode = reader.readString(offsets[11]);
+  object.trueBlack = reader.readBool(offsets[12]);
   return object;
 }
 
@@ -154,12 +175,18 @@ P _appSettingsDeserializeProp<P>(
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
       return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 9:
+      return (reader.readLong(offset)) as P;
+    case 10:
+      return (reader.readBool(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -721,6 +748,36 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      enableAiAssistantEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'enableAiAssistant',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      enableLeftPanelEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'enableLeftPanel',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      enableRightPanelEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'enableRightPanel',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       hasCompletedOnboardingEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1064,6 +1121,47 @@ extension AppSettingsQuerySortBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByEnableAiAssistant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableAiAssistant', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByEnableAiAssistantDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableAiAssistant', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByEnableLeftPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableLeftPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByEnableLeftPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableLeftPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByEnableRightPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableRightPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByEnableRightPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableRightPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
@@ -1194,6 +1292,47 @@ extension AppSettingsQuerySortThenBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByEnableAiAssistant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableAiAssistant', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByEnableAiAssistantDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableAiAssistant', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByEnableLeftPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableLeftPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByEnableLeftPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableLeftPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByEnableRightPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableRightPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByEnableRightPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'enableRightPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'hasCompletedOnboarding', Sort.asc);
@@ -1314,6 +1453,27 @@ extension AppSettingsQueryWhereDistinct
   }
 
   QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByEnableAiAssistant() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'enableAiAssistant');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByEnableLeftPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'enableLeftPanel');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByEnableRightPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'enableRightPanel');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'hasCompletedOnboarding');
@@ -1383,6 +1543,25 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> clockHandsModeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'clockHandsMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations>
+      enableAiAssistantProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'enableAiAssistant');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> enableLeftPanelProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'enableLeftPanel');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> enableRightPanelProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'enableRightPanel');
     });
   }
 

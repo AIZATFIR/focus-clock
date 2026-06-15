@@ -70,6 +70,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
       if (_tc.index != i) _tc.animateTo(i);
     });
 
+    final settings = ref.watch(settingsProvider).valueOrNull;
+    final enableAi = settings?.enableAiAssistant ?? true;
+    final enableLeft = settings?.enableLeftPanel ?? true;
+    final enableRight = settings?.enableRightPanel ?? true;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text.rich(
@@ -132,7 +137,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
         children: [
           Row(
             children: [
-              if (MediaQuery.of(context).size.width >= 900)
+              if (MediaQuery.of(context).size.width >= 900 && enableLeft)
                 const LeftPanel(),
               Expanded(
                 child: Column(
@@ -150,31 +155,32 @@ class _HomeShellState extends ConsumerState<HomeShell>
                       ),
                     ),
                     // Wide AI assistant button
-                    _WideButton(
-                      onTap: _openAi,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const _ClockDotsIcon(size: 16),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'AI Assistant',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppPalette.accent,
+                    if (enableAi)
+                      _WideButton(
+                        onTap: _openAi,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const _ClockDotsIcon(size: 16),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'AI Assistant',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppPalette.accent,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.keyboard_arrow_up_rounded,
-                              size: 17, color: AppPalette.textDim),
-                        ],
+                            const SizedBox(width: 6),
+                            const Icon(Icons.keyboard_arrow_up_rounded,
+                                size: 17, color: AppPalette.textDim),
+                          ],
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
-              if (MediaQuery.of(context).size.width >= 900)
+              if (MediaQuery.of(context).size.width >= 900 && enableRight)
                 const RightPanel(),
             ],
           ),
@@ -207,36 +213,52 @@ class _AiPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 28),
-          tooltip: 'Back to Clock',
-          onPressed: onClose,
-        ),
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
-            SizedBox(width: 8),
-            Text('AI Assistant',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-          ],
-        ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.add_comment_outlined, size: 15),
-            label:
-                const Text('New chat', style: TextStyle(fontSize: 12)),
-            style: TextButton.styleFrom(foregroundColor: AppPalette.textDim),
-            onPressed: () {
-              ref.read(aiServiceProvider).reset();
-              ref.read(aiTranscriptProvider.notifier).state =
-                  <ChatMessage>[];
+      backgroundColor: AppPalette.bg,
+      body: Column(
+        children: [
+          GestureDetector(
+            onTap: onClose,
+            onVerticalDragUpdate: (details) {
+              if (details.delta.dy > 3) onClose();
             },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(top: 32, bottom: 12),
+              color: AppPalette.card,
+              child: Column(
+                children: [
+                  const Icon(Icons.drag_handle_rounded, color: AppPalette.textDim, size: 28),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
+                      const SizedBox(width: 8),
+                      const Text('AI Assistant',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                      const SizedBox(width: 16),
+                      TextButton.icon(
+                        icon: const Icon(Icons.add_comment_outlined, size: 14),
+                        label: const Text('New', style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppPalette.textDim,
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        ),
+                        onPressed: () {
+                          ref.read(aiServiceProvider).reset();
+                          ref.read(aiTranscriptProvider.notifier).state = <ChatMessage>[];
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
+          const Expanded(child: AiChatPanel()),
         ],
       ),
-      body: const AiChatPanel(),
     );
   }
 }
@@ -247,7 +269,7 @@ class RippedPaperClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    const double ripHeight = 16.0;
+    const double ripHeight = 20.0;
     path.lineTo(0, ripHeight); // Start slightly below top-left
     
     // Create jagged edge along the top
@@ -256,9 +278,9 @@ class RippedPaperClipper extends CustomClipper<Path> {
     
     for (int i = 0; i < segments; i++) {
       final x1 = segmentWidth * i + (segmentWidth / 2);
-      final y1 = ripHeight + (i % 2 == 0 ? -6.0 : 8.0); // Jagged up and down
+      final y1 = ripHeight + (i % 2 == 0 ? -10.0 : 10.0); // Jagged up and down
       final x2 = segmentWidth * (i + 1);
-      final y2 = ripHeight + (i % 3 == 0 ? -3.0 : 3.0);
+      final y2 = ripHeight + (i % 3 == 0 ? -4.0 : 4.0);
       
       path.quadraticBezierTo(x1, y1, x2, y2);
     }
