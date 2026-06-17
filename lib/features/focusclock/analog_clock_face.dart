@@ -111,6 +111,29 @@ class _ClockPainter extends CustomPainter {
   final double outerReveal;
   final bool isPrecisionMode;
 
+  static final Map<String, TextPainter> _tpCache = {};
+
+  TextPainter _getPainter(String text, double fontSize, FontWeight weight, Color color, {double? letterSpacing}) {
+    final key = '${text}_${fontSize}_${weight.value}_${color.toARGB32()}_$letterSpacing';
+    if (_tpCache.containsKey(key)) {
+      return _tpCache[key]!;
+    }
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: weight,
+          letterSpacing: letterSpacing,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    _tpCache[key] = tp;
+    return tp;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
@@ -209,9 +232,7 @@ class _ClockPainter extends CustomPainter {
       }
       final txt = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
       
-      final span = TextSpan(style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppPalette.accent), text: txt);
-      final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
-      tp.layout();
+      final tp = _getPainter(txt, 12, FontWeight.w800, AppPalette.accent);
       
       final txtOffset = Offset(knobCenter.dx - tp.width / 2, knobCenter.dy - 26);
       final bgRect = RRect.fromRectAndRadius(
@@ -294,16 +315,22 @@ class _ClockPainter extends CustomPainter {
             final angle = (m / 720) * 2 * math.pi - math.pi / 2;
             final minVal = m % 60;
             final label = minVal == 0 ? '60' : minVal.toString().padLeft(2, '0');
-            final span = TextSpan(
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppPalette.textDim.withValues(alpha: alpha * 0.8)), 
-              text: label,
-            );
-            final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
-            tp.layout();
-            // Position outside the tick marks
-            final textRadius = outerRadius + 16;
-            final txtCenter = Offset(center.dx + math.cos(angle) * textRadius, center.dy + math.sin(angle) * textRadius);
-            tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+            
+            // Discretize alpha to 20 levels to cache effectively
+            final discreteAlpha = (alpha * 20).round() / 20.0;
+            if (discreteAlpha > 0) {
+              final tp = _getPainter(
+                label, 
+                11, 
+                FontWeight.w700, 
+                AppPalette.textDim.withValues(alpha: discreteAlpha * 0.8)
+              );
+              
+              // Position outside the tick marks
+              final textRadius = outerRadius + 16;
+              final txtCenter = Offset(center.dx + math.cos(angle) * textRadius, center.dy + math.sin(angle) * textRadius);
+              tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
+            }
           }
         }
       }
@@ -325,17 +352,7 @@ class _ClockPainter extends CustomPainter {
       } else {
         label = '$h';
       }
-      final tp = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: const TextStyle(
-              color: AppPalette.text, 
-              fontSize: 19, 
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.5),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _getPainter(label, 19, FontWeight.w600, AppPalette.text, letterSpacing: -0.5);
       tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
     }
 
@@ -351,19 +368,17 @@ class _ClockPainter extends CustomPainter {
           center.dy + math.sin(angle) * ringR,
         );
         final isQuarter = m % 15 == 0;
-        final tp = TextPainter(
-          text: TextSpan(
-            text: '$m',
-            style: TextStyle(
-              color: AppPalette.accent.withValues(
-                  alpha: outerReveal * (isQuarter ? 0.95 : 0.55)),
-              fontSize: isQuarter ? 10.0 : 8.0,
-              fontWeight: isQuarter ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
+        
+        final discreteAlpha = (outerReveal * (isQuarter ? 0.95 : 0.55) * 20).round() / 20.0;
+        if (discreteAlpha > 0) {
+          final tp = _getPainter(
+            '$m',
+            isQuarter ? 10.0 : 8.0,
+            isQuarter ? FontWeight.w600 : FontWeight.w400,
+            AppPalette.accent.withValues(alpha: discreteAlpha),
+          );
+          tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
+        }
       }
     }
 
