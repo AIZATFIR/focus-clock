@@ -7,7 +7,8 @@ import '../../models/activity.dart';
 import '../../providers/providers.dart';
 
 class RightPanel extends ConsumerWidget {
-  const RightPanel({super.key});
+  const RightPanel({super.key, this.onClose});
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,7 +29,6 @@ class RightPanel extends ConsumerWidget {
     }
 
     return Container(
-      width: 300,
       decoration: const BoxDecoration(
         border: Border(left: BorderSide(color: AppPalette.stroke)),
       ),
@@ -42,11 +42,12 @@ class RightPanel extends ConsumerWidget {
               border: Border(bottom: BorderSide(color: AppPalette.stroke)),
               color: AppPalette.card,
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.timeline_rounded, size: 18, color: AppPalette.accent),
-                SizedBox(width: 8),
-                Text('Daily Timeline', style: TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                const Icon(Icons.timeline_rounded, size: 18, color: AppPalette.accent),
+                const SizedBox(width: 8),
+                const Text('Daily Timeline', style: TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -91,8 +92,8 @@ class RightPanel extends ConsumerWidget {
                   itemCount: activities.length,
                   itemBuilder: (context, i) {
                     final a = activities[i];
-                    final startStr = '${a.startMinute ~/ 60}:${(a.startMinute % 60).toString().padLeft(2, '0')} ${a.ampmHalf == AmPmHalf.am ? "AM" : "PM"}';
-                    final endStr = '${a.endMinute ~/ 60}:${(a.endMinute % 60).toString().padLeft(2, '0')}';
+                    final startStr = formatMinuteOfHalf(a.startMinute, a.ampmHalf, is24h: true);
+                    final endStr = formatMinuteOfHalf(a.endMinute, a.ampmHalf, is24h: true);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(

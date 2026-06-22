@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
@@ -83,170 +84,573 @@ const _apiKeyGuides = <String, (String url, List<String> steps)>{
   ),
 };
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool? _is24h;
+  int? _clockHandsMode;
+  bool? _showMinuteLabels;
+  bool? _enableAiAssistant;
+  bool? _enableLeftPanel;
+  bool? _enableRightPanel;
+  String? _themeMode;
+  bool? _trueBlack;
+  int? _clockFaceTheme;
+  int? _notifLeadMinutes;
+  String? _keyLeftPanel;
+  String? _keyRightPanel;
+  String? _keyAiChat;
+  String? _keyPrecisionMode;
+  String? _keyPlanningMode;
+
+  void _syncLocal(AppSettings s) {
+    _is24h = s.is24h;
+    _clockHandsMode = s.clockHandsMode;
+    _showMinuteLabels = s.showMinuteLabels;
+    _enableAiAssistant = s.enableAiAssistant;
+    _enableLeftPanel = s.enableLeftPanel;
+    _enableRightPanel = s.enableRightPanel;
+    _themeMode = s.themeMode;
+    _trueBlack = s.trueBlack;
+    _clockFaceTheme = s.clockFaceTheme;
+    _notifLeadMinutes = s.notifLeadMinutes;
+    _keyLeftPanel = s.keyLeftPanel;
+    _keyRightPanel = s.keyRightPanel;
+    _keyAiChat = s.keyAiChat;
+    _keyPrecisionMode = s.keyPrecisionMode;
+    _keyPlanningMode = s.keyPlanningMode;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settingsAsync = ref.watch(settingsProvider);
+
+    // Listen to changes in settings provider to sync local state
+    ref.listen<AsyncValue<AppSettings>>(settingsProvider, (prev, next) {
+      if (next is AsyncData<AppSettings>) {
+        setState(() {
+          _syncLocal(next.value);
+        });
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-        data: (s) => ListView(
-          children: [
-            // ── Time ────────────────────────────────────────────────────────
-            const _Section(title: 'Time'),
-            SwitchListTile(
-              title: const Text('24-hour format'),
-              subtitle: Text(s.is24h ? 'Shows 13:45' : 'Shows 1:45 PM'),
-              value: s.is24h,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, is24h: v),
-            ),
+        data: (s) {
+          // Initialize if null
+          if (_is24h == null) {
+            _syncLocal(s);
+          }
 
-            // ── Clock Hands ─────────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'Clock Hands'),
-            RadioListTile(
-              title: const Text('1 hand — precision'),
-              subtitle: const Text('Single hand, 1 revolution per 12h'),
-              value: 1,
-              groupValue: s.clockHandsMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, clockHandsMode: v as int),
-            ),
-            RadioListTile(
-              title: const Text('2 hands — hour + minute'),
-              value: 2,
-              groupValue: s.clockHandsMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, clockHandsMode: v as int),
-            ),
-            RadioListTile(
-              title: const Text('3 hands — hour + minute + second'),
-              value: 3,
-              groupValue: s.clockHandsMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, clockHandsMode: v as int),
-            ),
+          final curIs24h = _is24h!;
+          final curClockHandsMode = _clockHandsMode!;
+          final curShowMinuteLabels = _showMinuteLabels!;
+          final curEnableAiAssistant = _enableAiAssistant!;
+          final curEnableLeftPanel = _enableLeftPanel!;
+          final curEnableRightPanel = _enableRightPanel!;
+          final curThemeMode = _themeMode!;
+          final curTrueBlack = _trueBlack!;
+          final curClockFaceTheme = _clockFaceTheme!;
+          final curNotifLeadMinutes = _notifLeadMinutes!;
+          final curKeyLeftPanel = _keyLeftPanel ?? s.keyLeftPanel;
+          final curKeyRightPanel = _keyRightPanel ?? s.keyRightPanel;
+          final curKeyAiChat = _keyAiChat ?? s.keyAiChat;
+          final curKeyPrecisionMode = _keyPrecisionMode ?? s.keyPrecisionMode;
+          final curKeyPlanningMode = _keyPlanningMode ?? s.keyPlanningMode;
 
-            // ── Clock Display ───────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'Clock Display'),
-            SwitchListTile(
-              title: const Text('Minute labels'),
-              subtitle: const Text('Show 5, 10, 15… on clock ring'),
-              value: s.showMinuteLabels,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, showMinuteLabels: v),
-            ),
-
-            // ── UI Panels ───────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'UI Layout'),
-            SwitchListTile(
-              title: const Text('AI Assistant'),
-              subtitle: const Text('Show bottom AI trigger button'),
-              value: s.enableAiAssistant,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, enableAiAssistant: v),
-            ),
-            SwitchListTile(
-              title: const Text('Left Panel (Current Focus)'),
-              subtitle: const Text('Show left sidebar on wide screens'),
-              value: s.enableLeftPanel,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, enableLeftPanel: v),
-            ),
-            SwitchListTile(
-              title: const Text('Right Panel (Timeline)'),
-              subtitle: const Text('Show right sidebar on wide screens'),
-              value: s.enableRightPanel,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, enableRightPanel: v),
-            ),
-
-            // ── Theme ───────────────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'Theme'),
-            RadioListTile(
-              title: const Text('Dark'),
-              value: 'dark',
-              groupValue: s.themeMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, themeMode: v as String),
-            ),
-            RadioListTile(
-              title: const Text('Light'),
-              value: 'light',
-              groupValue: s.themeMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, themeMode: v as String),
-            ),
-            RadioListTile(
-              title: const Text('System'),
-              value: 'system',
-              groupValue: s.themeMode,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, themeMode: v as String),
-            ),
-            SwitchListTile(
-              title: const Text('True black (AMOLED)'),
-              subtitle: const Text('Pure black background in dark theme'),
-              value: s.trueBlack,
-              activeColor: AppPalette.accent,
-              onChanged: (v) => _save(ref, s, trueBlack: v),
-            ),
-
-            // ── Notifications ───────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'Notifications'),
-            ListTile(
-              title: const Text('Lead time'),
-              subtitle: Text('${s.notifLeadMinutes} minute(s) before'),
-              trailing: DropdownButton<int>(
-                value: s.notifLeadMinutes,
-                items: const [1, 5, 10, 15]
-                    .map((v) =>
-                        DropdownMenuItem(value: v, child: Text('$v min')))
-                    .toList(),
+          return ListView(
+            children: [
+              // ── Simple Mode ──────────────────────────────────────────────────
+              const _Section(title: 'Mode'),
+              SwitchListTile(
+                title: const Text('Simple Mode'),
+                subtitle: const Text('Flat, lightweight UI without glowing effects'),
+                value: curClockFaceTheme >= 5,
+                activeColor: AppPalette.accent,
                 onChanged: (v) {
-                  if (v != null) _save(ref, s, notifLeadMinutes: v);
+                  setState(() {
+                    _clockFaceTheme = v ? 5 : 1;
+                    if (v) {
+                      // Automatically force 12h in simple mode to match old Linux app layout
+                      _is24h = false;
+                    }
+                  });
+                  _save(s, clockFaceTheme: v ? 5 : 1, is24h: v ? false : null);
                 },
               ),
-            ),
 
-            // ── AI Assistant ─────────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'AI Assistant'),
-            _AiConfigTile(s: s, onSave: (baseUrl, apiKey, model) {
-              _save(ref, s,
-                  aiBaseUrl: baseUrl, aiApiKey: apiKey, aiModel: model);
-            }),
+              const Divider(),
+              // ── Time ────────────────────────────────────────────────────────
+              const _Section(title: 'Time'),
+              SwitchListTile(
+                title: const Text('24-hour format'),
+                subtitle: Text(curIs24h ? 'Shows 13:45' : 'Shows 1:45 PM'),
+                value: curIs24h,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _is24h = v;
+                  });
+                  _save(s, is24h: v);
+                },
+              ),
 
-            // ── Google Calendar ─────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'Google Calendar'),
-            _GCalTile(),
+              // ── Clock Hands ─────────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Clock Hands'),
+              RadioListTile(
+                title: const Text('1 hand — precision'),
+                subtitle: const Text('Single hand, 1 revolution per 12h'),
+                value: 1,
+                groupValue: curClockHandsMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _clockHandsMode = v;
+                    });
+                    _save(s, clockHandsMode: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('2 hands — hour + minute'),
+                value: 2,
+                groupValue: curClockHandsMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _clockHandsMode = v;
+                    });
+                    _save(s, clockHandsMode: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('3 hands — hour + minute + second'),
+                value: 3,
+                groupValue: curClockHandsMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _clockHandsMode = v;
+                    });
+                    _save(s, clockHandsMode: v);
+                  }
+                },
+              ),
 
-            // ── About ───────────────────────────────────────────────────────
-            const Divider(),
-            const _Section(title: 'About'),
-            const ListTile(
-              title: Text('Focus Clock'),
-              subtitle: Text('v0.2.0'),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
+              // ── Clock Display ───────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Clock Display'),
+              SwitchListTile(
+                title: const Text('Minute labels'),
+                subtitle: const Text('Show 5, 10, 15… on clock ring'),
+                value: curShowMinuteLabels,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _showMinuteLabels = v;
+                  });
+                  _save(s, showMinuteLabels: v);
+                },
+              ),
+
+              // ── UI Panels ───────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'UI Layout'),
+              SwitchListTile(
+                title: const Text('AI Assistant'),
+                subtitle: const Text('Show bottom AI trigger button'),
+                value: curEnableAiAssistant,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _enableAiAssistant = v;
+                  });
+                  _save(s, enableAiAssistant: v);
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Left Panel (Current Focus)'),
+                subtitle: const Text('Show left sidebar on wide screens'),
+                value: curEnableLeftPanel,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _enableLeftPanel = v;
+                  });
+                  _save(s, enableLeftPanel: v);
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Right Panel (Timeline)'),
+                subtitle: const Text('Show right sidebar on wide screens'),
+                value: curEnableRightPanel,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _enableRightPanel = v;
+                  });
+                  _save(s, enableRightPanel: v);
+                },
+              ),
+
+              // ── Theme ───────────────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Theme'),
+              RadioListTile(
+                title: const Text('Dark'),
+                value: 'dark',
+                groupValue: curThemeMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _themeMode = v;
+                    });
+                    _save(s, themeMode: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('Light'),
+                value: 'light',
+                groupValue: curThemeMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _themeMode = v;
+                    });
+                    _save(s, themeMode: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('System'),
+                value: 'system',
+                groupValue: curThemeMode,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _themeMode = v;
+                    });
+                    _save(s, themeMode: v);
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: const Text('True black (AMOLED)'),
+                subtitle: const Text('Pure black background in dark theme'),
+                value: curTrueBlack,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _trueBlack = v;
+                  });
+                  _save(s, trueBlack: v);
+                },
+              ),
+
+              // ── Clock Face Theme ─────────────────────────────────────────────
+              if (curClockFaceTheme < 5) ...[
+                const Divider(),
+                const _Section(title: 'Clock Face Theme'),
+                RadioListTile<int>(
+                  title: const Text('Default (Yellow-Black)'),
+                  value: 1,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+                RadioListTile<int>(
+                  title: const Text('Elegance (White-Glow)'),
+                  value: 2,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+                RadioListTile<int>(
+                  title: const Text('Blue-Glow'),
+                  value: 3,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+                RadioListTile<int>(
+                  title: const Text('Purple-Glow'),
+                  value: 4,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+              ] else ...[
+                const Divider(),
+                const _Section(title: 'Simple Clock Style'),
+                RadioListTile<int>(
+                  title: const Text('Simple Flat'),
+                  value: 5,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+                RadioListTile<int>(
+                  title: const Text('Simple Mode Classic'),
+                  value: 6,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+              ],
+
+              // ── Notifications ───────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Notifications'),
+              ListTile(
+                title: const Text('Lead time'),
+                subtitle: Text('${curNotifLeadMinutes} minute(s) before'),
+                trailing: DropdownButton<int>(
+                  value: curNotifLeadMinutes,
+                  items: const [1, 5, 10, 15]
+                      .map((v) =>
+                          DropdownMenuItem(value: v, child: Text('$v min')))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _notifLeadMinutes = v;
+                      });
+                      _save(s, notifLeadMinutes: v);
+                    }
+                  },
+                ),
+              ),
+
+              // ── AI Assistant ─────────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'AI Assistant'),
+              _AiConfigTile(s: s, onSave: (baseUrl, apiKey, model) {
+                _save(s,
+                    aiBaseUrl: baseUrl, aiApiKey: apiKey, aiModel: model);
+              }),
+
+              // ── Google Calendar ─────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Google Calendar'),
+              _GCalTile(),
+
+              // ── Keyboard Shortcuts ──────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'Keyboard Shortcuts'),
+              ListTile(
+                title: const Text('Toggle Left Panel'),
+                subtitle: Text('Current shortcut: Ctrl + $curKeyLeftPanel'),
+                trailing: TextButton(
+                  onPressed: () {
+                    _recordKeybind('Toggle Left Panel', curKeyLeftPanel, (newKey) {
+                      setState(() {
+                        _keyLeftPanel = newKey;
+                      });
+                      _save(s, keyLeftPanel: newKey);
+                    });
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+              ListTile(
+                title: const Text('Toggle Right Panel'),
+                subtitle: Text('Current shortcut: Ctrl + $curKeyRightPanel'),
+                trailing: TextButton(
+                  onPressed: () {
+                    _recordKeybind('Toggle Right Panel', curKeyRightPanel, (newKey) {
+                      setState(() {
+                        _keyRightPanel = newKey;
+                      });
+                      _save(s, keyRightPanel: newKey);
+                    });
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+              ListTile(
+                title: const Text('Toggle AI Chat'),
+                subtitle: Text('Current shortcut: Ctrl + $curKeyAiChat'),
+                trailing: TextButton(
+                  onPressed: () {
+                    _recordKeybind('Toggle AI Chat', curKeyAiChat, (newKey) {
+                      setState(() {
+                        _keyAiChat = newKey;
+                      });
+                      _save(s, keyAiChat: newKey);
+                    });
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+              ListTile(
+                title: const Text('Toggle Precision Mode'),
+                subtitle: Text('Current shortcut: Ctrl + $curKeyPrecisionMode'),
+                trailing: TextButton(
+                  onPressed: () {
+                    _recordKeybind('Toggle Precision Mode', curKeyPrecisionMode, (newKey) {
+                      setState(() {
+                        _keyPrecisionMode = newKey;
+                      });
+                      _save(s, keyPrecisionMode: newKey);
+                    });
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+              ListTile(
+                title: const Text('Toggle Planning Mode'),
+                subtitle: Text('Current shortcut: Ctrl + $curKeyPlanningMode'),
+                trailing: TextButton(
+                  onPressed: () {
+                    _recordKeybind('Toggle Planning Mode', curKeyPlanningMode, (newKey) {
+                      setState(() {
+                        _keyPlanningMode = newKey;
+                      });
+                      _save(s, keyPlanningMode: newKey);
+                    });
+                  },
+                  child: const Text('Change'),
+                ),
+              ),
+
+              // ── About ───────────────────────────────────────────────────────
+              const Divider(),
+              const _Section(title: 'About'),
+              const ListTile(
+                title: Text('Focus Clock'),
+                subtitle: Text('v0.2.0'),
+              ),
+              const SizedBox(height: 32),
+            ],
+          );
+        },
       ),
     );
   }
 
+  void _recordKeybind(String label, String currentKey, Function(String newKey) onSaved) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Focus(
+          autofocus: true,
+          onKeyEvent: (node, event) {
+            if (event is KeyDownEvent) {
+              final keyLabel = event.logicalKey.keyLabel;
+              if (event.logicalKey == LogicalKeyboardKey.escape) {
+                Navigator.of(context).pop();
+                return KeyEventResult.handled;
+              }
+              if (keyLabel.isNotEmpty) {
+                onSaved(keyLabel);
+                Navigator.of(context).pop();
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1E1F24),
+            title: Text('Assign Key for $label', style: const TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Press any key to assign it as the new shortcut.\nKey combinations will use Ctrl + [Key].',
+                  style: TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black38,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppPalette.accent.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'Current: Ctrl + $currentKey',
+                    style: TextStyle(
+                      color: AppPalette.accent,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Press Esc to cancel',
+                  style: TextStyle(color: Colors.white30, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _save(
-    WidgetRef ref,
     AppSettings s, {
     bool? is24h,
     int? clockHandsMode,
@@ -254,26 +658,39 @@ class SettingsScreen extends ConsumerWidget {
     bool? trueBlack,
     int? notifLeadMinutes,
     bool? showMinuteLabels,
+    int? clockFaceTheme,
     String? aiBaseUrl,
     String? aiApiKey,
     String? aiModel,
     bool? enableAiAssistant,
     bool? enableLeftPanel,
     bool? enableRightPanel,
+    String? keyLeftPanel,
+    String? keyRightPanel,
+    String? keyAiChat,
+    String? keyPrecisionMode,
+    String? keyPlanningMode,
   }) {
     final next = AppSettings()
+      ..id = s.id
       ..is24h = is24h ?? s.is24h
       ..clockHandsMode = clockHandsMode ?? s.clockHandsMode
       ..themeMode = themeMode ?? s.themeMode
       ..trueBlack = trueBlack ?? s.trueBlack
       ..notifLeadMinutes = notifLeadMinutes ?? s.notifLeadMinutes
       ..showMinuteLabels = showMinuteLabels ?? s.showMinuteLabels
+      ..clockFaceTheme = clockFaceTheme ?? s.clockFaceTheme
       ..aiBaseUrl = aiBaseUrl ?? s.aiBaseUrl
       ..aiApiKey = aiApiKey ?? s.aiApiKey
       ..aiModel = aiModel ?? s.aiModel
       ..enableAiAssistant = enableAiAssistant ?? s.enableAiAssistant
       ..enableLeftPanel = enableLeftPanel ?? s.enableLeftPanel
-      ..enableRightPanel = enableRightPanel ?? s.enableRightPanel;
+      ..enableRightPanel = enableRightPanel ?? s.enableRightPanel
+      ..keyLeftPanel = keyLeftPanel ?? s.keyLeftPanel
+      ..keyRightPanel = keyRightPanel ?? s.keyRightPanel
+      ..keyAiChat = keyAiChat ?? s.keyAiChat
+      ..keyPrecisionMode = keyPrecisionMode ?? s.keyPrecisionMode
+      ..keyPlanningMode = keyPlanningMode ?? s.keyPlanningMode;
     ref.read(settingsRepoProvider).update(next);
   }
 }

@@ -103,8 +103,8 @@ class _MatrixView extends ConsumerWidget {
         const SizedBox(height: 16),
         _Quadrant(
           index: 0,
-          title: 'DO FIRST',
-          subtitle: 'Urgent + Important',
+          title: 'KUADRAN 1: LAKUKAN (DO)',
+          subtitle: 'Penting & Mendesak',
           color: const Color(0xFFE5484D),
           tasks: q[0],
           ref: ref,
@@ -112,8 +112,8 @@ class _MatrixView extends ConsumerWidget {
         const SizedBox(height: 16),
         _Quadrant(
           index: 1,
-          title: 'SCHEDULE',
-          subtitle: 'Not Urgent + Important',
+          title: 'KUADRAN 2: JADWALKAN (SCHEDULE)',
+          subtitle: 'Penting & Tidak Mendesak',
           color: AppPalette.accent,
           tasks: q[1],
           ref: ref,
@@ -121,8 +121,8 @@ class _MatrixView extends ConsumerWidget {
         const SizedBox(height: 16),
         _Quadrant(
           index: 2,
-          title: 'DELEGATE',
-          subtitle: 'Urgent + Not Important',
+          title: 'KUADRAN 3: DELEGASIKAN (DELEGATE)',
+          subtitle: 'Tidak Penting & Mendesak',
           color: const Color(0xFFE6B800),
           tasks: q[2],
           ref: ref,
@@ -130,8 +130,8 @@ class _MatrixView extends ConsumerWidget {
         const SizedBox(height: 16),
         _Quadrant(
           index: 3,
-          title: 'ELIMINATE',
-          subtitle: 'Not Urgent + Not Important',
+          title: 'KUADRAN 4: HAPUS (DELETE)',
+          subtitle: 'Tidak Penting & Tidak Mendesak',
           color: AppPalette.textDim,
           tasks: q[3],
           ref: ref,
@@ -315,23 +315,29 @@ class _TaskTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          // Drag handle
           if (isDraggable)
             Draggable<Task>(
               data: t,
+              dragAnchorStrategy: pointerDragAnchorStrategy,
               feedback: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: MediaQuery.of(context).size.width - 32,
-                  padding: const EdgeInsets.all(12),
+                  width: 220,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: AppPalette.card,
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppPalette.card.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppPalette.stroke, width: 1),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20, spreadRadius: 4),
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.45), blurRadius: 12, offset: const Offset(2, 4)),
                     ],
                   ),
-                  child: Text(t.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  child: Text(
+                    t.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppPalette.text),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               childWhenDragging: const Opacity(opacity: 0.3, child: Icon(Icons.drag_indicator, size: 20, color: AppPalette.textDim)),

@@ -32,53 +32,83 @@ const AppSettingsSchema = CollectionSchema(
       name: r'aiModel',
       type: IsarType.string,
     ),
-    r'clockHandsMode': PropertySchema(
+    r'clockFaceTheme': PropertySchema(
       id: 3,
+      name: r'clockFaceTheme',
+      type: IsarType.long,
+    ),
+    r'clockHandsMode': PropertySchema(
+      id: 4,
       name: r'clockHandsMode',
       type: IsarType.long,
     ),
     r'enableAiAssistant': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'enableAiAssistant',
       type: IsarType.bool,
     ),
     r'enableLeftPanel': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'enableLeftPanel',
       type: IsarType.bool,
     ),
     r'enableRightPanel': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'enableRightPanel',
       type: IsarType.bool,
     ),
     r'hasCompletedOnboarding': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'hasCompletedOnboarding',
       type: IsarType.bool,
     ),
     r'is24h': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'is24h',
       type: IsarType.bool,
     ),
+    r'keyAiChat': PropertySchema(
+      id: 10,
+      name: r'keyAiChat',
+      type: IsarType.string,
+    ),
+    r'keyLeftPanel': PropertySchema(
+      id: 11,
+      name: r'keyLeftPanel',
+      type: IsarType.string,
+    ),
+    r'keyPlanningMode': PropertySchema(
+      id: 12,
+      name: r'keyPlanningMode',
+      type: IsarType.string,
+    ),
+    r'keyPrecisionMode': PropertySchema(
+      id: 13,
+      name: r'keyPrecisionMode',
+      type: IsarType.string,
+    ),
+    r'keyRightPanel': PropertySchema(
+      id: 14,
+      name: r'keyRightPanel',
+      type: IsarType.string,
+    ),
     r'notifLeadMinutes': PropertySchema(
-      id: 9,
+      id: 15,
       name: r'notifLeadMinutes',
       type: IsarType.long,
     ),
     r'showMinuteLabels': PropertySchema(
-      id: 10,
+      id: 16,
       name: r'showMinuteLabels',
       type: IsarType.bool,
     ),
     r'themeMode': PropertySchema(
-      id: 11,
+      id: 17,
       name: r'themeMode',
       type: IsarType.string,
     ),
     r'trueBlack': PropertySchema(
-      id: 12,
+      id: 18,
       name: r'trueBlack',
       type: IsarType.bool,
     )
@@ -106,6 +136,11 @@ int _appSettingsEstimateSize(
   bytesCount += 3 + object.aiApiKey.length * 3;
   bytesCount += 3 + object.aiBaseUrl.length * 3;
   bytesCount += 3 + object.aiModel.length * 3;
+  bytesCount += 3 + object.keyAiChat.length * 3;
+  bytesCount += 3 + object.keyLeftPanel.length * 3;
+  bytesCount += 3 + object.keyPlanningMode.length * 3;
+  bytesCount += 3 + object.keyPrecisionMode.length * 3;
+  bytesCount += 3 + object.keyRightPanel.length * 3;
   bytesCount += 3 + object.themeMode.length * 3;
   return bytesCount;
 }
@@ -119,16 +154,22 @@ void _appSettingsSerialize(
   writer.writeString(offsets[0], object.aiApiKey);
   writer.writeString(offsets[1], object.aiBaseUrl);
   writer.writeString(offsets[2], object.aiModel);
-  writer.writeLong(offsets[3], object.clockHandsMode);
-  writer.writeBool(offsets[4], object.enableAiAssistant);
-  writer.writeBool(offsets[5], object.enableLeftPanel);
-  writer.writeBool(offsets[6], object.enableRightPanel);
-  writer.writeBool(offsets[7], object.hasCompletedOnboarding);
-  writer.writeBool(offsets[8], object.is24h);
-  writer.writeLong(offsets[9], object.notifLeadMinutes);
-  writer.writeBool(offsets[10], object.showMinuteLabels);
-  writer.writeString(offsets[11], object.themeMode);
-  writer.writeBool(offsets[12], object.trueBlack);
+  writer.writeLong(offsets[3], object.clockFaceTheme);
+  writer.writeLong(offsets[4], object.clockHandsMode);
+  writer.writeBool(offsets[5], object.enableAiAssistant);
+  writer.writeBool(offsets[6], object.enableLeftPanel);
+  writer.writeBool(offsets[7], object.enableRightPanel);
+  writer.writeBool(offsets[8], object.hasCompletedOnboarding);
+  writer.writeBool(offsets[9], object.is24h);
+  writer.writeString(offsets[10], object.keyAiChat);
+  writer.writeString(offsets[11], object.keyLeftPanel);
+  writer.writeString(offsets[12], object.keyPlanningMode);
+  writer.writeString(offsets[13], object.keyPrecisionMode);
+  writer.writeString(offsets[14], object.keyRightPanel);
+  writer.writeLong(offsets[15], object.notifLeadMinutes);
+  writer.writeBool(offsets[16], object.showMinuteLabels);
+  writer.writeString(offsets[17], object.themeMode);
+  writer.writeBool(offsets[18], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -141,17 +182,23 @@ AppSettings _appSettingsDeserialize(
   object.aiApiKey = reader.readString(offsets[0]);
   object.aiBaseUrl = reader.readString(offsets[1]);
   object.aiModel = reader.readString(offsets[2]);
-  object.clockHandsMode = reader.readLong(offsets[3]);
-  object.enableAiAssistant = reader.readBool(offsets[4]);
-  object.enableLeftPanel = reader.readBool(offsets[5]);
-  object.enableRightPanel = reader.readBool(offsets[6]);
-  object.hasCompletedOnboarding = reader.readBool(offsets[7]);
+  object.clockFaceTheme = reader.readLong(offsets[3]);
+  object.clockHandsMode = reader.readLong(offsets[4]);
+  object.enableAiAssistant = reader.readBool(offsets[5]);
+  object.enableLeftPanel = reader.readBool(offsets[6]);
+  object.enableRightPanel = reader.readBool(offsets[7]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[8]);
   object.id = id;
-  object.is24h = reader.readBool(offsets[8]);
-  object.notifLeadMinutes = reader.readLong(offsets[9]);
-  object.showMinuteLabels = reader.readBool(offsets[10]);
-  object.themeMode = reader.readString(offsets[11]);
-  object.trueBlack = reader.readBool(offsets[12]);
+  object.is24h = reader.readBool(offsets[9]);
+  object.keyAiChat = reader.readString(offsets[10]);
+  object.keyLeftPanel = reader.readString(offsets[11]);
+  object.keyPlanningMode = reader.readString(offsets[12]);
+  object.keyPrecisionMode = reader.readString(offsets[13]);
+  object.keyRightPanel = reader.readString(offsets[14]);
+  object.notifLeadMinutes = reader.readLong(offsets[15]);
+  object.showMinuteLabels = reader.readBool(offsets[16]);
+  object.themeMode = reader.readString(offsets[17]);
+  object.trueBlack = reader.readBool(offsets[18]);
   return object;
 }
 
@@ -171,7 +218,7 @@ P _appSettingsDeserializeProp<P>(
     case 3:
       return (reader.readLong(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 5:
       return (reader.readBool(offset)) as P;
     case 6:
@@ -181,12 +228,24 @@ P _appSettingsDeserializeProp<P>(
     case 8:
       return (reader.readBool(offset)) as P;
     case 9:
-      return (reader.readLong(offset)) as P;
-    case 10:
       return (reader.readBool(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readString(offset)) as P;
+    case 13:
+      return (reader.readString(offset)) as P;
+    case 14:
+      return (reader.readString(offset)) as P;
+    case 15:
+      return (reader.readLong(offset)) as P;
+    case 16:
+      return (reader.readBool(offset)) as P;
+    case 17:
+      return (reader.readString(offset)) as P;
+    case 18:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -692,6 +751,62 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      clockFaceThemeEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'clockFaceTheme',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      clockFaceThemeGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'clockFaceTheme',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      clockFaceThemeLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'clockFaceTheme',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      clockFaceThemeBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'clockFaceTheme',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       clockHandsModeEqualTo(int value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -846,6 +961,686 @@ extension AppSettingsQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'is24h',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'keyAiChat',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'keyAiChat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'keyAiChat',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyAiChat',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyAiChatIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'keyAiChat',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'keyLeftPanel',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'keyLeftPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'keyLeftPanel',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyLeftPanel',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyLeftPanelIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'keyLeftPanel',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'keyPlanningMode',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'keyPlanningMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'keyPlanningMode',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyPlanningMode',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPlanningModeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'keyPlanningMode',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'keyPrecisionMode',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'keyPrecisionMode',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'keyPrecisionMode',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyPrecisionMode',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyPrecisionModeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'keyPrecisionMode',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'keyRightPanel',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'keyRightPanel',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'keyRightPanel',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'keyRightPanel',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      keyRightPanelIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'keyRightPanel',
+        value: '',
       ));
     });
   }
@@ -1107,6 +1902,19 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByClockFaceTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockFaceTheme', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByClockFaceThemeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockFaceTheme', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByClockHandsMode() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'clockHandsMode', Sort.asc);
@@ -1184,6 +1992,71 @@ extension AppSettingsQuerySortBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'is24h', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByKeyAiChat() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyAiChat', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByKeyAiChatDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyAiChat', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByKeyLeftPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyLeftPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByKeyLeftPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyLeftPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByKeyPlanningMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPlanningMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByKeyPlanningModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPlanningMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByKeyPrecisionMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPrecisionMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByKeyPrecisionModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPrecisionMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByKeyRightPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyRightPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByKeyRightPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyRightPanel', Sort.desc);
     });
   }
 
@@ -1275,6 +2148,19 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByAiModelDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'aiModel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByClockFaceTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockFaceTheme', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByClockFaceThemeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'clockFaceTheme', Sort.desc);
     });
   }
 
@@ -1370,6 +2256,71 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByKeyAiChat() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyAiChat', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByKeyAiChatDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyAiChat', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByKeyLeftPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyLeftPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByKeyLeftPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyLeftPanel', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByKeyPlanningMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPlanningMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByKeyPlanningModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPlanningMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByKeyPrecisionMode() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPrecisionMode', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByKeyPrecisionModeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyPrecisionMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByKeyRightPanel() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyRightPanel', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByKeyRightPanelDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'keyRightPanel', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByNotifLeadMinutes() {
     return QueryBuilder.apply(this, (query) {
@@ -1446,6 +2397,12 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByClockFaceTheme() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'clockFaceTheme');
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByClockHandsMode() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'clockHandsMode');
@@ -1483,6 +2440,44 @@ extension AppSettingsQueryWhereDistinct
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIs24h() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'is24h');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByKeyAiChat(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'keyAiChat', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByKeyLeftPanel(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'keyLeftPanel', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByKeyPlanningMode(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'keyPlanningMode',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByKeyPrecisionMode(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'keyPrecisionMode',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByKeyRightPanel(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'keyRightPanel',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -1540,6 +2535,12 @@ extension AppSettingsQueryProperty
     });
   }
 
+  QueryBuilder<AppSettings, int, QQueryOperations> clockFaceThemeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'clockFaceTheme');
+    });
+  }
+
   QueryBuilder<AppSettings, int, QQueryOperations> clockHandsModeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'clockHandsMode');
@@ -1575,6 +2576,38 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, bool, QQueryOperations> is24hProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'is24h');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations> keyAiChatProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'keyAiChat');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations> keyLeftPanelProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'keyLeftPanel');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations>
+      keyPlanningModeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'keyPlanningMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations>
+      keyPrecisionModeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'keyPrecisionMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations> keyRightPanelProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'keyRightPanel');
     });
   }
 

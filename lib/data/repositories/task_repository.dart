@@ -14,6 +14,10 @@ class TaskRepository {
     return isar.tasks.where().sortByCreatedAtDesc().watch(fireImmediately: true);
   }
 
+  Stream<List<Task>> watchByActivity(int activityId) {
+    return isar.tasks.filter().activityIdEqualTo(activityId).watch(fireImmediately: true);
+  }
+
   Future<int> add(Task task) async {
     return isar.writeTxn(() async {
       task.createdAt = DateTime.now();

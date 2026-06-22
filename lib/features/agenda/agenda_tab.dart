@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -15,10 +16,62 @@ class AgendaTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(currentDateProvider);
-    final settings = ref.watch(settingsProvider).valueOrNull;
-    final is24h = settings?.is24h ?? false;
+    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24h ?? false));
+
+    final today = dateOnly(DateTime.now());
+    final isToday = selectedDate == today;
+    final isTomorrow = selectedDate == today.add(const Duration(days: 1));
+    final dateString = isToday
+        ? 'Today'
+        : isTomorrow
+            ? 'Tomorrow'
+            : DateFormat('EEE, MMM d').format(selectedDate);
+
     return Column(
       children: [
+        // Date Navigation Switcher Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_rounded, size: 16, color: AppPalette.textDim),
+                onPressed: () {
+                  ref.read(currentDateProvider.notifier).state = selectedDate.subtract(const Duration(days: 1));
+                  HapticFeedback.lightImpact();
+                },
+              ),
+              Expanded(
+                child: Center(
+                  child: TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        ref.read(currentDateProvider.notifier).state = dateOnly(picked);
+                      }
+                    },
+                    child: Text(
+                      dateString.toUpperCase(),
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppPalette.text, letterSpacing: 1.2),
+                    ),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppPalette.textDim),
+                onPressed: () {
+                  ref.read(currentDateProvider.notifier).state = selectedDate.add(const Duration(days: 1));
+                  HapticFeedback.lightImpact();
+                },
+              ),
+            ],
+          ),
+        ),
         _WeekStrip(selectedDate: selectedDate),
         Expanded(child: _TimelineView(date: selectedDate, is24h: is24h)),
       ],
@@ -26,7 +79,7 @@ class AgendaTab extends ConsumerWidget {
   }
 }
 
-// ── Week strip — exactly 7 days, Sun-Sat of current week ─────────────────────
+// ── Week strip — exactly 7 days, Sun-Sat of week containing selectedDate ─────────────────────
 
 class _WeekStrip extends ConsumerWidget {
   const _WeekStrip({required this.selectedDate});
@@ -35,8 +88,8 @@ class _WeekStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final today = dateOnly(DateTime.now());
-    // Week containing today, Sun=0
-    final sun = today.subtract(Duration(days: today.weekday % 7));
+    // Week containing selectedDate, Sun=0
+    final sun = selectedDate.subtract(Duration(days: selectedDate.weekday % 7));
     final days = List.generate(7, (i) => sun.add(Duration(days: i)));
 
     return Container(
@@ -128,6 +181,9 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   // create-by-drag state
   int? _createStartMin; // absolute minute of day
   int? _createEndMin;
+  
+  double _hourHMultiplier = 1.0;
+  double _baseScale = 1.0;
 
   @override
   void initState() {
@@ -151,37 +207,81 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
   Widget build(BuildContext context) {
     final activitiesAsync = ref.watch(activitiesByDateProvider);
     final activities = activitiesAsync.valueOrNull ?? const <Activity>[];
+    
+    final double hourH = _hourH * _hourHMultiplier;
+    final double totalH = hourH * 24;
 
     return Stack(
       children: [
-        GestureDetector(
-          // drag on empty area = create new activity
-          onVerticalDragStart: (d) => _onCreateDragStart(d, context),
-          onVerticalDragUpdate: _onCreateDragUpdate,
-          onVerticalDragEnd: (_) => _onCreateDragEnd(context),
-          child: SingleChildScrollView(
-            controller: _scroll,
-            physics: _draggingId != null || _createStartMin != null
-                ? const NeverScrollableScrollPhysics()
-                : const ClampingScrollPhysics(),
-            child: SizedBox(
-              height: _totalH,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: _labelW,
-                    height: _totalH,
-                    child: _buildLabels(),
-                  ),
-                  Expanded(child: _buildGrid(activities)),
-                ],
+        Listener(
+          onPointerSignal: (pointerSignal) {
+            if (pointerSignal is PointerScrollEvent) {
+              final isCtrl = HardwareKeyboard.instance.isControlPressed;
+              if (isCtrl) {
+                setState(() {
+                  final double zoomChange = -pointerSignal.scrollDelta.dy * 0.002;
+                  _hourHMultiplier = (_hourHMultiplier + zoomChange).clamp(0.6, 3.0);
+                });
+              }
+            }
+          },
+          child: GestureDetector(
+            onScaleStart: (details) {
+              if (details.pointerCount == 2) {
+                _baseScale = _hourHMultiplier;
+              } else if (details.pointerCount == 1) {
+                final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
+                final localY = details.localFocalPoint.dy;
+                final absMin = ((localY + scrollOff) / hourH * 60).round().clamp(0, 1439);
+                setState(() {
+                  _createStartMin = absMin;
+                  _createEndMin = absMin;
+                });
+              }
+            },
+            onScaleUpdate: (details) {
+              if (details.pointerCount == 2) {
+                setState(() {
+                  _hourHMultiplier = (_baseScale * details.scale).clamp(0.6, 3.0);
+                });
+              } else if (details.pointerCount == 1 && _createStartMin != null) {
+                final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
+                final localY = details.localFocalPoint.dy;
+                final newEndMin = ((localY + scrollOff) / hourH * 60).round().clamp(_createStartMin! + 5, 1439);
+                setState(() {
+                  _createEndMin = newEndMin;
+                });
+              }
+            },
+            onScaleEnd: (details) {
+              if (_createStartMin != null) {
+                _onCreateDragEnd(context);
+              }
+            },
+            child: SingleChildScrollView(
+              controller: _scroll,
+              physics: _draggingId != null || _createStartMin != null
+                  ? const NeverScrollableScrollPhysics()
+                  : const ClampingScrollPhysics(),
+              child: SizedBox(
+                height: totalH,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: _labelW,
+                      height: totalH,
+                      child: _buildLabels(hourH),
+                    ),
+                    Expanded(child: _buildGrid(activities, hourH, totalH)),
+                  ],
+                ),
               ),
             ),
           ),
         ),
         if (dateOnly(widget.date) == dateOnly(DateTime.now()))
-          _NowLine(hourH: _hourH, labelW: _labelW, scroll: _scroll),
+          _NowLine(hourH: hourH, labelW: _labelW, scroll: _scroll),
         Positioned(
           right: 16,
           bottom: 16,
@@ -198,11 +298,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
 
   // ── Labels ─────────────────────────────────────────────────────────────────
 
-  Widget _buildLabels() {
+  Widget _buildLabels(double hourH) {
     final items = <Widget>[];
     for (int h = 1; h < 24; h++) {
       items.add(Positioned(
-        top: h * _hourH - 7,
+        top: h * hourH - 7,
         left: 0,
         right: 4,
         child: Text(
@@ -214,7 +314,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
       // :15 :30 :45 sub-labels
       for (final m in [15, 30, 45]) {
         items.add(Positioned(
-          top: h * _hourH + m / 60 * _hourH - 5,
+          top: h * hourH + m / 60 * hourH - 5,
           right: 4,
           child: Text(
             ':${m.toString().padLeft(2, '0')}',
@@ -240,11 +340,11 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
 
   // ── Grid ──────────────────────────────────────────────────────────────────
 
-  Widget _buildGrid(List<Activity> activities) {
+  Widget _buildGrid(List<Activity> activities, double hourH, double totalH) {
     final createPreviews = <Widget>[];
     if (_createStartMin != null && _createEndMin != null) {
-      final top = _createStartMin! / 60 * _hourH;
-      final h = ((_createEndMin! - _createStartMin!) / 60 * _hourH)
+      final top = _createStartMin! / 60 * hourH;
+      final h = ((_createEndMin! - _createStartMin!) / 60 * hourH)
           .clamp(20.0, double.infinity);
       createPreviews.add(
         Positioned(
@@ -266,24 +366,24 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     return Stack(
       children: [
         CustomPaint(
-          size: Size(double.infinity, _totalH),
-          painter: _GridPainter(hourH: _hourH),
+          size: Size(double.infinity, totalH),
+          painter: _GridPainter(hourH: hourH),
         ),
-        ...activities.map((a) => _buildBlock(a)),
+        ...activities.map((a) => _buildBlock(a, hourH)),
         ...createPreviews,
       ],
     );
   }
 
-  Widget _buildBlock(Activity a) {
+  Widget _buildBlock(Activity a, double hourH) {
     final offsetMin = a.ampmHalf == AmPmHalf.am ? 0 : 720;
     final isDragging = _draggingId == a.id;
-    final delta = isDragging ? _snappedDeltaMin() : 0;
+    final delta = isDragging ? _snappedDeltaMin(hourH) : 0;
     final startMin = (offsetMin + a.startMinute + delta).clamp(0, 1440 - 1);
     final endMin =
         (offsetMin + a.endMinute + delta).clamp(startMin + 1, 1440);
-    final top = startMin / 60 * _hourH;
-    final height = ((endMin - startMin) / 60 * _hourH).clamp(22.0, 1e6);
+    final top = startMin / 60 * hourH;
+    final height = ((endMin - startMin) / 60 * hourH).clamp(22.0, 1e6);
     final color = Color(a.colorValue);
     final fg = _fg(color);
 
@@ -306,7 +406,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
         },
         onVerticalDragUpdate: (d) =>
             setState(() => _dragDeltaY += d.delta.dy),
-        onVerticalDragEnd: (_) => _commitBlockDrag(a),
+        onVerticalDragEnd: (_) => _commitBlockDrag(a, hourH),
         child: Opacity(
           opacity: a.isCompleted ? 0.45 : 1.0,
           child: Material(
@@ -387,14 +487,14 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     );
   }
 
-  int _snappedDeltaMin() {
-    final raw = (_dragDeltaY / _hourH * 60).round();
+  int _snappedDeltaMin(double hourH) {
+    final raw = (_dragDeltaY / hourH * 60).round();
     return snapDelta(raw);
   }
 
-  Future<void> _commitBlockDrag(Activity a) async {
+  Future<void> _commitBlockDrag(Activity a, double hourH) async {
     if (_draggingId == null) return;
-    final delta = _snappedDeltaMin();
+    final delta = _snappedDeltaMin(hourH);
     setState(() {
       _draggingId = null;
       _dragDeltaY = 0;
@@ -409,29 +509,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
     HapticFeedback.lightImpact();
   }
 
-  // ── Create by dragging empty area ─────────────────────────────────────────
-
-  void _onCreateDragStart(DragStartDetails d, BuildContext ctx) {
-    final scrollOff = _scroll.hasClients ? _scroll.offset : 0.0;
-    final box = ctx.findRenderObject() as RenderBox?;
-    final topOfWidget = box?.localToGlobal(Offset.zero).dy ?? 0.0;
-    final localY = d.globalPosition.dy - topOfWidget;
-    final absMin =
-        ((localY + scrollOff) / _hourH * 60).round().clamp(0, 1439);
-    setState(() {
-      _createStartMin = absMin;
-      _createEndMin = absMin;
-    });
-  }
-
-  void _onCreateDragUpdate(DragUpdateDetails d) {
-    if (_createStartMin == null) return;
-    // accumulate dy from start position
-    final newEndMin = (_createStartMin! + d.localPosition.dy / _hourH * 60)
-        .round()
-        .clamp(_createStartMin! + 5, 1439);
-    setState(() => _createEndMin = newEndMin);
-  }
+  // (Obsolete drag start/update helper functions are replaced by GestureDetector onScale callbacks)
 
   Future<void> _onCreateDragEnd(BuildContext ctx) async {
     if (_createStartMin == null || _createEndMin == null) return;

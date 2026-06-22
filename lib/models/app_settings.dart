@@ -12,6 +12,14 @@ class AppSettings {
   bool trueBlack = false; // AMOLED: pure black bg when dark theme active
   int clockHandsMode = 1; // 1=single precision, 2=hour+min, 3=hour+min+sec
   bool showMinuteLabels = false;
+  int clockFaceTheme = 1; // 1=Yellow-Black, 2=Elegance, 3=Blue, 4=Purple, 5=Simple Flat, 6=Simple Classic
+  
+  // Custom Keyboard Shortcuts (Key Labels)
+  String keyLeftPanel = 'B';
+  String keyRightPanel = 'E';
+  String keyAiChat = 'A';
+  String keyPrecisionMode = 'P';
+  String keyPlanningMode = 'J';
   
   // UI Toggles
   bool enableAiAssistant = true;

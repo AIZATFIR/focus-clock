@@ -153,7 +153,48 @@ class _IconPicker extends StatelessWidget {
             child: const Icon(Icons.close, size: 16, color: AppPalette.textDim),
           ),
         ),
-        ...presetIcons.map((icon) {
+        // "Custom emoji" option
+        GestureDetector(
+          onTap: () async {
+            final customEmoji = await showDialog<String>(
+              context: context,
+              builder: (ctx) {
+                final ctrl = TextEditingController();
+                return AlertDialog(
+                  backgroundColor: AppPalette.card,
+                  title: const Text('Custom Emoji', style: TextStyle(fontSize: 16)),
+                  content: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    maxLength: 2,
+                    decoration: const InputDecoration(hintText: '😀', border: OutlineInputBorder()),
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: AppPalette.accent, foregroundColor: Colors.black),
+                      onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+            if (customEmoji != null && customEmoji.isNotEmpty) {
+              onChanged(customEmoji);
+            }
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              border: Border.all(color: AppPalette.stroke, width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.add, size: 20, color: AppPalette.textDim),
+          ),
+        ),
+        ...[if (value != null && !presetIcons.contains(value)) value!, ...presetIcons].map((icon) {
           final selected = value == icon;
           return GestureDetector(
             onTap: () => onChanged(icon),

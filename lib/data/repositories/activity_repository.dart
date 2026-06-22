@@ -74,6 +74,9 @@ class ActivityRepository {
       if (half != null && a.ampmHalf != half) return false;
 
       if (a.recurrence == 'daily') return true;
+      if (a.recurrence == 'weekday') {
+        return targetDate.weekday >= 1 && targetDate.weekday <= 5;
+      }
       if (a.recurrence == 'weekly') {
         return a.date.weekday == targetDate.weekday;
       }

@@ -94,6 +94,38 @@ final eisenhowerTasksProvider = StreamProvider<List<Task>>((ref) {
   return ref.watch(taskRepoProvider).watchAll();
 });
 
+/// Tasks scheduled for the currently selected date and half.
+final tasksByHalfProvider = Provider<List<Task>>((ref) {
+  final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
+  final date = ref.watch(currentDateProvider);
+  final half = ref.watch(ampmHalfProvider);
+  final activities = ref.watch(activitiesByHalfProvider).valueOrNull ?? const [];
+  final activityIds = activities.map((a) => a.id).toSet();
+  
+  return tasks.where((t) {
+    if (t.startMinute == null || t.endMinute == null) return false;
+    if (t.activityId != null) {
+      return activityIds.contains(t.activityId);
+    }
+    return t.date != null && 
+           t.date!.year == date.year &&
+           t.date!.month == date.month &&
+           t.date!.day == date.day &&
+           t.ampmHalf == half;
+  }).toList();
+});
+
+/// Unscheduled tasks (Inbox) that don't have start/end minutes.
+final unscheduledTasksProvider = Provider<List<Task>>((ref) {
+  final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
+  return tasks.where((t) => t.startMinute == null || t.endMinute == null).toList();
+});
+
+/// Tasks assigned to a specific activity.
+final tasksForActivityProvider = StreamProvider.family<List<Task>, int>((ref, activityId) {
+  return ref.watch(taskRepoProvider).watchByActivity(activityId);
+});
+
 /// The task currently being scheduled into the clock.
 final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 
@@ -101,6 +133,45 @@ final schedulingTaskProvider = StateProvider<Task?>((_) => null);
 /// "New chat" replaces it with an empty list.
 final aiTranscriptProvider =
     StateProvider<List<ChatMessage>>((_) => <ChatMessage>[]);
+
+// ── Planning Mode State ──────────────────────────────────────────────────
+
+/// Tracks whether the UI is in Planning Mode (Fullscreen Clock)
+final planningModeProvider = StateProvider<bool>((ref) => false);
+
+/// Tracks the specific date being planned. Defaults to today.
+final planningDateProvider = StateProvider<DateTime>((ref) => dateOnly(DateTime.now()));
+
+/// Tracks whether the clock is in Precision Mode (1-minute snapping)
+final precisionModeProvider = StateProvider<bool>((ref) => false);
+
+/// Tracks whether the clock is in Instant Mode (double click fill)
+final isInstantModeProvider = StateProvider<bool>((ref) => false);
+
+/// Tracks whether the user is actively dragging the clock hand or a segment
+final isClockDraggingProvider = StateProvider<bool>((ref) => false);
+
+/// Tracks the selected duration interval for Instant Mode (default 60 minutes)
+final instantIntervalProvider = StateProvider<int>((ref) => 60);
+
+/// Tasks scheduled for the currently selected date (entire 24h day).
+final tasksByDateProvider = Provider<List<Task>>((ref) {
+  final tasks = ref.watch(eisenhowerTasksProvider).valueOrNull ?? const [];
+  final date = ref.watch(currentDateProvider);
+  final activities = ref.watch(activitiesByDateProvider).valueOrNull ?? const [];
+  final activityIds = activities.map((a) => a.id).toSet();
+  
+  return tasks.where((t) {
+    if (t.startMinute == null || t.endMinute == null) return false;
+    if (t.activityId != null) {
+      return activityIds.contains(t.activityId);
+    }
+    return t.date != null && 
+           t.date!.year == date.year &&
+           t.date!.month == date.month &&
+           t.date!.day == date.day;
+  }).toList();
+});
 
 /// AI service — lazily init on first use.
 /// AI service — recreated when settings change.

@@ -19,11 +19,14 @@ int minuteOfHalf(DateTime d) {
   return h12 * 60 + d.minute;
 }
 
-/// Snap absolute minute [0..720]: prefer nearest hour (within 8 min), else nearest 5.
+int toDbMinute(int uiMinute) => uiMinute % 720;
+AmPmHalf toDbHalf(int uiMinute) => uiMinute < 720 ? AmPmHalf.am : AmPmHalf.pm;
+int toUiMinute(int dbMinute, AmPmHalf half, {bool is24h = true}) =>
+    is24h ? (dbMinute + (half == AmPmHalf.pm ? 720 : 0)) : dbMinute;
+
+/// Snap absolute minute [0..1440]: nearest 5 minutes.
 int snap5(int m) {
-  final nearestHour = ((m + 30) ~/ 60) * 60;
-  if ((m - nearestHour).abs() <= 8) return nearestHour.clamp(0, 720);
-  return ((m + 2) ~/ 5) * 5 % 720;
+  return (((m + 2.5) ~/ 5) * 5).clamp(0, 1440);
 }
 
 /// Snap a drag delta (any int): nearest 5, prefer 0 or multiples of 60 (within 8).
@@ -50,23 +53,28 @@ String formatMinuteOfHalf(int minute, AmPmHalf half, {required bool is24h}) {
 String formatTimeOfDay(DateTime d, {required bool is24h}) {
   if (is24h) {
     return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  } else {
+    final h12 = d.hour % 12;
+    final hour = h12 == 0 ? 12 : h12;
+    final ampm = d.hour < 12 ? 'AM' : 'PM';
+    return '${hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')} $ampm';
   }
-  final h12 = d.hour % 12;
-  final h = h12 == 0 ? 12 : h12;
-  final ampm = d.hour < 12 ? 'AM' : 'PM';
-  return '$h:${d.minute.toString().padLeft(2, '0')} $ampm';
 }
 
-/// Convert (dx, dy) from clock center to minute-of-half [0..720).
+/// Convert (dx, dy) from clock center to minute-of-day [0..1440) or [0..720).
 /// 12 o'clock = top = minute 0. Clockwise.
-int offsetToMinute(Offset offset) {
+int offsetToMinute(Offset offset, {required bool is24h}) {
   final theta = math.atan2(offset.dx, -offset.dy);
   var norm = theta < 0 ? theta + 2 * math.pi : theta;
-  final minute = (norm / (2 * math.pi) * 720).round() % 720;
+  final scale = is24h ? 1440.0 : 720.0;
+  final minute = (norm / (2 * math.pi) * scale).round() % scale.toInt();
   return minute;
 }
 
-double minuteToAngle(int minute) => (minute / 720.0) * 2 * math.pi;
+double minuteToAngle(int minute, {required bool is24h}) {
+  final scale = is24h ? 1440.0 : 720.0;
+  return (minute / scale) * 2 * math.pi;
+}
 
 /// True if [aStart, aEnd) overlaps [bStart, bEnd).
 bool rangesOverlap(int aStart, int aEnd, int bStart, int bEnd) =>

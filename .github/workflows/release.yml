@@ -1,0 +1,143 @@
+name: Release Focus Clock
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        
+      - name: Run build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+        
+      - name: Build APK
+        run: flutter build apk --release
+        
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-clock-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libblkid-dev
+          
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        
+      - name: Run build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+        
+      - name: Build Linux Desktop
+        run: flutter build linux --release
+        
+      - name: Archive Linux Bundle
+        run: |
+          cd build/linux/x64/release/bundle
+          tar -czf ../../../../focus-clock-linux.tar.gz .
+          
+      - name: Upload Linux Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-clock-linux-desktop
+          path: focus-clock-linux.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          
+      - name: Install dependencies
+        run: flutter pub get
+        
+      - name: Run build_runner
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+        
+      - name: Build Windows Desktop
+        run: flutter build windows --release
+        
+      - name: Archive Windows Bundle
+        shell: bash
+        run: |
+          cd build/windows/x64/release/runner
+          7z a ../../../../focus-clock-windows.zip .
+          
+      - name: Upload Windows Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: focus-clock-windows-desktop
+          path: focus-clock-windows.zip
+
+  publish-release:
+    needs: [build-android, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: focus-clock-android-apk
+          path: ./artifacts
+          
+      - name: Download Linux Desktop
+        uses: actions/download-artifact@v4
+        with:
+          name: focus-clock-linux-desktop
+          path: ./artifacts
+          
+      - name: Download Windows Desktop
+        uses: actions/download-artifact@v4
+        with:
+          name: focus-clock-windows-desktop
+          path: ./artifacts
+          
+      - name: Rename artifacts for release
+        run: |
+          mv ./artifacts/app-release.apk ./artifacts/focus-clock-android.apk
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./artifacts/focus-clock-android.apk
+            ./artifacts/focus-clock-linux.tar.gz
+            ./artifacts/focus-clock-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

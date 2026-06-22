@@ -454,7 +454,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('✨', style: TextStyle(fontSize: 40)),
+            const Icon(Icons.auto_awesome, size: 48, color: AppPalette.accent),
             const SizedBox(height: 12),
             const Text(
               'AI Schedule Assistant',
