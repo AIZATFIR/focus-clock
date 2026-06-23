@@ -66,9 +66,7 @@ jobs:
         run: flutter build linux --release
         
       - name: Archive Linux Bundle
-        run: |
-          cd build/linux/x64/release/bundle
-          tar -czf ../../../../focus-clock-linux.tar.gz .
+        run: tar -czf focus-clock-linux.tar.gz -C build/linux/x64/release/bundle .
           
       - name: Upload Linux Archive
         uses: actions/upload-artifact@v4
@@ -99,7 +97,7 @@ jobs:
         shell: bash
         run: |
           cd build/windows/x64/runner/Release
-          7z a ../../../../focus-clock-windows.zip .
+          7z a ../../../../../focus-clock-windows.zip .
           
       - name: Upload Windows Archive
         uses: actions/upload-artifact@v4
