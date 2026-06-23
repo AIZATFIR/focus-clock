@@ -360,13 +360,22 @@ class _ClockPainter extends CustomPainter {
           ? AppPalette.danger
           : (previewColor ?? themeAccentColor);
       final scale = is24hDial ? 1440 : 720;
-      final endInClock = math.min(previewEnd!, scale);
-      _drawArc(canvas, center, taskInner, arcOuter, previewStart!, endInClock,
-          base.withValues(alpha: 0.55),
-          dashed: true);
+      final startInClock = previewStart!.clamp(0, scale);
+      final endInClock = previewEnd!.clamp(0, scale);
+      if (startInClock < endInClock) {
+        _drawArc(canvas, center, taskInner, arcOuter, startInClock, endInClock,
+            base.withValues(alpha: 0.55),
+            dashed: true);
+      }
       // Span continues past midnight
       if (previewEnd! > scale) {
         _drawArc(canvas, center, taskInner, arcOuter, 0, previewEnd! - scale,
+            base.withValues(alpha: 0.28),
+            dashed: true);
+      }
+      // Span starts before noon/midnight
+      if (previewStart! < 0) {
+        _drawArc(canvas, center, taskInner, arcOuter, scale + previewStart!, scale,
             base.withValues(alpha: 0.28),
             dashed: true);
       }

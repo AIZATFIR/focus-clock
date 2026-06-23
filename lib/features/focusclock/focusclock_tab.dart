@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/services.dart';
@@ -185,11 +186,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     with TickerProviderStateMixin {
   Activity? _draggingActivity;
   int? _lastPanMinute;
-  bool _crossedHalf = false;
   bool _isPrecisionMode = false;
   bool _hasDragged = false;
   bool _isExiting = false;
   int? _dragClickMinute;
+  int _dragValue = 0;
   
   late final AnimationController _revealCtrl;
   late final AnimationController _pulseCtrl;
@@ -247,7 +248,24 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       if (excludeId != null && a.id == excludeId) continue;
       final aStart = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
       final aEnd = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
-      if (rangesOverlap(start, end, aStart, aEnd)) return true;
+
+      if (is24h) {
+        if (rangesOverlap(start, end, aStart, aEnd)) return true;
+      } else {
+        int cycleStart = (start ~/ 720) * 720;
+        if (start < 0 && start % 720 != 0) {
+          cycleStart = ((start ~/ 720) - 1) * 720;
+        }
+        for (int c = cycleStart; c <= end; c += 720) {
+          if ((c ~/ 720).abs() % 2 == 0) {
+            final s = math.max(start - c, 0);
+            final e = math.min(end - c, 720);
+            if (s < e) {
+              if (rangesOverlap(s, e, aStart, aEnd)) return true;
+            }
+          }
+        }
+      }
     }
     return false;
   }
@@ -853,7 +871,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     _dragStartNotifier.value = clickMin;
     _dragEndNotifier.value = clickMin;
     _lastPanMinute = offsetToMinute(centered, is24h: is24h);
-    _crossedHalf = false;
+    _dragValue = 0;
     _dragConflictNotifier.value = false;
   }
 
@@ -863,48 +881,43 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final centered = _toCenter(p, size);
     final is24h = _is24h;
     final raw = offsetToMinute(centered, is24h: is24h);
-    final currentMin = _snap(raw);
     final clickMin = _dragClickMinute!;
     final prevEnd = _dragEndNotifier.value;
 
     final last = _lastPanMinute ?? raw;
-    final limitMax = is24h ? 1080 : 540;
-    final limitMin = is24h ? 360 : 180;
     final scale = is24h ? 1440 : 720;
-    if (!_crossedHalf && last > limitMax && raw < limitMin) {
-      _crossedHalf = true;
-    } else if (_crossedHalf && last < limitMin && raw > limitMax) {
-      _crossedHalf = false;
+
+    int delta = raw - last;
+    if (delta > scale / 2) {
+      delta -= scale;
+    } else if (delta < -scale / 2) {
+      delta += scale;
     }
+    _dragValue += delta;
     _lastPanMinute = raw;
+
+    final currentAbsolute = clickMin + _dragValue;
 
     int start;
     int end;
-    if (_crossedHalf) {
-      if (currentMin >= clickMin) {
-        start = clickMin;
-        end = scale + currentMin;
-      } else {
-        start = currentMin;
-        end = scale + clickMin;
-      }
+    if (currentAbsolute >= clickMin) {
+      start = clickMin;
+      end = _snap(currentAbsolute);
     } else {
-      if (currentMin >= clickMin) {
-        start = clickMin;
-        end = currentMin;
-      } else {
-        start = currentMin;
-        end = clickMin;
-      }
+      start = _snap(currentAbsolute);
+      end = clickMin;
     }
 
     if (end - start < 5) {
       end = start + 5;
     }
+    if (end - start > 1440) {
+      end = start + 1440;
+    }
 
     _dragStartNotifier.value = start;
     _dragEndNotifier.value = end;
-    _dragConflictNotifier.value = _hasConflict(start, end.clamp(0, scale), activities, is24h: is24h);
+    _dragConflictNotifier.value = _hasConflict(start, end, activities, is24h: is24h);
     _hoverMinuteNotifier.value = raw;
 
     if (_isPrecisionMode && !_aimLockCtrl.isAnimating) {
@@ -936,7 +949,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     _dragConflictNotifier.value = false;
     _hoverMinuteNotifier.value = null;
     _dragClickMinute = null;
-    _crossedHalf = false;
     _lastPanMinute = null;
 
     HapticFeedback.lightImpact();
