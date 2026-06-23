@@ -61,6 +61,28 @@ String formatTimeOfDay(DateTime d, {required bool is24h}) {
   }
 }
 
+String formatCurrentTime(DateTime d, {required bool is24h, required String format}) {
+  if (format == 'seconds') {
+    if (is24h) {
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
+    } else {
+      final h12 = d.hour % 12;
+      final hour = h12 == 0 ? 12 : h12;
+      final ampm = d.hour < 12 ? 'AM' : 'PM';
+      return '${hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')} $ampm';
+    }
+  } else if (format == 'detailed') {
+    final days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final weekdayStr = days[d.weekday == 7 ? 0 : d.weekday];
+    final monthStr = months[d.month - 1];
+    final timePart = formatTimeOfDay(d, is24h: is24h);
+    return '$weekdayStr, ${d.day} $monthStr $timePart';
+  } else {
+    return formatTimeOfDay(d, is24h: is24h);
+  }
+}
+
 /// Convert (dx, dy) from clock center to minute-of-day [0..1440) or [0..720).
 /// 12 o'clock = top = minute 0. Clockwise.
 int offsetToMinute(Offset offset, {required bool is24h}) {

@@ -117,7 +117,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.of(context).viewInsets.bottom;
-    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24h ?? false));
+    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
     final readOnly = _mode == DetailMode.view;
     return KeyboardListener(
       focusNode: _focusNode,

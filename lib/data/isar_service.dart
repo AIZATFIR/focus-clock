@@ -28,16 +28,39 @@ class IsarService {
       await isar.writeTxn(() async {
         await isar.presets.putAll([
           Preset()
-            ..name = 'Lari'
-            ..colorValue = presetColors[2]
+            ..name = 'Deepwork'
+            ..colorValue = presetColors[11] // Blue
+            ..iconKey = '💻'
             ..createdAt = DateTime.now(),
           Preset()
-            ..name = 'Koding'
-            ..colorValue = presetColors[0]
+            ..name = 'Intentional Rest'
+            ..colorValue = presetColors[15] // Pink
+            ..iconKey = '🧘'
             ..createdAt = DateTime.now(),
           Preset()
-            ..name = 'Istirahat'
-            ..colorValue = presetColors[4]
+            ..name = 'Social activity'
+            ..colorValue = presetColors[2] // Orange
+            ..iconKey = '🤝'
+            ..createdAt = DateTime.now(),
+          Preset()
+            ..name = 'Hobbies'
+            ..colorValue = presetColors[14] // Purple
+            ..iconKey = '🎨'
+            ..createdAt = DateTime.now(),
+          Preset()
+            ..name = 'Exercise'
+            ..colorValue = presetColors[7] // Green
+            ..iconKey = '🏃'
+            ..createdAt = DateTime.now(),
+          Preset()
+            ..name = 'Wind down'
+            ..colorValue = presetColors[13] // Deep Purple
+            ..iconKey = '💆'
+            ..createdAt = DateTime.now(),
+          Preset()
+            ..name = 'Sleep'
+            ..colorValue = presetColors[16] // Brown
+            ..iconKey = '😴'
             ..createdAt = DateTime.now(),
         ]);
       });

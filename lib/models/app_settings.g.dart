@@ -42,73 +42,103 @@ const AppSettingsSchema = CollectionSchema(
       name: r'clockHandsMode',
       type: IsarType.long,
     ),
-    r'enableAiAssistant': PropertySchema(
+    r'currentTimeFormat': PropertySchema(
       id: 5,
+      name: r'currentTimeFormat',
+      type: IsarType.string,
+    ),
+    r'enableAiAssistant': PropertySchema(
+      id: 6,
       name: r'enableAiAssistant',
       type: IsarType.bool,
     ),
     r'enableLeftPanel': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'enableLeftPanel',
       type: IsarType.bool,
     ),
     r'enableRightPanel': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'enableRightPanel',
       type: IsarType.bool,
     ),
+    r'floatTimeText': PropertySchema(
+      id: 9,
+      name: r'floatTimeText',
+      type: IsarType.bool,
+    ),
+    r'glowStyle': PropertySchema(
+      id: 10,
+      name: r'glowStyle',
+      type: IsarType.string,
+    ),
     r'hasCompletedOnboarding': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'hasCompletedOnboarding',
       type: IsarType.bool,
     ),
     r'is24h': PropertySchema(
-      id: 9,
+      id: 12,
       name: r'is24h',
       type: IsarType.bool,
     ),
+    r'is24hDial': PropertySchema(
+      id: 13,
+      name: r'is24hDial',
+      type: IsarType.bool,
+    ),
+    r'is24hTime': PropertySchema(
+      id: 14,
+      name: r'is24hTime',
+      type: IsarType.bool,
+    ),
     r'keyAiChat': PropertySchema(
-      id: 10,
+      id: 15,
       name: r'keyAiChat',
       type: IsarType.string,
     ),
     r'keyLeftPanel': PropertySchema(
-      id: 11,
+      id: 16,
       name: r'keyLeftPanel',
       type: IsarType.string,
     ),
     r'keyPlanningMode': PropertySchema(
-      id: 12,
+      id: 17,
       name: r'keyPlanningMode',
       type: IsarType.string,
     ),
     r'keyPrecisionMode': PropertySchema(
-      id: 13,
+      id: 18,
       name: r'keyPrecisionMode',
       type: IsarType.string,
     ),
     r'keyRightPanel': PropertySchema(
-      id: 14,
+      id: 19,
       name: r'keyRightPanel',
       type: IsarType.string,
     ),
     r'notifLeadMinutes': PropertySchema(
-      id: 15,
+      id: 20,
       name: r'notifLeadMinutes',
       type: IsarType.long,
     ),
+    r'showCurrentTime': PropertySchema(
+      id: 21,
+      name: r'showCurrentTime',
+      type: IsarType.bool,
+    ),
     r'showMinuteLabels': PropertySchema(
-      id: 16,
+      id: 22,
       name: r'showMinuteLabels',
       type: IsarType.bool,
     ),
     r'themeMode': PropertySchema(
-      id: 17,
+      id: 23,
       name: r'themeMode',
       type: IsarType.string,
     ),
     r'trueBlack': PropertySchema(
-      id: 18,
+      id: 24,
       name: r'trueBlack',
       type: IsarType.bool,
     )
@@ -136,6 +166,8 @@ int _appSettingsEstimateSize(
   bytesCount += 3 + object.aiApiKey.length * 3;
   bytesCount += 3 + object.aiBaseUrl.length * 3;
   bytesCount += 3 + object.aiModel.length * 3;
+  bytesCount += 3 + object.currentTimeFormat.length * 3;
+  bytesCount += 3 + object.glowStyle.length * 3;
   bytesCount += 3 + object.keyAiChat.length * 3;
   bytesCount += 3 + object.keyLeftPanel.length * 3;
   bytesCount += 3 + object.keyPlanningMode.length * 3;
@@ -156,20 +188,26 @@ void _appSettingsSerialize(
   writer.writeString(offsets[2], object.aiModel);
   writer.writeLong(offsets[3], object.clockFaceTheme);
   writer.writeLong(offsets[4], object.clockHandsMode);
-  writer.writeBool(offsets[5], object.enableAiAssistant);
-  writer.writeBool(offsets[6], object.enableLeftPanel);
-  writer.writeBool(offsets[7], object.enableRightPanel);
-  writer.writeBool(offsets[8], object.hasCompletedOnboarding);
-  writer.writeBool(offsets[9], object.is24h);
-  writer.writeString(offsets[10], object.keyAiChat);
-  writer.writeString(offsets[11], object.keyLeftPanel);
-  writer.writeString(offsets[12], object.keyPlanningMode);
-  writer.writeString(offsets[13], object.keyPrecisionMode);
-  writer.writeString(offsets[14], object.keyRightPanel);
-  writer.writeLong(offsets[15], object.notifLeadMinutes);
-  writer.writeBool(offsets[16], object.showMinuteLabels);
-  writer.writeString(offsets[17], object.themeMode);
-  writer.writeBool(offsets[18], object.trueBlack);
+  writer.writeString(offsets[5], object.currentTimeFormat);
+  writer.writeBool(offsets[6], object.enableAiAssistant);
+  writer.writeBool(offsets[7], object.enableLeftPanel);
+  writer.writeBool(offsets[8], object.enableRightPanel);
+  writer.writeBool(offsets[9], object.floatTimeText);
+  writer.writeString(offsets[10], object.glowStyle);
+  writer.writeBool(offsets[11], object.hasCompletedOnboarding);
+  writer.writeBool(offsets[12], object.is24h);
+  writer.writeBool(offsets[13], object.is24hDial);
+  writer.writeBool(offsets[14], object.is24hTime);
+  writer.writeString(offsets[15], object.keyAiChat);
+  writer.writeString(offsets[16], object.keyLeftPanel);
+  writer.writeString(offsets[17], object.keyPlanningMode);
+  writer.writeString(offsets[18], object.keyPrecisionMode);
+  writer.writeString(offsets[19], object.keyRightPanel);
+  writer.writeLong(offsets[20], object.notifLeadMinutes);
+  writer.writeBool(offsets[21], object.showCurrentTime);
+  writer.writeBool(offsets[22], object.showMinuteLabels);
+  writer.writeString(offsets[23], object.themeMode);
+  writer.writeBool(offsets[24], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -184,21 +222,27 @@ AppSettings _appSettingsDeserialize(
   object.aiModel = reader.readString(offsets[2]);
   object.clockFaceTheme = reader.readLong(offsets[3]);
   object.clockHandsMode = reader.readLong(offsets[4]);
-  object.enableAiAssistant = reader.readBool(offsets[5]);
-  object.enableLeftPanel = reader.readBool(offsets[6]);
-  object.enableRightPanel = reader.readBool(offsets[7]);
-  object.hasCompletedOnboarding = reader.readBool(offsets[8]);
+  object.currentTimeFormat = reader.readString(offsets[5]);
+  object.enableAiAssistant = reader.readBool(offsets[6]);
+  object.enableLeftPanel = reader.readBool(offsets[7]);
+  object.enableRightPanel = reader.readBool(offsets[8]);
+  object.floatTimeText = reader.readBool(offsets[9]);
+  object.glowStyle = reader.readString(offsets[10]);
+  object.hasCompletedOnboarding = reader.readBool(offsets[11]);
   object.id = id;
-  object.is24h = reader.readBool(offsets[9]);
-  object.keyAiChat = reader.readString(offsets[10]);
-  object.keyLeftPanel = reader.readString(offsets[11]);
-  object.keyPlanningMode = reader.readString(offsets[12]);
-  object.keyPrecisionMode = reader.readString(offsets[13]);
-  object.keyRightPanel = reader.readString(offsets[14]);
-  object.notifLeadMinutes = reader.readLong(offsets[15]);
-  object.showMinuteLabels = reader.readBool(offsets[16]);
-  object.themeMode = reader.readString(offsets[17]);
-  object.trueBlack = reader.readBool(offsets[18]);
+  object.is24h = reader.readBool(offsets[12]);
+  object.is24hDial = reader.readBool(offsets[13]);
+  object.is24hTime = reader.readBool(offsets[14]);
+  object.keyAiChat = reader.readString(offsets[15]);
+  object.keyLeftPanel = reader.readString(offsets[16]);
+  object.keyPlanningMode = reader.readString(offsets[17]);
+  object.keyPrecisionMode = reader.readString(offsets[18]);
+  object.keyRightPanel = reader.readString(offsets[19]);
+  object.notifLeadMinutes = reader.readLong(offsets[20]);
+  object.showCurrentTime = reader.readBool(offsets[21]);
+  object.showMinuteLabels = reader.readBool(offsets[22]);
+  object.themeMode = reader.readString(offsets[23]);
+  object.trueBlack = reader.readBool(offsets[24]);
   return object;
 }
 
@@ -220,7 +264,7 @@ P _appSettingsDeserializeProp<P>(
     case 4:
       return (reader.readLong(offset)) as P;
     case 5:
-      return (reader.readBool(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readBool(offset)) as P;
     case 7:
@@ -232,20 +276,32 @@ P _appSettingsDeserializeProp<P>(
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
-      return (reader.readString(offset)) as P;
-    case 12:
-      return (reader.readString(offset)) as P;
-    case 13:
-      return (reader.readString(offset)) as P;
-    case 14:
-      return (reader.readString(offset)) as P;
-    case 15:
-      return (reader.readLong(offset)) as P;
-    case 16:
       return (reader.readBool(offset)) as P;
+    case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readBool(offset)) as P;
+    case 14:
+      return (reader.readBool(offset)) as P;
+    case 15:
+      return (reader.readString(offset)) as P;
+    case 16:
+      return (reader.readString(offset)) as P;
     case 17:
       return (reader.readString(offset)) as P;
     case 18:
+      return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readString(offset)) as P;
+    case 20:
+      return (reader.readLong(offset)) as P;
+    case 21:
+      return (reader.readBool(offset)) as P;
+    case 22:
+      return (reader.readBool(offset)) as P;
+    case 23:
+      return (reader.readString(offset)) as P;
+    case 24:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -863,6 +919,142 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'currentTimeFormat',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'currentTimeFormat',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'currentTimeFormat',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'currentTimeFormat',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      currentTimeFormatIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'currentTimeFormat',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       enableAiAssistantEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -888,6 +1080,152 @@ extension AppSettingsQueryFilter
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'enableRightPanel',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      floatTimeTextEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'floatTimeText',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'glowStyle',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'glowStyle',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'glowStyle',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'glowStyle',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      glowStyleIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'glowStyle',
+        value: '',
       ));
     });
   }
@@ -960,6 +1298,26 @@ extension AppSettingsQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'is24h',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      is24hDialEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'is24hDial',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      is24hTimeEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'is24hTime',
         value: value,
       ));
     });
@@ -1702,6 +2060,16 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      showCurrentTimeEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'showCurrentTime',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       showMinuteLabelsEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1929,6 +2297,20 @@ extension AppSettingsQuerySortBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByCurrentTimeFormat() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentTimeFormat', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByCurrentTimeFormatDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentTimeFormat', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByEnableAiAssistant() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'enableAiAssistant', Sort.asc);
@@ -1969,6 +2351,31 @@ extension AppSettingsQuerySortBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByFloatTimeText() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'floatTimeText', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByFloatTimeTextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'floatTimeText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByGlowStyle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'glowStyle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByGlowStyleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'glowStyle', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       sortByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
@@ -1992,6 +2399,30 @@ extension AppSettingsQuerySortBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'is24h', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hDial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hDial', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hDialDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hDial', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByIs24hTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hTime', Sort.desc);
     });
   }
 
@@ -2071,6 +2502,19 @@ extension AppSettingsQuerySortBy
       sortByNotifLeadMinutesDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'notifLeadMinutes', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByShowCurrentTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showCurrentTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByShowCurrentTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showCurrentTime', Sort.desc);
     });
   }
 
@@ -2178,6 +2622,20 @@ extension AppSettingsQuerySortThenBy
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByCurrentTimeFormat() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentTimeFormat', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByCurrentTimeFormatDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'currentTimeFormat', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByEnableAiAssistant() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'enableAiAssistant', Sort.asc);
@@ -2218,6 +2676,31 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByFloatTimeText() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'floatTimeText', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByFloatTimeTextDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'floatTimeText', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByGlowStyle() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'glowStyle', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByGlowStyleDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'glowStyle', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
@@ -2253,6 +2736,30 @@ extension AppSettingsQuerySortThenBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIs24hDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'is24h', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIs24hDial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hDial', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIs24hDialDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hDial', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIs24hTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByIs24hTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'is24hTime', Sort.desc);
     });
   }
 
@@ -2335,6 +2842,19 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByShowCurrentTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showCurrentTime', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByShowCurrentTimeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'showCurrentTime', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
       thenByShowMinuteLabels() {
     return QueryBuilder.apply(this, (query) {
@@ -2409,6 +2929,14 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByCurrentTimeFormat(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'currentTimeFormat',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByEnableAiAssistant() {
     return QueryBuilder.apply(this, (query) {
@@ -2430,6 +2958,19 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByFloatTimeText() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'floatTimeText');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByGlowStyle(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'glowStyle', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct>
       distinctByHasCompletedOnboarding() {
     return QueryBuilder.apply(this, (query) {
@@ -2440,6 +2981,18 @@ extension AppSettingsQueryWhereDistinct
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIs24h() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'is24h');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIs24hDial() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'is24hDial');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByIs24hTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'is24hTime');
     });
   }
 
@@ -2485,6 +3038,13 @@ extension AppSettingsQueryWhereDistinct
       distinctByNotifLeadMinutes() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'notifLeadMinutes');
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QDistinct>
+      distinctByShowCurrentTime() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'showCurrentTime');
     });
   }
 
@@ -2547,6 +3107,13 @@ extension AppSettingsQueryProperty
     });
   }
 
+  QueryBuilder<AppSettings, String, QQueryOperations>
+      currentTimeFormatProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'currentTimeFormat');
+    });
+  }
+
   QueryBuilder<AppSettings, bool, QQueryOperations>
       enableAiAssistantProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2566,6 +3133,18 @@ extension AppSettingsQueryProperty
     });
   }
 
+  QueryBuilder<AppSettings, bool, QQueryOperations> floatTimeTextProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'floatTimeText');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations> glowStyleProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'glowStyle');
+    });
+  }
+
   QueryBuilder<AppSettings, bool, QQueryOperations>
       hasCompletedOnboardingProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2576,6 +3155,18 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, bool, QQueryOperations> is24hProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'is24h');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> is24hDialProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'is24hDial');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> is24hTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'is24hTime');
     });
   }
 
@@ -2614,6 +3205,12 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, int, QQueryOperations> notifLeadMinutesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'notifLeadMinutes');
+    });
+  }
+
+  QueryBuilder<AppSettings, bool, QQueryOperations> showCurrentTimeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'showCurrentTime');
     });
   }
 

@@ -296,11 +296,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   @override
   Widget build(BuildContext context) {
-    final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24h ?? false));
+    final is24hDial = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hDial ?? false));
+    final is24hTime = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
+    final showCurrentTime = ref.watch(settingsProvider.select((s) => s.valueOrNull?.showCurrentTime ?? true));
+    final currentTimeFormat = ref.watch(settingsProvider.select((s) => s.valueOrNull?.currentTimeFormat ?? 'short'));
+    final floatTimeText = ref.watch(settingsProvider.select((s) => s.valueOrNull?.floatTimeText ?? false));
+    final glowStyle = ref.watch(settingsProvider.select((s) => s.valueOrNull?.glowStyle ?? 'default'));
+    final is24h = is24hDial;
     final clockHandsMode = ref.watch(settingsProvider.select((s) => s.valueOrNull?.clockHandsMode ?? 1));
     final clockFaceTheme = ref.watch(settingsProvider.select((s) => s.valueOrNull?.clockFaceTheme ?? 1));
-    final activitiesAsync = ref.watch(is24h ? activitiesByDateProvider : activitiesByHalfProvider);
-    final tasks = ref.watch(is24h ? tasksByDateProvider : tasksByHalfProvider);
+    final activitiesAsync = ref.watch(is24hDial ? activitiesByDateProvider : activitiesByHalfProvider);
+    final tasks = ref.watch(is24hDial ? tasksByDateProvider : tasksByHalfProvider);
     final half = ref.watch(ampmHalfProvider);
     final nowAsync = ref.watch(currentTimeProvider);
     final now = nowAsync.valueOrNull ?? DateTime.now();
@@ -510,7 +516,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                           previewConflict: _dragConflictNotifier.value,
                                           pulse: _pulseCtrl.value,
                                           clockHandsMode: clockHandsMode,
-                                          is24h: is24h,
+                                          is24hDial: is24hDial,
+                                          is24hTime: is24hTime,
+                                          floatTimeText: floatTimeText,
+                                          showCurrentTime: showCurrentTime,
+                                          currentTimeFormat: currentTimeFormat,
+                                          glowStyle: glowStyle,
                                           isToday: isToday,
                                           hoverMinute: _hoverMinuteNotifier.value,
                                           isPrecisionMode: _isPrecisionMode,
@@ -775,7 +786,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   Offset _toCenter(Offset local, Size size) => local - size.center(Offset.zero);
 
-  bool get _is24h => ref.read(settingsProvider).valueOrNull?.is24h ?? false;
+  bool get _is24h => ref.read(settingsProvider).valueOrNull?.is24hDial ?? false;
 
   int? _hitActivity(Offset local, Size size, List<Activity> activities) {
     final centered = _toCenter(local, size);

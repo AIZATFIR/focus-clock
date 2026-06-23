@@ -107,6 +107,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _keyAiChat;
   String? _keyPrecisionMode;
   String? _keyPlanningMode;
+  bool? _is24hDial;
+  bool? _is24hTime;
+  bool? _showCurrentTime;
+  String? _currentTimeFormat;
+  bool? _floatTimeText;
+  String? _glowStyle;
 
   void _syncLocal(AppSettings s) {
     _is24h = s.is24h;
@@ -124,6 +130,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _keyAiChat = s.keyAiChat;
     _keyPrecisionMode = s.keyPrecisionMode;
     _keyPlanningMode = s.keyPlanningMode;
+    _is24hDial = s.is24hDial;
+    _is24hTime = s.is24hTime;
+    _showCurrentTime = s.showCurrentTime;
+    _currentTimeFormat = s.currentTimeFormat;
+    _floatTimeText = s.floatTimeText;
+    _glowStyle = s.glowStyle;
   }
 
   @override
@@ -150,7 +162,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _syncLocal(s);
           }
 
-          final curIs24h = _is24h!;
           final curClockHandsMode = _clockHandsMode!;
           final curShowMinuteLabels = _showMinuteLabels!;
           final curEnableAiAssistant = _enableAiAssistant!;
@@ -181,27 +192,95 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     if (v) {
                       // Automatically force 12h in simple mode to match old Linux app layout
                       _is24h = false;
+                      _is24hDial = false;
+                      _is24hTime = false;
                     }
                   });
-                  _save(s, clockFaceTheme: v ? 5 : 1, is24h: v ? false : null);
+                  _save(
+                    s,
+                    clockFaceTheme: v ? 5 : 1,
+                    is24h: v ? false : null,
+                    is24hDial: v ? false : null,
+                    is24hTime: v ? false : null,
+                  );
                 },
               ),
 
               const Divider(),
-              // ── Time ────────────────────────────────────────────────────────
-              const _Section(title: 'Time'),
+              // ── Time & Display ──────────────────────────────────────────────
+              const _Section(title: 'Time & Display'),
               SwitchListTile(
-                title: const Text('24-hour format'),
-                subtitle: Text(curIs24h ? 'Shows 13:45' : 'Shows 1:45 PM'),
-                value: curIs24h,
+                title: const Text('24-hour Time Format'),
+                subtitle: Text((_is24hTime ?? false) ? 'Digital displays show 13:45' : 'Digital displays show 1:45 PM'),
+                value: _is24hTime ?? false,
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
                   setState(() {
-                    _is24h = v;
+                    _is24hTime = v;
                   });
-                  _save(s, is24h: v);
+                  _save(s, is24hTime: v);
                 },
               ),
+              SwitchListTile(
+                title: const Text('24-hour Clock Dial'),
+                subtitle: Text((_is24hDial ?? false) ? 'Dial shows 0-23 (24h sweep)' : 'Dial shows 1-12 (12h sweep)'),
+                value: _is24hDial ?? false,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _is24hDial = v;
+                    _is24h = v;
+                  });
+                  _save(s, is24hDial: v, is24h: v);
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Show Current Time Tip'),
+                subtitle: const Text('Display time bubble at the tip of the hand'),
+                value: _showCurrentTime ?? true,
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  setState(() {
+                    _showCurrentTime = v;
+                  });
+                  _save(s, showCurrentTime: v);
+                },
+              ),
+              if (_showCurrentTime ?? true) ...[
+                ListTile(
+                  title: const Text('Current Time Format'),
+                  subtitle: const Text('Choose how detailed the time bubble is'),
+                  trailing: DropdownButton<String>(
+                    value: _currentTimeFormat ?? 'short',
+                    dropdownColor: const Color(0xFF1E1F24),
+                    items: const [
+                      DropdownMenuItem(value: 'short', child: Text('Hours & Minutes')),
+                      DropdownMenuItem(value: 'seconds', child: Text('Hours, Minutes, Seconds')),
+                      DropdownMenuItem(value: 'detailed', child: Text('Detailed (Date + Time)')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() {
+                          _currentTimeFormat = v;
+                        });
+                        _save(s, currentTimeFormat: v);
+                      }
+                    },
+                  ),
+                ),
+                SwitchListTile(
+                  title: const Text('Floating Time Text'),
+                  subtitle: const Text('Remove background capsule to let the text float'),
+                  value: _floatTimeText ?? false,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    setState(() {
+                      _floatTimeText = v;
+                    });
+                    _save(s, floatTimeText: v);
+                  },
+                ),
+              ],
 
               // ── Clock Hands ─────────────────────────────────────────────────
               const Divider(),
@@ -424,6 +503,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     }
                   },
                 ),
+                const Divider(),
+                const _Section(title: 'Glow Style'),
+                RadioListTile<String>(
+                  title: const Text('Default Glow'),
+                  subtitle: const Text('Full glowing aura with background capsule'),
+                  value: 'default',
+                  groupValue: _glowStyle ?? 'default',
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _glowStyle = v;
+                      });
+                      _save(s, glowStyle: v);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text('Floating Text (No Background)'),
+                  subtitle: const Text('Vibrant floating text with no capsule background'),
+                  value: 'floating',
+                  groupValue: _glowStyle ?? 'default',
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _glowStyle = v;
+                      });
+                      _save(s, glowStyle: v);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text('Subtle Glow'),
+                  subtitle: const Text('Minimal accent glow with background capsule'),
+                  value: 'subtle',
+                  groupValue: _glowStyle ?? 'default',
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _glowStyle = v;
+                      });
+                      _save(s, glowStyle: v);
+                    }
+                  },
+                ),
+                RadioListTile<String>(
+                  title: const Text('Disable Glow'),
+                  subtitle: const Text('Flat hands and markings with no glowing effects'),
+                  value: 'off',
+                  groupValue: _glowStyle ?? 'default',
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _glowStyle = v;
+                      });
+                      _save(s, glowStyle: v);
+                    }
+                  },
+                ),
               ] else ...[
                 const Divider(),
                 const _Section(title: 'Simple Clock Style'),
@@ -462,7 +603,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'Notifications'),
               ListTile(
                 title: const Text('Lead time'),
-                subtitle: Text('${curNotifLeadMinutes} minute(s) before'),
+                subtitle: Text('$curNotifLeadMinutes minute(s) before'),
                 trailing: DropdownButton<int>(
                   value: curNotifLeadMinutes,
                   items: const [1, 5, 10, 15]
@@ -577,7 +718,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const _Section(title: 'About'),
               const ListTile(
                 title: Text('Focus Clock'),
-                subtitle: Text('v0.2.0'),
+                subtitle: Text('v0.3.0'),
               ),
               const SizedBox(height: 32),
             ],
@@ -670,6 +811,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     String? keyAiChat,
     String? keyPrecisionMode,
     String? keyPlanningMode,
+    bool? is24hDial,
+    bool? is24hTime,
+    bool? showCurrentTime,
+    String? currentTimeFormat,
+    bool? floatTimeText,
+    String? glowStyle,
   }) {
     final next = AppSettings()
       ..id = s.id
@@ -690,7 +837,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ..keyRightPanel = keyRightPanel ?? s.keyRightPanel
       ..keyAiChat = keyAiChat ?? s.keyAiChat
       ..keyPrecisionMode = keyPrecisionMode ?? s.keyPrecisionMode
-      ..keyPlanningMode = keyPlanningMode ?? s.keyPlanningMode;
+      ..keyPlanningMode = keyPlanningMode ?? s.keyPlanningMode
+      ..is24hDial = is24hDial ?? s.is24hDial
+      ..is24hTime = is24hTime ?? s.is24hTime
+      ..showCurrentTime = showCurrentTime ?? s.showCurrentTime
+      ..currentTimeFormat = currentTimeFormat ?? s.currentTimeFormat
+      ..floatTimeText = floatTimeText ?? s.floatTimeText
+      ..glowStyle = glowStyle ?? s.glowStyle;
     ref.read(settingsRepoProvider).update(next);
   }
 }

@@ -7,6 +7,12 @@ class AppSettings {
   Id id = 0;
 
   bool is24h = false;
+  bool is24hTime = false;
+  bool is24hDial = false;
+  bool showCurrentTime = true;
+  String currentTimeFormat = 'short'; // 'short' | 'seconds' | 'detailed'
+  bool floatTimeText = false;
+  String glowStyle = 'default'; // 'default' | 'floating' | 'themed'
   int notifLeadMinutes = 1;
   String themeMode = 'dark'; // 'dark' | 'light' | 'system'
   bool trueBlack = false; // AMOLED: pure black bg when dark theme active

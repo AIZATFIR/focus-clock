@@ -21,7 +21,12 @@ class AnalogClockFace extends StatelessWidget {
     this.previewConflict = false,
     this.pulse = 0,
     this.clockHandsMode = 1,
-    this.is24h = false,
+    this.is24hDial = false,
+    this.is24hTime = false,
+    this.floatTimeText = false,
+    this.showCurrentTime = true,
+    this.currentTimeFormat = 'short',
+    this.glowStyle = 'default',
     this.isToday = true,
     this.hoverMinute,
     this.outerReveal = 0,
@@ -50,7 +55,12 @@ class AnalogClockFace extends StatelessWidget {
   final int clockHandsMode;
 
   /// 24h dial: PM half shows 13–23 (12 at top), AM shows 0–11.
-  final bool is24h;
+  final bool is24hDial;
+  final bool is24hTime;
+  final bool floatTimeText;
+  final bool showCurrentTime;
+  final String currentTimeFormat;
+  final String glowStyle;
 
   final bool isToday;
 
@@ -78,7 +88,12 @@ class AnalogClockFace extends StatelessWidget {
           previewConflict: previewConflict,
           pulse: pulse,
           clockHandsMode: clockHandsMode,
-          is24h: is24h,
+          is24hDial: is24hDial,
+          is24hTime: is24hTime,
+          floatTimeText: floatTimeText,
+          showCurrentTime: showCurrentTime,
+          currentTimeFormat: currentTimeFormat,
+          glowStyle: glowStyle,
           isToday: isToday,
           outerReveal: outerReveal,
           tasks: tasks,
@@ -106,7 +121,12 @@ class _ClockPainter extends CustomPainter {
     this.previewConflict = false,
     this.pulse = 0,
     this.clockHandsMode = 1,
-    this.is24h = false,
+    this.is24hDial = false,
+    this.is24hTime = false,
+    this.floatTimeText = false,
+    this.showCurrentTime = true,
+    this.currentTimeFormat = 'short',
+    this.glowStyle = 'default',
     this.isToday = true,
     this.outerReveal = 0,
     this.tasks = const [],
@@ -127,7 +147,12 @@ class _ClockPainter extends CustomPainter {
   final bool previewConflict;
   final double pulse;
   final int clockHandsMode;
-  final bool is24h;
+  final bool is24hDial;
+  final bool is24hTime;
+  final bool floatTimeText;
+  final bool showCurrentTime;
+  final String currentTimeFormat;
+  final String glowStyle;
   final bool isToday;
   final int? hoverMinute;
   final double outerReveal;
@@ -172,7 +197,7 @@ class _ClockPainter extends CustomPainter {
     // Theme Color Configurations
     final int theme = clockFaceTheme;
     final Color themeAccentColor;
-    final bool enableGlows = theme <= 4;
+    final bool enableGlows = theme <= 4 && glowStyle != 'off';
 
     switch (theme) {
       case 2: // Elegance (White-Glow)
@@ -196,8 +221,8 @@ class _ClockPainter extends CustomPainter {
         break;
     }
 
-    // 1. Dual-layer soft shadow & glowing aura (disabled in Simple theme)
-    if (enableGlows) {
+    // 1. Dual-layer soft shadow & glowing aura (disabled in Simple theme or when subtle/off)
+    if (enableGlows && glowStyle != 'subtle') {
       canvas.drawCircle(
         center,
         outerRadius + 22,
@@ -277,8 +302,8 @@ class _ClockPainter extends CustomPainter {
 
     // Activity arcs
     for (final a in activities) {
-      final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
-      final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
+      final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24hDial);
+      final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24hDial);
       _drawArc(canvas, center, taskInner, arcOuter, start, end,
           Color(a.colorValue),
           label: a.title, icon: a.iconKey);
@@ -287,8 +312,8 @@ class _ClockPainter extends CustomPainter {
     // Task arcs
     for (final t in tasks) {
       if (t.startMinute != null && t.endMinute != null) {
-        final start = toUiMinute(t.startMinute!, t.ampmHalf, is24h: is24h);
-        final end = toUiMinute(t.endMinute!, t.ampmHalf, is24h: is24h);
+        final start = toUiMinute(t.startMinute!, t.ampmHalf, is24h: is24hDial);
+        final end = toUiMinute(t.endMinute!, t.ampmHalf, is24h: is24hDial);
         final pCv = activities.where((a) => a.id == t.activityId).firstOrNull?.colorValue;
         final pC = pCv != null ? Color(pCv) : themeAccentColor;
         final taskColor = Color.lerp(pC, Colors.white, 0.45)!;
@@ -300,7 +325,7 @@ class _ClockPainter extends CustomPainter {
 
     // Ghost Line
     if (hoverMinute != null && isPrecisionMode && theme <= 4) {
-      final scale = is24h ? 1440 : 720;
+      final scale = is24hDial ? 1440 : 720;
       final angle = (hoverMinute! / scale) * 2 * math.pi - math.pi / 2;
       
       // Draw ghost line
@@ -317,12 +342,12 @@ class _ClockPainter extends CustomPainter {
 
     // Pulse ring on the activity happening right now
     if (isToday) {
-      final m = is24h 
+      final m = is24hDial 
           ? (now.hour * 60 + now.minute)
           : ((now.hour % 12) * 60 + now.minute);
       for (final a in activities) {
-        final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24h);
-        final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24h);
+        final start = toUiMinute(a.startMinute, a.ampmHalf, is24h: is24hDial);
+        final end = toUiMinute(a.endMinute, a.ampmHalf, is24h: is24hDial);
         if (m >= start && m < end) {
           _drawPulseRing(canvas, center, arcOuter, start, end, Color(a.colorValue));
           break;
@@ -334,7 +359,7 @@ class _ClockPainter extends CustomPainter {
       final base = previewConflict
           ? AppPalette.danger
           : (previewColor ?? themeAccentColor);
-      final scale = is24h ? 1440 : 720;
+      final scale = is24hDial ? 1440 : 720;
       final endInClock = math.min(previewEnd!, scale);
       _drawArc(canvas, center, taskInner, arcOuter, previewStart!, endInClock,
           base.withValues(alpha: 0.55),
@@ -348,8 +373,8 @@ class _ClockPainter extends CustomPainter {
     }
 
     // Tick marks — every 5 minutes (for 12h) or 10 minutes (for 24h)
-    final limit = is24h ? 1440 : 720;
-    final step = is24h ? 10 : 5;
+    final limit = is24hDial ? 1440 : 720;
+    final step = is24hDial ? 10 : 5;
     for (int m = 0; m < limit; m += step) {
       final angle = (m / limit) * 2 * math.pi - math.pi / 2;
       final isHour = m % 60 == 0;
@@ -359,7 +384,7 @@ class _ClockPainter extends CustomPainter {
       final double tickLen;
       final double sw;
       final double opacity;
-      if (is24h) {
+      if (is24hDial) {
         tickLen = isHour ? 15.0 : is30 ? 10.0 : 6.0;
         sw = isHour ? 3.0 : is30 ? 1.8 : 1.0;
         opacity = isHour ? 0.90 : is30 ? 0.65 : 0.35;
@@ -425,14 +450,14 @@ class _ClockPainter extends CustomPainter {
       final m = hoverMinute! % 60;
       final h = hoverMinute! ~/ 60;
       final String txt;
-      if (is24h) {
+      if (is24hTime) {
         txt = '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
       } else {
         final displayHour = h == 0 ? 12 : h;
         final suffix = viewHalf == AmPmHalf.pm ? ' PM' : ' AM';
         txt = '${displayHour.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}$suffix';
       }
-      final angle = (hoverMinute! / (is24h ? 1440 : 720)) * 2 * math.pi - math.pi / 2;
+      final angle = (hoverMinute! / (is24hDial ? 1440 : 720)) * 2 * math.pi - math.pi / 2;
       
       final textRadius = outerRadius + 22;
       final txtCenter = Offset(
@@ -474,7 +499,7 @@ class _ClockPainter extends CustomPainter {
     }
 
     // Hour numbers — 12h dial shows 1..12 (or 0..11 if theme >= 5), 24h dial shows 0..23
-    if (is24h) {
+    if (is24hDial) {
       for (int h = 0; h < 24; h++) {
         final angle = (h / 24) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
@@ -500,7 +525,7 @@ class _ClockPainter extends CustomPainter {
     }
 
     // Hands sweep only if today and viewed half matches actual time (or in 24h)
-    if (isToday && (is24h || halfOfNow(now) == viewHalf)) {
+    if (isToday && (is24hDial || halfOfNow(now) == viewHalf)) {
       _drawHands(canvas, center, r, outerRadius, themeAccentColor, enableGlows);
     }
 
@@ -518,7 +543,7 @@ class _ClockPainter extends CustomPainter {
   void _drawPulseRing(
       Canvas canvas, Offset center, double arcOuter, int startMin, int endMin, Color color) {
     final wave = 0.5 - 0.5 * math.cos(pulse * 2 * math.pi);
-    final scale = is24h ? 1440 : 720;
+    final scale = is24hDial ? 1440 : 720;
     final startAngle = (startMin / scale) * 2 * math.pi - math.pi / 2;
     final sweep = ((endMin - startMin) / scale) * 2 * math.pi;
     canvas.drawArc(
@@ -535,7 +560,7 @@ class _ClockPainter extends CustomPainter {
   }
 
   void _drawGridLines(Canvas canvas, Offset center, double inner, double outer) {
-    final scale = is24h ? 1440 : 720;
+    final scale = is24hDial ? 1440 : 720;
     final paint = Paint()
       ..color = AppPalette.stroke.withValues(alpha: 0.35)
       ..strokeWidth = 0.5;
@@ -566,7 +591,7 @@ class _ClockPainter extends CustomPainter {
     bool dashed = false,
   }) {
     if (endMin <= startMin) return;
-    final scale = is24h ? 1440 : 720;
+    final scale = is24hDial ? 1440 : 720;
     final startAngle = (startMin / scale) * 2 * math.pi - math.pi / 2;
     final sweep = ((endMin - startMin) / scale) * 2 * math.pi;
     final path = Path()
@@ -656,8 +681,8 @@ class _ClockPainter extends CustomPainter {
   }
 
   void _drawHands(Canvas canvas, Offset center, double r, double outerRadius, Color accentColor, bool enableGlows) {
-    final scale = is24h ? 1440.0 : 720.0;
-    final totalMins = is24h 
+    final scale = is24hDial ? 1440.0 : 720.0;
+    final totalMins = is24hDial 
         ? (now.hour * 60 + now.minute + now.second / 60.0)
         : ((now.hour % 12) * 60 + now.minute + now.second / 60.0);
     final pAngle = (totalMins / scale) * 2 * math.pi - math.pi / 2;
@@ -665,7 +690,7 @@ class _ClockPainter extends CustomPainter {
     final double precisionWidth = clockFaceTheme == 6 ? 2.0 : 3.5;
     final double hourWidth = clockFaceTheme == 6 ? 4.0 : 7.5;
     final double minuteWidth = clockFaceTheme == 6 ? 2.5 : 4.5;
-    final bool showTooltip = clockFaceTheme != 6;
+    final bool showTooltip = clockFaceTheme != 6 && showCurrentTime;
 
     switch (clockHandsMode) {
       case 1:
@@ -709,24 +734,10 @@ class _ClockPainter extends CustomPainter {
       center.dx + math.cos(angle) * (handLen + 28),
       center.dy + math.sin(angle) * (handLen + 28),
     );
-    final String txt;
-    if (is24h) {
-      final hourStr = now.hour.toString().padLeft(2, '0');
-      final minStr = now.minute.toString().padLeft(2, '0');
-      final secStr = now.second.toString().padLeft(2, '0');
-      txt = '$hourStr:$minStr:$secStr';
-    } else {
-      final h12 = now.hour % 12;
-      final displayHour = h12 == 0 ? 12 : h12;
-      final hourStr = displayHour.toString().padLeft(2, '0');
-      final minStr = now.minute.toString().padLeft(2, '0');
-      final secStr = now.second.toString().padLeft(2, '0');
-      final suffix = now.hour < 12 ? ' AM' : ' PM';
-      txt = '$hourStr:$minStr:$secStr$suffix';
-    }
+    final String txt = formatCurrentTime(now, is24h: is24hTime, format: currentTimeFormat);
     
     // Spotlight glow behind the current time (further outside the dial)
-    if (enableGlows) {
+    if (enableGlows && glowStyle != 'subtle') {
       canvas.drawCircle(
         tipOffset,
         24,
@@ -736,23 +747,34 @@ class _ClockPainter extends CustomPainter {
       );
     }
     
-    final tp = _getPainter(txt, 11, FontWeight.w800, clockFaceTheme >= 5 ? Colors.black : Colors.white);
-    final chipRect = Rect.fromCenter(center: tipOffset, width: tp.width + 16, height: tp.height + 8);
-    final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
+    final bool isFloating = floatTimeText || glowStyle == 'floating';
+    final Color textColor;
+    if (isFloating) {
+      textColor = accentColor;
+    } else {
+      textColor = clockFaceTheme >= 5 ? Colors.black : Colors.white;
+    }
     
-    // Paint capsule background
-    canvas.drawRRect(
-      chipRRect,
-      Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withOpacity(0.80),
-    );
-    if (clockFaceTheme < 5) {
+    final tp = _getPainter(txt, 11, FontWeight.w800, textColor);
+    
+    if (!isFloating) {
+      final chipRect = Rect.fromCenter(center: tipOffset, width: tp.width + 16, height: tp.height + 8);
+      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
+      
+      // Paint capsule background
       canvas.drawRRect(
         chipRRect,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0
-          ..color = accentColor.withOpacity(0.35),
+        Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withOpacity(0.80),
       );
+      if (clockFaceTheme < 5) {
+        canvas.drawRRect(
+          chipRRect,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.0
+            ..color = accentColor.withOpacity(0.35),
+        );
+      }
     }
     
     tp.paint(canvas, Offset(tipOffset.dx - tp.width / 2, tipOffset.dy - tp.height / 2));
@@ -807,7 +829,12 @@ class _ClockPainter extends CustomPainter {
       old.previewConflict != previewConflict ||
       old.pulse != pulse ||
       old.clockHandsMode != clockHandsMode ||
-      old.is24h != is24h ||
+      old.is24hDial != is24hDial ||
+      old.is24hTime != is24hTime ||
+      old.floatTimeText != floatTimeText ||
+      old.showCurrentTime != showCurrentTime ||
+      old.currentTimeFormat != currentTimeFormat ||
+      old.glowStyle != glowStyle ||
       old.outerReveal != outerReveal ||
       old.hoverMinute != hoverMinute ||
       old.clockFaceTheme != clockFaceTheme ||
