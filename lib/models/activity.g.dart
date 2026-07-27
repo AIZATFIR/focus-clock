@@ -58,53 +58,63 @@ const ActivitySchema = CollectionSchema(
       name: r'endMinute',
       type: IsarType.long,
     ),
-    r'groupId': PropertySchema(
+    r'excludedDates': PropertySchema(
       id: 8,
+      name: r'excludedDates',
+      type: IsarType.dateTimeList,
+    ),
+    r'groupId': PropertySchema(
+      id: 9,
       name: r'groupId',
       type: IsarType.string,
     ),
     r'iconKey': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'iconKey',
       type: IsarType.string,
     ),
     r'importance': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'importance',
       type: IsarType.long,
     ),
     r'isCompleted': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
+    r'isLocked': PropertySchema(
+      id: 13,
+      name: r'isLocked',
+      type: IsarType.bool,
+    ),
     r'isUrgent': PropertySchema(
-      id: 12,
+      id: 14,
       name: r'isUrgent',
       type: IsarType.bool,
     ),
     r'presetId': PropertySchema(
-      id: 13,
+      id: 15,
       name: r'presetId',
       type: IsarType.long,
     ),
     r'recurrence': PropertySchema(
-      id: 14,
+      id: 16,
       name: r'recurrence',
       type: IsarType.string,
     ),
     r'startMinute': PropertySchema(
-      id: 15,
+      id: 17,
       name: r'startMinute',
       type: IsarType.long,
     ),
     r'title': PropertySchema(
-      id: 16,
+      id: 18,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 17,
+      id: 19,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -157,6 +167,7 @@ int _activityEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.description.length * 3;
+  bytesCount += 3 + object.excludedDates.length * 8;
   {
     final value = object.groupId;
     if (value != null) {
@@ -188,16 +199,18 @@ void _activitySerialize(
   writer.writeString(offsets[5], object.description);
   writer.writeLong(offsets[6], object.eisenhowerQuadrant);
   writer.writeLong(offsets[7], object.endMinute);
-  writer.writeString(offsets[8], object.groupId);
-  writer.writeString(offsets[9], object.iconKey);
-  writer.writeLong(offsets[10], object.importance);
-  writer.writeBool(offsets[11], object.isCompleted);
-  writer.writeBool(offsets[12], object.isUrgent);
-  writer.writeLong(offsets[13], object.presetId);
-  writer.writeString(offsets[14], object.recurrence);
-  writer.writeLong(offsets[15], object.startMinute);
-  writer.writeString(offsets[16], object.title);
-  writer.writeDateTime(offsets[17], object.updatedAt);
+  writer.writeDateTimeList(offsets[8], object.excludedDates);
+  writer.writeString(offsets[9], object.groupId);
+  writer.writeString(offsets[10], object.iconKey);
+  writer.writeLong(offsets[11], object.importance);
+  writer.writeBool(offsets[12], object.isCompleted);
+  writer.writeBool(offsets[13], object.isLocked);
+  writer.writeBool(offsets[14], object.isUrgent);
+  writer.writeLong(offsets[15], object.presetId);
+  writer.writeString(offsets[16], object.recurrence);
+  writer.writeLong(offsets[17], object.startMinute);
+  writer.writeString(offsets[18], object.title);
+  writer.writeDateTime(offsets[19], object.updatedAt);
 }
 
 Activity _activityDeserialize(
@@ -216,16 +229,18 @@ Activity _activityDeserialize(
   object.deadline = reader.readDateTimeOrNull(offsets[4]);
   object.description = reader.readString(offsets[5]);
   object.endMinute = reader.readLong(offsets[7]);
-  object.groupId = reader.readStringOrNull(offsets[8]);
-  object.iconKey = reader.readStringOrNull(offsets[9]);
+  object.excludedDates = reader.readDateTimeList(offsets[8]) ?? [];
+  object.groupId = reader.readStringOrNull(offsets[9]);
+  object.iconKey = reader.readStringOrNull(offsets[10]);
   object.id = id;
-  object.importance = reader.readLong(offsets[10]);
-  object.isCompleted = reader.readBool(offsets[11]);
-  object.presetId = reader.readLongOrNull(offsets[13]);
-  object.recurrence = reader.readString(offsets[14]);
-  object.startMinute = reader.readLong(offsets[15]);
-  object.title = reader.readString(offsets[16]);
-  object.updatedAt = reader.readDateTime(offsets[17]);
+  object.importance = reader.readLong(offsets[11]);
+  object.isCompleted = reader.readBool(offsets[12]);
+  object.isLocked = reader.readBool(offsets[13]);
+  object.presetId = reader.readLongOrNull(offsets[15]);
+  object.recurrence = reader.readString(offsets[16]);
+  object.startMinute = reader.readLong(offsets[17]);
+  object.title = reader.readString(offsets[18]);
+  object.updatedAt = reader.readDateTime(offsets[19]);
   return object;
 }
 
@@ -254,24 +269,28 @@ P _activityDeserializeProp<P>(
     case 7:
       return (reader.readLong(offset)) as P;
     case 8:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeList(offset) ?? []) as P;
     case 9:
       return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 11:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 12:
       return (reader.readBool(offset)) as P;
     case 13:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 14:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 15:
-      return (reader.readLong(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 16:
       return (reader.readString(offset)) as P;
     case 17:
+      return (reader.readLong(offset)) as P;
+    case 18:
+      return (reader.readString(offset)) as P;
+    case 19:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1061,6 +1080,151 @@ extension ActivityQueryFilter
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesElementEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'excludedDates',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesElementGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'excludedDates',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesElementLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'excludedDates',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesElementBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'excludedDates',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      excludedDatesLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'excludedDates',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> groupIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1463,6 +1627,16 @@ extension ActivityQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isCompleted',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> isLockedEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isLocked',
         value: value,
       ));
     });
@@ -2068,6 +2242,18 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsLockedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByIsUrgent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isUrgent', Sort.asc);
@@ -2300,6 +2486,18 @@ extension ActivityQuerySortThenBy
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsLockedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByIsUrgent() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isUrgent', Sort.asc);
@@ -2424,6 +2622,12 @@ extension ActivityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Activity, Activity, QDistinct> distinctByExcludedDates() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'excludedDates');
+    });
+  }
+
   QueryBuilder<Activity, Activity, QDistinct> distinctByGroupId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2447,6 +2651,12 @@ extension ActivityQueryWhereDistinct
   QueryBuilder<Activity, Activity, QDistinct> distinctByIsCompleted() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isLocked');
     });
   }
 
@@ -2545,6 +2755,13 @@ extension ActivityQueryProperty
     });
   }
 
+  QueryBuilder<Activity, List<DateTime>, QQueryOperations>
+      excludedDatesProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'excludedDates');
+    });
+  }
+
   QueryBuilder<Activity, String?, QQueryOperations> groupIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'groupId');
@@ -2566,6 +2783,12 @@ extension ActivityQueryProperty
   QueryBuilder<Activity, bool, QQueryOperations> isCompletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isCompleted');
+    });
+  }
+
+  QueryBuilder<Activity, bool, QQueryOperations> isLockedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isLocked');
     });
   }
 

@@ -15,6 +15,7 @@ class AppSettings {
   String glowStyle = 'default'; // 'default' | 'floating' | 'themed'
   int notifLeadMinutes = 1;
   String themeMode = 'dark'; // 'dark' | 'light' | 'system'
+  String themePalette = 'executive'; // 'executive' | 'sage' | 'sepia' | 'cream'
   bool trueBlack = false; // AMOLED: pure black bg when dark theme active
   int clockHandsMode = 1; // 1=single precision, 2=hour+min, 3=hour+min+sec
   bool showMinuteLabels = false;

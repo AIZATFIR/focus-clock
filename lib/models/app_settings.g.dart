@@ -137,8 +137,13 @@ const AppSettingsSchema = CollectionSchema(
       name: r'themeMode',
       type: IsarType.string,
     ),
-    r'trueBlack': PropertySchema(
+    r'themePalette': PropertySchema(
       id: 24,
+      name: r'themePalette',
+      type: IsarType.string,
+    ),
+    r'trueBlack': PropertySchema(
+      id: 25,
       name: r'trueBlack',
       type: IsarType.bool,
     )
@@ -174,6 +179,7 @@ int _appSettingsEstimateSize(
   bytesCount += 3 + object.keyPrecisionMode.length * 3;
   bytesCount += 3 + object.keyRightPanel.length * 3;
   bytesCount += 3 + object.themeMode.length * 3;
+  bytesCount += 3 + object.themePalette.length * 3;
   return bytesCount;
 }
 
@@ -207,7 +213,8 @@ void _appSettingsSerialize(
   writer.writeBool(offsets[21], object.showCurrentTime);
   writer.writeBool(offsets[22], object.showMinuteLabels);
   writer.writeString(offsets[23], object.themeMode);
-  writer.writeBool(offsets[24], object.trueBlack);
+  writer.writeString(offsets[24], object.themePalette);
+  writer.writeBool(offsets[25], object.trueBlack);
 }
 
 AppSettings _appSettingsDeserialize(
@@ -242,7 +249,8 @@ AppSettings _appSettingsDeserialize(
   object.showCurrentTime = reader.readBool(offsets[21]);
   object.showMinuteLabels = reader.readBool(offsets[22]);
   object.themeMode = reader.readString(offsets[23]);
-  object.trueBlack = reader.readBool(offsets[24]);
+  object.themePalette = reader.readString(offsets[24]);
+  object.trueBlack = reader.readBool(offsets[25]);
   return object;
 }
 
@@ -302,6 +310,8 @@ P _appSettingsDeserializeProp<P>(
     case 23:
       return (reader.readString(offset)) as P;
     case 24:
+      return (reader.readString(offset)) as P;
+    case 25:
       return (reader.readBool(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2216,6 +2226,142 @@ extension AppSettingsQueryFilter
   }
 
   QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'themePalette',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'themePalette',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'themePalette',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'themePalette',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
+      themePaletteIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'themePalette',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterFilterCondition>
       trueBlackEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -2541,6 +2687,19 @@ extension AppSettingsQuerySortBy
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByThemeModeDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'themeMode', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> sortByThemePalette() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      sortByThemePaletteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.desc);
     });
   }
 
@@ -2881,6 +3040,19 @@ extension AppSettingsQuerySortThenBy
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByThemePalette() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AppSettings, AppSettings, QAfterSortBy>
+      thenByThemePaletteDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'themePalette', Sort.desc);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QAfterSortBy> thenByTrueBlack() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'trueBlack', Sort.asc);
@@ -3062,6 +3234,13 @@ extension AppSettingsQueryWhereDistinct
     });
   }
 
+  QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByThemePalette(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'themePalette', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<AppSettings, AppSettings, QDistinct> distinctByTrueBlack() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'trueBlack');
@@ -3223,6 +3402,12 @@ extension AppSettingsQueryProperty
   QueryBuilder<AppSettings, String, QQueryOperations> themeModeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'themeMode');
+    });
+  }
+
+  QueryBuilder<AppSettings, String, QQueryOperations> themePaletteProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'themePalette');
     });
   }
 

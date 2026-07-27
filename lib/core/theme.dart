@@ -25,44 +25,66 @@ class AppPalette {
   static const lightAccent = Color(0xFFD4A800); // darker gold for light bg
 }
 
-ThemeData buildDarkTheme() {
+ThemeData buildDarkTheme([String palette = 'executive']) {
+  Color bg = AppPalette.bg;
+  Color card = AppPalette.card;
+  Color accent = AppPalette.accent;
+  Color stroke = AppPalette.stroke;
+
+  if (palette == 'sage') {
+    bg = const Color(0xFF131A17);
+    card = const Color(0xFF1C2723);
+    accent = const Color(0xFF4EAA86);
+    stroke = const Color(0xFF273831);
+  } else if (palette == 'sepia') {
+    bg = const Color(0xFF1A1714);
+    card = const Color(0xFF26211C);
+    accent = const Color(0xFFD99B26);
+    stroke = const Color(0xFF382F27);
+  } else if (palette == 'cream') {
+    bg = const Color(0xFF17181F);
+    card = const Color(0xFF222430);
+    accent = const Color(0xFF8C9EFF);
+    stroke = const Color(0xFF2E3244);
+  }
+
   final base = ThemeData.dark(useMaterial3: true);
   return base.copyWith(
     splashFactory: NoSplash.splashFactory,
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
-    scaffoldBackgroundColor: AppPalette.bg,
+    scaffoldBackgroundColor: bg,
     colorScheme: base.colorScheme.copyWith(
-      surface: AppPalette.bg,
-      primary: AppPalette.accent,
-      secondary: AppPalette.accent,
+      surface: bg,
+      primary: accent,
+      secondary: accent,
       onSurface: AppPalette.text,
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppPalette.bg,
+    appBarTheme: AppBarTheme(
+      backgroundColor: bg,
       foregroundColor: AppPalette.text,
       elevation: 0,
       centerTitle: true,
     ),
-    cardColor: AppPalette.card,
-    dividerColor: AppPalette.stroke,
+    cardColor: card,
+    dividerColor: stroke,
     textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
       bodyColor: AppPalette.text,
       displayColor: AppPalette.text,
     ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: AppPalette.card,
-      selectedItemColor: AppPalette.accent,
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: card,
+      selectedItemColor: accent,
       unselectedItemColor: AppPalette.textDim,
       type: BottomNavigationBarType.fixed,
     ),
-    snackBarTheme: const SnackBarThemeData(
-      backgroundColor: AppPalette.card,
-      contentTextStyle: TextStyle(color: AppPalette.text),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: card,
+      contentTextStyle: const TextStyle(color: AppPalette.text),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: AppPalette.card,
-      indicatorColor: AppPalette.accent.withValues(alpha: 0.22),
+      backgroundColor: card,
+      indicatorColor: accent.withValues(alpha: 0.22),
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
           fontSize: 12,
@@ -70,14 +92,14 @@ ThemeData buildDarkTheme() {
               ? FontWeight.w600
               : FontWeight.w400,
           color: states.contains(WidgetState.selected)
-              ? AppPalette.accent
+              ? accent
               : AppPalette.textDim,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           color: states.contains(WidgetState.selected)
-              ? AppPalette.accent
+              ? accent
               : AppPalette.textDim,
         ),
       ),

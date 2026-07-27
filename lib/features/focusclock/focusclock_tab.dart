@@ -11,7 +11,13 @@ import '../../models/activity.dart';
 import '../../models/preset.dart';
 import '../../providers/providers.dart';
 import '../activity_detail/activity_detail_sheet.dart';
+import '../ai_chat/voice_assistant_sheet.dart';
+import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
+import '../../widgets/quick_timer_hub.dart';
+import '../../widgets/command_palette.dart';
+import '../../widgets/hotkeys_modal.dart';
+import '../../widgets/floating_quick_ai_bar.dart';
 import 'analog_clock_face.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
@@ -345,6 +351,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       }
     });
 
+    ref.listen<bool>(isInstantModeProvider, (prev, next) {
+      if (next == false) {
+        _dragStartNotifier.value = null;
+        _dragEndNotifier.value = null;
+      }
+    });
+
     final m = is24h 
         ? (now.hour * 60 + now.minute)
         : ((now.hour % 12) * 60 + now.minute);
@@ -596,41 +609,242 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               ),
             ),
   
+            // Top Header Action Bar & Quick Timer Hub
             Positioned(
               top: 10,
               left: 14,
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  _exitApp();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppPalette.card,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppPalette.stroke),
-                  ),
-                  child: const Icon(
-                    Icons.power_settings_new_rounded,
-                    size: 16,
-                    color: AppPalette.danger,
-                  ),
-                ),
-              ),
-            ),
-  
-            Positioned(
-              top: 10,
               right: 14,
-              child: Text(
-                formatTimeOfDay(now, is24h: is24h),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppPalette.accent,
-                  letterSpacing: 0.5,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      // Exit App
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          _exitApp();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: const Icon(
+                            Icons.power_settings_new_rounded,
+                            size: 16,
+                            color: AppPalette.danger,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Back to Launching Desk
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          ref.read(selectedAppModeProvider.notifier).state = 'launching';
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back_rounded, size: 14, color: AppPalette.accent),
+                              SizedBox(width: 4),
+                              Text(
+                                'Desk',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.text),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Hero Primary Option 1: Quick Input Focus
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          // Quick Input is rendered right below
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppPalette.accent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.bolt_rounded, size: 15, color: Colors.black),
+                              SizedBox(width: 4),
+                              Text(
+                                '⚡ Quick Input',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Hero Primary Option 2: Talking About Your Day (Storytelling & Refleksi)
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (_) => const StorytellingSheet(),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.auto_stories_rounded, size: 14, color: AppPalette.accent),
+                              SizedBox(width: 6),
+                              Text(
+                                '📖 Talking About Your Day',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppPalette.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Voice Secretary
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => const VoiceAssistantSheet(),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: const Icon(
+                            Icons.mic_rounded,
+                            size: 14,
+                            color: AppPalette.accent,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+
+                      // Command Palette
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          showDialog(
+                            context: context,
+                            builder: (_) => const CommandPaletteModal(),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: const Icon(
+                            Icons.terminal_rounded,
+                            size: 14,
+                            color: AppPalette.textDim,
+                          ),
+                        ),
+                      ),
+
+                      // Hotkeys Cheatsheet
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          showDialog(
+                            context: context,
+                            builder: (_) => const HotkeysModal(),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppPalette.stroke),
+                          ),
+                          child: const Icon(
+                            Icons.help_outline_rounded,
+                            size: 14,
+                            color: AppPalette.textDim,
+                          ),
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // Current Date & Time Display
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${now.day} ${_monthName(now.month)} ${now.year}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppPalette.textDim,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            formatTimeOfDay(now, is24h: is24h),
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppPalette.accent,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Quick Timer Hub (1-Tap 5/10/15/30/60m)
+                  if (!ref.watch(planningModeProvider))
+                    const QuickTimerHub(),
+                ],
               ),
             ),
   
@@ -796,6 +1010,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 ],
               ),
             ),
+
+            // Floating Quick-AI Command Bar ("P info...")
+            const Positioned(
+              bottom: 20,
+              right: 16,
+              child: FloatingQuickAiBar(),
+            ),
           ],
         );
       }),
@@ -805,6 +1026,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
   Offset _toCenter(Offset local, Size size) => local - size.center(Offset.zero);
 
   bool get _is24h => ref.read(settingsProvider).valueOrNull?.is24hDial ?? false;
+
+  String _monthName(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[month - 1];
+  }
 
   int? _hitActivity(Offset local, Size size, List<Activity> activities) {
     final centered = _toCenter(local, size);
@@ -837,8 +1063,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
     
     final dbStart = toDbMinute(start24);
-    final dbEnd = toDbMinute(end24);
     final dbHalf = toDbHalf(start24);
+    final dbEnd = toDbEndMinute(end24, dbHalf);
     
     final activity = Activity()
       ..title = ''
@@ -963,8 +1189,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
 
     final dbStart = toDbMinute(start24);
-    final dbEnd = toDbMinute(end24);
     final dbHalf = toDbHalf(start24);
+    final dbEnd = toDbEndMinute(end24, dbHalf);
 
     if (result is Preset) {
       final activity = await activityFromPreset(
@@ -1100,8 +1326,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
     
     _draggingActivity!.startMinute = toDbMinute(start24);
-    _draggingActivity!.endMinute = toDbMinute(end24);
     _draggingActivity!.ampmHalf = toDbHalf(start24);
+    _draggingActivity!.endMinute = toDbEndMinute(end24, _draggingActivity!.ampmHalf);
 
     await ref
         .read(activityRepoProvider)
@@ -1157,8 +1383,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
 
     final dbStart = toDbMinute(start24);
-    final dbEnd = toDbMinute(end24);
     final dbHalf = toDbHalf(start24);
+    final dbEnd = toDbEndMinute(end24, dbHalf);
 
     final a = await activityFromPreset(
       preset: p,

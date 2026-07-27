@@ -99,6 +99,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool? _enableLeftPanel;
   bool? _enableRightPanel;
   String? _themeMode;
+  String? _themePalette;
   bool? _trueBlack;
   int? _clockFaceTheme;
   int? _notifLeadMinutes;
@@ -122,6 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _enableLeftPanel = s.enableLeftPanel;
     _enableRightPanel = s.enableRightPanel;
     _themeMode = s.themeMode;
+    _themePalette = s.themePalette;
     _trueBlack = s.trueBlack;
     _clockFaceTheme = s.clockFaceTheme;
     _notifLeadMinutes = s.notifLeadMinutes;
@@ -440,6 +442,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _trueBlack = v;
                   });
                   _save(s, trueBlack: v);
+                },
+              ),
+
+              const Divider(),
+              const _Section(title: 'Eye-Friendly Palette'),
+              RadioListTile(
+                title: const Text('OLED Executive Gold'),
+                subtitle: const Text('Muted gold & obsidian midnight'),
+                value: 'executive',
+                groupValue: _themePalette ?? 'executive',
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _themePalette = v);
+                    _save(s, themePalette: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('Soft Sage & Emerald'),
+                subtitle: const Text('Eye-soothing green tones for long work sessions'),
+                value: 'sage',
+                groupValue: _themePalette ?? 'executive',
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _themePalette = v);
+                    _save(s, themePalette: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('Warm Sunset Sepia'),
+                subtitle: const Text('Warm amber tones with blue-light reduction'),
+                value: 'sepia',
+                groupValue: _themePalette ?? 'executive',
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _themePalette = v);
+                    _save(s, themePalette: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('Soft Cream Dark'),
+                subtitle: const Text('Gentle indigo & soft slate contrast'),
+                value: 'cream',
+                groupValue: _themePalette ?? 'executive',
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _themePalette = v);
+                    _save(s, themePalette: v);
+                  }
                 },
               ),
 
@@ -796,6 +853,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     bool? is24h,
     int? clockHandsMode,
     String? themeMode,
+    String? themePalette,
     bool? trueBlack,
     int? notifLeadMinutes,
     bool? showMinuteLabels,
@@ -823,6 +881,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ..is24h = is24h ?? s.is24h
       ..clockHandsMode = clockHandsMode ?? s.clockHandsMode
       ..themeMode = themeMode ?? s.themeMode
+      ..themePalette = themePalette ?? s.themePalette
       ..trueBlack = trueBlack ?? s.trueBlack
       ..notifLeadMinutes = notifLeadMinutes ?? s.notifLeadMinutes
       ..showMinuteLabels = showMinuteLabels ?? s.showMinuteLabels

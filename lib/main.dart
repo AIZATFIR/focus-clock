@@ -47,15 +47,15 @@ Future<void> main() async {
   );
 }
 
-class FocusClockDesktopWrapper extends StatefulWidget {
+class FocusClockDesktopWrapper extends ConsumerStatefulWidget {
   const FocusClockDesktopWrapper({super.key, required this.child});
   final Widget child;
 
   @override
-  State<FocusClockDesktopWrapper> createState() => _FocusClockDesktopWrapperState();
+  ConsumerState<FocusClockDesktopWrapper> createState() => _FocusClockDesktopWrapperState();
 }
 
-class _FocusClockDesktopWrapperState extends State<FocusClockDesktopWrapper> with WindowListener, TrayListener {
+class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrapper> with WindowListener, TrayListener {
   @override
   void initState() {
     super.initState();
@@ -76,38 +76,56 @@ class _FocusClockDesktopWrapperState extends State<FocusClockDesktopWrapper> wit
   }
 
   Future<void> _initTray() async {
-    // Basic tray setup. Note: You should place an icon at linux/tray_icon.png or similar.
-    // For now, we will just use a generic or empty string which might show a default icon.
-    // In production, configure standard system paths for tray_manager.
     await trayManager.setIcon(
-      Platform.isWindows ? 'assets/app_icon.ico' : 'assets/app_icon.png', // Assuming app_icon exists
+      Platform.isWindows ? 'assets/app_icon.ico' : 'assets/app_icon.png',
     );
-    
-    Menu menu = Menu(
-      items: [
+
+    _updateTrayMenu();
+  }
+
+  Future<void> _updateTrayMenu() async {
+    final title = ref.read(activeTimerTitleProvider);
+    final endTime = ref.read(activeTimerEndTimeProvider);
+    final hasActive = endTime != null;
+
+    final items = <MenuItem>[
+      if (hasActive) ...[
         MenuItem(
-          key: 'show_window',
-          label: 'Show Focus Clock',
+          key: 'status',
+          label: '📍 BERLANGSUNG: $title',
+          disabled: true,
+        ),
+        MenuItem(
+          key: 'stop_timer',
+          label: '⏹️ Stop / Selesai Sesi Ini',
+        ),
+        MenuItem(
+          key: 'reschedule_15',
+          label: '⏩ Reschedule (+15 Menit)',
         ),
         MenuItem.separator(),
-        MenuItem(
-          key: 'exit_app',
-          label: 'Exit',
-        ),
       ],
-    );
-    await trayManager.setContextMenu(menu);
+      MenuItem(
+        key: 'show_window',
+        label: 'Tampilkan Focus Clock',
+      ),
+      MenuItem.separator(),
+      MenuItem(
+        key: 'exit_app',
+        label: 'Keluar',
+      ),
+    ];
+
+    await trayManager.setContextMenu(Menu(items: items));
   }
 
   @override
   void onWindowClose() {
-    // Instead of exiting, we hide the window (standby mode)
     windowManager.hide();
   }
 
   @override
   void onTrayIconMouseDown() {
-    // Show window when tray icon is clicked
     windowManager.show();
     windowManager.focus();
   }
@@ -117,8 +135,19 @@ class _FocusClockDesktopWrapperState extends State<FocusClockDesktopWrapper> wit
     if (menuItem.key == 'show_window') {
       windowManager.show();
       windowManager.focus();
+    } else if (menuItem.key == 'stop_timer') {
+      ref.read(activeTimerEndTimeProvider.notifier).state = null;
+      ref.read(activeTimerIsPausedProvider.notifier).state = false;
+      _updateTrayMenu();
+    } else if (menuItem.key == 'reschedule_15') {
+      final cur = ref.read(activeTimerEndTimeProvider);
+      if (cur != null) {
+        ref.read(activeTimerEndTimeProvider.notifier).state = cur.add(const Duration(minutes: 15));
+        ref.read(activeTimerTotalSecondsProvider.notifier).update((t) => t + 900);
+      }
+      _updateTrayMenu();
     } else if (menuItem.key == 'exit_app') {
-      windowManager.destroy(); // Force exit
+      windowManager.destroy();
     }
   }
 

@@ -11,6 +11,7 @@ class FocusClockApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(settingsProvider.select((s) => s.valueOrNull?.themeMode ?? 'dark'));
+    final themePalette = ref.watch(settingsProvider.select((s) => s.valueOrNull?.themePalette ?? 'executive'));
     final trueBlack = ref.watch(settingsProvider.select((s) => s.valueOrNull?.trueBlack ?? false));
     final hasSettings = ref.watch(settingsProvider.select((s) => s.hasValue));
 
@@ -23,7 +24,7 @@ class FocusClockApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Focus Clock',
       theme: buildLightTheme(),
-      darkTheme: trueBlack ? buildBlackTheme() : buildDarkTheme(),
+      darkTheme: trueBlack ? buildBlackTheme() : buildDarkTheme(themePalette),
       themeMode: mode,
       home: hasSettings
           ? const HomeShell()

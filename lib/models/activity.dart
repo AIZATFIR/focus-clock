@@ -42,6 +42,12 @@ class Activity {
   /// Whether this activity has been completed.
   bool isCompleted = false;
 
+  /// Whether this activity is locked against accidental edit/drag/delete.
+  bool isLocked = false;
+
+  /// Excluded dates for single-day deletions of a recurring activity series.
+  List<DateTime> excludedDates = [];
+
   late DateTime createdAt;
   late DateTime updatedAt;
 

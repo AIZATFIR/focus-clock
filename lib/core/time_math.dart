@@ -20,6 +20,9 @@ int minuteOfHalf(DateTime d) {
 }
 
 int toDbMinute(int uiMinute) => uiMinute % 720;
+int toDbEndMinute(int uiEndMinute, AmPmHalf half) {
+  return uiEndMinute - (half == AmPmHalf.pm ? 720 : 0);
+}
 AmPmHalf toDbHalf(int uiMinute) => uiMinute < 720 ? AmPmHalf.am : AmPmHalf.pm;
 int toUiMinute(int dbMinute, AmPmHalf half, {bool is24h = true}) =>
     is24h ? (dbMinute + (half == AmPmHalf.pm ? 720 : 0)) : dbMinute;

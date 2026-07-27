@@ -73,6 +73,9 @@ class ActivityRepository {
       if (dateOnly(a.date) == targetDate) return false;
       if (half != null && a.ampmHalf != half) return false;
 
+      // Skip excluded dates (single-day deletions)
+      if (a.excludedDates.any((d) => dateOnly(d) == targetDate)) return false;
+
       if (a.recurrence == 'daily') return true;
       if (a.recurrence == 'weekday') {
         return targetDate.weekday >= 1 && targetDate.weekday <= 5;
@@ -95,6 +98,8 @@ class ActivityRepository {
         ..description = a.description
         ..colorValue = a.colorValue
         ..recurrence = a.recurrence
+        ..isLocked = a.isLocked
+        ..excludedDates = a.excludedDates
         ..createdAt = a.createdAt
         ..updatedAt = a.updatedAt;
       return projected;
@@ -106,6 +111,55 @@ class ActivityRepository {
     final id = await _isar.writeTxn(() => _isar.activitys.put(a));
     await _notifier.scheduleForActivity(a, leadMinutes: notifLeadMinutes);
     return id;
+  }
+
+  /// Delete only a single instance of a recurring activity for [targetDate].
+  Future<void> deleteSingleInstance(Activity a, DateTime targetDate) async {
+    final target = dateOnly(targetDate);
+    final dbActivity = await _isar.activitys.get(a.id);
+
+    if (dbActivity != null && dbActivity.recurrence != 'none') {
+      if (!dbActivity.excludedDates.any((d) => dateOnly(d) == target)) {
+        dbActivity.excludedDates = [...dbActivity.excludedDates, target];
+        dbActivity.updatedAt = DateTime.now();
+        await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
+      }
+    } else {
+      await deleteGroupOf(a);
+    }
+  }
+
+  /// Duplicate [a] as a new standalone activity on [targetDate].
+  Future<int> duplicateActivity(Activity a, DateTime targetDate) async {
+    final now = DateTime.now();
+    final copy = Activity()
+      ..presetId = a.presetId
+      ..iconKey = a.iconKey
+      ..title = '${a.title} (Copy)'
+      ..startMinute = a.startMinute
+      ..endMinute = a.endMinute
+      ..ampmHalf = a.ampmHalf
+      ..date = dateOnly(targetDate)
+      ..description = a.description
+      ..colorValue = a.colorValue
+      ..recurrence = 'none'
+      ..importance = a.importance
+      ..deadline = a.deadline
+      ..isCompleted = false
+      ..isLocked = false
+      ..createdAt = now
+      ..updatedAt = now;
+
+    return upsert(copy);
+  }
+
+  /// Toggle lock status of [a].
+  Future<void> toggleLock(Activity a, bool locked) async {
+    final dbActivity = await _isar.activitys.get(a.id);
+    if (dbActivity == null) return;
+    dbActivity.isLocked = locked;
+    dbActivity.updatedAt = DateTime.now();
+    await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
   }
 
   Future<List<Activity>> getGroup(String groupId) =>

@@ -102,7 +102,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
       ..date = date
       ..ampmHalf = toDbHalf(start)
       ..startMinute = toDbMinute(start)
-      ..endMinute = toDbMinute(end)
+      ..endMinute = toDbEndMinute(end, toDbHalf(start))
       ..createdAt = DateTime.now();
 
     await ref.read(taskRepoProvider).add(task);
@@ -147,7 +147,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
       ..date = date
       ..ampmHalf = toDbHalf(start)
       ..startMinute = toDbMinute(start)
-      ..endMinute = toDbMinute(end)
+      ..endMinute = toDbEndMinute(end, toDbHalf(start))
       ..createdAt = DateTime.now();
 
     await ref.read(taskRepoProvider).add(task);
@@ -316,7 +316,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                   ..date = date
                   ..ampmHalf = toDbHalf(start)
                   ..startMinute = toDbMinute(start)
-                  ..endMinute = toDbMinute(start + 30);
+                  ..endMinute = toDbEndMinute(start + 30, toDbHalf(start));
 
                 await ref.read(taskRepoProvider).update(updated);
                 HapticFeedback.heavyImpact();
@@ -528,8 +528,8 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               
                               final updated = a
                                 ..startMinute = toDbMinute(finalStart)
-                                ..endMinute = toDbMinute(finalEnd)
-                                ..ampmHalf = toDbHalf(finalStart);
+                                ..ampmHalf = toDbHalf(finalStart)
+                                ..endMinute = toDbEndMinute(finalEnd, toDbHalf(finalStart));
                                 
                               final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
                               await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
@@ -565,9 +565,11 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               ref.read(isClockDraggingProvider.notifier).state = false;
                               final finalStart = _draggedActivityStart!.round();
                               
+                              final absoluteEnd = toUiMinute(a.endMinute, a.ampmHalf);
                               final updated = a
                                 ..startMinute = toDbMinute(finalStart)
-                                ..ampmHalf = toDbHalf(finalStart);
+                                ..ampmHalf = toDbHalf(finalStart)
+                                ..endMinute = toDbEndMinute(absoluteEnd, toDbHalf(finalStart));
                                 
                               final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
                               await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
@@ -603,7 +605,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                               ref.read(isClockDraggingProvider.notifier).state = false;
                               final finalEnd = _draggedActivityEnd!.round();
                               
-                              final updated = a..endMinute = toDbMinute(finalEnd);
+                              final updated = a..endMinute = toDbEndMinute(finalEnd, a.ampmHalf);
                               
                               final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
                               await ref.read(activityRepoProvider).upsert(updated, notifLeadMinutes: lead);
@@ -697,8 +699,8 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 
                                 final updated = task
                                   ..startMinute = toDbMinute(finalStart)
-                                  ..endMinute = toDbMinute(finalEnd)
-                                  ..ampmHalf = toDbHalf(finalStart);
+                                  ..ampmHalf = toDbHalf(finalStart)
+                                  ..endMinute = toDbEndMinute(finalEnd, toDbHalf(finalStart));
                                   
                                 await ref.read(taskRepoProvider).update(updated);
                                 setState(() {
@@ -733,9 +735,11 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 ref.read(isClockDraggingProvider.notifier).state = false;
                                 final finalStart = _draggedTaskStart!.round();
                                 
+                                final absoluteEnd = toUiMinute(task.endMinute!, task.ampmHalf);
                                 final updated = task
                                   ..startMinute = toDbMinute(finalStart)
-                                  ..ampmHalf = toDbHalf(finalStart);
+                                  ..ampmHalf = toDbHalf(finalStart)
+                                  ..endMinute = toDbEndMinute(absoluteEnd, toDbHalf(finalStart));
                                   
                                 await ref.read(taskRepoProvider).update(updated);
                                 setState(() {
@@ -770,7 +774,7 @@ class _LeftPanelState extends ConsumerState<LeftPanel> {
                                 ref.read(isClockDraggingProvider.notifier).state = false;
                                 final finalEnd = _draggedTaskEnd!.round();
                                 
-                                final updated = task..endMinute = toDbMinute(finalEnd);
+                                final updated = task..endMinute = toDbEndMinute(finalEnd, task.ampmHalf);
                                 
                                 await ref.read(taskRepoProvider).update(updated);
                                 setState(() {

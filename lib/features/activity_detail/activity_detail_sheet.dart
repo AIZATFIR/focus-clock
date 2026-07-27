@@ -29,7 +29,10 @@ Future<void> showActivityDetailSheet(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             color: AppPalette.glassSurface,
-            child: _DetailSheet(initial: activity, initialMode: mode),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: _DetailSheet(initial: activity, initialMode: mode),
+            ),
           ),
         ),
       ),
@@ -56,6 +59,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   late int _color;
   late String _recurrence;
   late int _importance;
+  late bool _isLocked;
   DateTime? _deadline;
   final _focusNode = FocusNode();
 
@@ -67,11 +71,11 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _descCtrl = TextEditingController(text: widget.initial.description);
     final a = widget.initial;
     _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
-    // toDateTime normalizes endMinute > 720 into the next half/day
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
     _color = a.colorValue;
     _recurrence = a.recurrence;
     _importance = a.importance;
+    _isLocked = a.isLocked;
     _deadline = a.deadline;
     if (a.groupId != null) _loadGroupSpan(a.groupId!);
     WidgetsBinding.instance
@@ -240,6 +244,20 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
           ),
           if (!readOnly) ...[
             const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.lock_outline_rounded, size: 18, color: AppPalette.accent),
+                const SizedBox(width: 8),
+                const Text('Kunci Aktivitas (Lock)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const Spacer(),
+                Switch(
+                  value: _isLocked,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) => setState(() => _isLocked = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             const Text('Color',
                 style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
             const SizedBox(height: 6),
@@ -281,34 +299,45 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               ),
             ),
           ] else ...[
-
+            if (_isLocked) ...[
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Icon(Icons.lock_rounded, size: 14, color: AppPalette.accent),
+                  SizedBox(width: 6),
+                  Text('Terkunci 🔒 (Protected)', style: TextStyle(color: AppPalette.accent, fontSize: 12)),
+                ],
+              ),
+            ],
             if (_recurrence != 'none') ...[
               const SizedBox(height: 8),
               _RecurrenceInfo(_recurrence),
             ],
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           if (_mode != DetailMode.view)
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                const Spacer(),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppPalette.accent,
-                    foregroundColor: Colors.black,
+            SafeArea(
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
                   ),
-                  onPressed: _save,
-                  child: const Text('Save'),
-                ),
-              ],
+                  const Spacer(),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppPalette.accent,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: _save,
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
             ),
         ],
       ),
-    )); // closes Padding + KeyboardListener
+    ));
   }
 
   String _modeTitle() => switch (_mode) {
@@ -334,6 +363,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       ..recurrence = _recurrence
       ..importance = _importance
       ..deadline = _deadline
+      ..isLocked = _isLocked
       ..groupId = groupId
       ..createdAt = src.createdAt
       ..updatedAt = DateTime.now();
@@ -355,7 +385,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     final repo = ref.read(activityRepoProvider);
     final segments = splitSpan(_startDt, _endDt);
 
-    // Ids belonging to this block (self or group) are exempt from conflicts
     final selfIds = <int>{a.id};
     if (a.groupId != null) {
       selfIds.addAll((await repo.getGroup(a.groupId!)).map((g) => g.id));
@@ -409,7 +438,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
         ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
 
     if (segments.length == 1 && a.groupId == null) {
-      // Plain single-half block — keep the existing record/id
       final seg = segments.first;
       a.title = title;
       a.description = _descCtrl.text.trim();
@@ -421,6 +449,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       a.recurrence = _recurrence;
       a.importance = _importance;
       a.deadline = _deadline;
+      a.isLocked = _isLocked;
       await repo.upsert(a, notifLeadMinutes: lead);
     } else {
       final groupId =
@@ -433,7 +462,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     }
     HapticFeedback.lightImpact();
 
-    // Push to Google Calendar if signed in (fire-and-forget)
     final gcalSigned = ref.read(gcalSignedInProvider);
     if (gcalSigned) {
       final gcal = ref.read(gcalServiceProvider);
@@ -448,7 +476,37 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   }
 
   Future<void> _delete() async {
-    await ref.read(activityRepoProvider).deleteGroupOf(widget.initial);
+    final repo = ref.read(activityRepoProvider);
+
+    if (widget.initial.recurrence != 'none') {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Hapus Aktivitas Berulang'),
+          content: const Text('Apakah Anda ingin menghapus hanya untuk hari ini atau seluruh seri berulang?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'single'),
+              child: const Text('Hapus Hari Ini Doang'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppPalette.danger),
+              onPressed: () => Navigator.pop(ctx, 'all'),
+              child: const Text('Hapus Semua Hari'),
+            ),
+          ],
+        ),
+      );
+
+      if (choice == 'single') {
+        await repo.deleteSingleInstance(widget.initial, widget.initial.date);
+      } else if (choice == 'all') {
+        await repo.deleteGroupOf(widget.initial);
+      }
+    } else {
+      await repo.deleteGroupOf(widget.initial);
+    }
+
     if (mounted) Navigator.pop(context);
   }
 }

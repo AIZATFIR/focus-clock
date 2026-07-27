@@ -397,13 +397,24 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
             ? null
             : () => showActivityDetailSheet(context,
                 activity: a, mode: DetailMode.view),
-        onVerticalDragStart: (_) {
-          HapticFeedback.mediumImpact();
-          setState(() {
-            _draggingId = a.id;
-            _dragDeltaY = 0;
-          });
-        },
+        onVerticalDragStart: a.isLocked
+            ? (_) {
+                HapticFeedback.vibrate();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Aktivitas terkunci 🔒 Buka kuncian terlebih dahulu.'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            : (_) {
+                HapticFeedback.mediumImpact();
+                setState(() {
+                  _draggingId = a.id;
+                  _dragDeltaY = 0;
+                });
+              },
         onVerticalDragUpdate: (d) =>
             setState(() => _dragDeltaY += d.delta.dy),
         onVerticalDragEnd: (_) => _commitBlockDrag(a, hourH),
@@ -456,9 +467,39 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                       ],
                     ),
                   ),
+                  if (a.isLocked)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(Icons.lock_rounded, size: 12, color: fg.withValues(alpha: 0.85)),
+                    ),
                   if (a.recurrence != 'none')
-                    Icon(Icons.repeat,
-                        size: 11, color: fg.withValues(alpha: 0.6)),
+                    Icon(Icons.repeat, size: 11, color: fg.withValues(alpha: 0.6)),
+                  
+                  // 1-Tap Copy Button (Image 1)
+                  if (!isDragging)
+                    GestureDetector(
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        final messenger = ScaffoldMessenger.of(context);
+                        await ref.read(activityRepoProvider).duplicateActivity(a, widget.date);
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Aktivitas berhasil disalin!'),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 4, right: 4),
+                        child: Icon(
+                          Icons.copy_rounded,
+                          size: 13,
+                          color: fg.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
+
                   // Complete toggle
                   if (!isDragging)
                     GestureDetector(
@@ -468,7 +509,7 @@ class _TimelineViewState extends ConsumerState<_TimelineView> {
                             a, !a.isCompleted);
                       },
                       child: Padding(
-                        padding: const EdgeInsets.only(left: 4),
+                        padding: const EdgeInsets.only(left: 2),
                         child: Icon(
                           a.isCompleted
                               ? Icons.check_circle_rounded

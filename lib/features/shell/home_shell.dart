@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
+import '../../widgets/command_palette.dart';
+import '../../widgets/hotkeys_modal.dart';
+import 'launching_page.dart';
+import 'simple_mode_view.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
 import '../focusclock/focusclock_tab.dart';
@@ -14,20 +18,20 @@ import 'right_panel.dart';
 
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
+
   @override
   ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
 class _HomeShellState extends ConsumerState<HomeShell>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final PageController _pc;
   late final TabController _tc;
-  bool _showAi = false;
   bool _leftExpanded = true;
   bool _rightExpanded = true;
+  bool _showAi = false;
 
-  late final AnimationController _aiAnim;
-  late final FocusNode _shellFocusNode;
+  final FocusNode _shellFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -35,47 +39,60 @@ class _HomeShellState extends ConsumerState<HomeShell>
     final initial = ref.read(tabIndexProvider).clamp(0, 2);
     _pc = PageController(initialPage: initial);
     _tc = TabController(length: 3, vsync: this, initialIndex: initial);
-    _aiAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _shellFocusNode = FocusNode(debugLabel: 'HomeShellFocusNode');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _shellFocusNode.requestFocus();
-      }
-    });
   }
 
   @override
   void dispose() {
-    _shellFocusNode.dispose();
-    _aiAnim.dispose();
     _pc.dispose();
     _tc.dispose();
+    _shellFocusNode.dispose();
     super.dispose();
   }
 
-  void _openAi() {
-    setState(() => _showAi = true);
-    _aiAnim.forward();
+  void _closeAi() {
+    if (_showAi) {
+      setState(() => _showAi = false);
+    }
   }
 
-  void _closeAi() async {
-    await _aiAnim.reverse();
-    if (mounted) setState(() => _showAi = false);
+  void _openAi() {
+    if (!_showAi) {
+      setState(() => _showAi = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<int>(tabIndexProvider, (_, next) {
-      final i = next.clamp(0, 2);
-      if (_pc.hasClients && _pc.page?.round() != i) {
-        _pc.animateToPage(
-          i,
-          duration: const Duration(milliseconds: 280),
-          curve: Curves.easeInOutCubic,
-        );
-      }
+    ref.listen<int>(tabIndexProvider, (_, i) {
       if (_tc.index != i) _tc.animateTo(i);
     });
+
+    final appMode = ref.watch(selectedAppModeProvider);
+    if (appMode == 'launching') {
+      return const LaunchingPage();
+    }
+
+    if (appMode == 'simple') {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            SystemSound.play(SystemSoundType.click);
+            ref.read(selectedAppModeProvider.notifier).state = 'launching';
+          }
+        },
+        child: KeyboardListener(
+          focusNode: FocusNode()..requestFocus(),
+          onKeyEvent: (event) {
+            if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
+              SystemSound.play(SystemSoundType.click);
+              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+            }
+          },
+          child: const SimpleModeView(),
+        ),
+      );
+    }
 
     final isPlanning = ref.watch(planningModeProvider);
     final isClockDragging = ref.watch(isClockDraggingProvider);
@@ -103,6 +120,15 @@ class _HomeShellState extends ConsumerState<HomeShell>
     } else {
       mainContent = Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppPalette.accent),
+            tooltip: 'Kembali ke Launching Desk',
+            onPressed: () {
+              SystemSound.play(SystemSoundType.click);
+              HapticFeedback.selectionClick();
+              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+            },
+          ),
           title: const Text.rich(
             TextSpan(children: [
               TextSpan(
@@ -265,41 +291,53 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 ),
               ),
             
-            if (_showAi || _aiAnim.isAnimating)
-              AnimatedBuilder(
-                animation: _aiAnim,
-                builder: (context, child) {
-                  return FractionalTranslation(
-                    translation: Offset(0, 1.0 - _aiAnim.value),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(top: BorderSide(color: AppPalette.accent.withValues(alpha: 0.3), width: 1.5)),
-                        ),
-                        child: _AiPage(onClose: _closeAi),
-                      ),
-                    ),
-                  );
-                },
+            if (_showAi)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: AppPalette.accent.withValues(alpha: 0.3), width: 1.5)),
+                  ),
+                  child: _AiPage(onClose: _closeAi),
+                ),
               ),
           ],
         ),
       );
     }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          SystemSound.play(SystemSoundType.click);
+          ref.read(selectedAppModeProvider.notifier).state = 'launching';
+        }
+      },
+      child: Focus(
+        focusNode: _shellFocusNode,
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              SystemSound.play(SystemSoundType.click);
+              ref.read(selectedAppModeProvider.notifier).state = 'launching';
+              return KeyEventResult.handled;
+            }
 
-    return Focus(
-      focusNode: _shellFocusNode,
-      autofocus: true,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent) {
-          final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+            final isControlPressed = HardwareKeyboard.instance.isControlPressed;
           final isAltPressed = HardwareKeyboard.instance.isAltPressed;
           
           final String pressedKey = event.logicalKey.keyLabel.toUpperCase();
           
           if (isControlPressed) {
-            if (pressedKey == keyLeftPanel.toUpperCase() || event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+            if (pressedKey == 'K') {
+              showDialog(
+                context: context,
+                builder: (_) => const CommandPaletteModal(),
+              );
+              HapticFeedback.mediumImpact();
+              return KeyEventResult.handled;
+            } else if (pressedKey == keyLeftPanel.toUpperCase() || event.logicalKey == LogicalKeyboardKey.arrowLeft) {
               if (enableLeft) {
                 setState(() => _leftExpanded = !_leftExpanded);
                 HapticFeedback.lightImpact();
@@ -336,6 +374,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
               HapticFeedback.lightImpact();
               return KeyEventResult.handled;
             }
+          } else if (pressedKey == '?' || event.logicalKey == LogicalKeyboardKey.slash) {
+            showDialog(
+              context: context,
+              builder: (_) => const HotkeysModal(),
+            );
+            HapticFeedback.lightImpact();
+            return KeyEventResult.handled;
           } else if (isAltPressed) {
             if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
               final cur = ref.read(tabIndexProvider);
@@ -406,8 +451,9 @@ class _HomeShellState extends ConsumerState<HomeShell>
         },
         child: mainContent,
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── AI full-screen page ───────────────────────────────────────────────────────

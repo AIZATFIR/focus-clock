@@ -136,6 +136,9 @@ final aiTranscriptProvider =
 
 // ── Planning Mode State ──────────────────────────────────────────────────
 
+/// Tracks current app mode ('launching', 'simple', 'overview')
+final selectedAppModeProvider = StateProvider<String>((ref) => 'launching');
+
 /// Tracks whether the UI is in Planning Mode (Fullscreen Clock)
 final planningModeProvider = StateProvider<bool>((ref) => false);
 
@@ -153,6 +156,12 @@ final isClockDraggingProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks the selected duration interval for Instant Mode (default 60 minutes)
 final instantIntervalProvider = StateProvider<int>((ref) => 60);
+
+// ── Quick Focus Timer State ─────────────────────────────────────────────
+final activeTimerEndTimeProvider = StateProvider<DateTime?>((_) => null);
+final activeTimerTotalSecondsProvider = StateProvider<int>((_) => 0);
+final activeTimerTitleProvider = StateProvider<String>((_) => 'Deep Focus');
+final activeTimerIsPausedProvider = StateProvider<bool>((_) => false);
 
 /// Tasks scheduled for the currently selected date (entire 24h day).
 final tasksByDateProvider = Provider<List<Task>>((ref) {
