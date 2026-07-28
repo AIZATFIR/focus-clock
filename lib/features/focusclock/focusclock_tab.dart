@@ -669,38 +669,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                       const SizedBox(width: 8),
 
-                      // Hero Primary Option 1: Quick Input Focus
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          // Quick Input is rendered right below
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppPalette.accent,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.bolt_rounded, size: 15, color: Colors.black),
-                              SizedBox(width: 4),
-                              Text(
-                                '⚡ Quick Input',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Hero Primary Option 2: Talking About Your Day (Storytelling & Refleksi)
+                      // Hero Option: Talking About Your Day (Storytelling & Refleksi)
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.mediumImpact();
@@ -840,10 +809,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  // Quick Timer Hub (1-Tap 5/10/15/30/60m)
-                  if (!ref.watch(planningModeProvider))
-                    const QuickTimerHub(),
                 ],
               ),
             ),

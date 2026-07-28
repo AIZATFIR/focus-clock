@@ -168,6 +168,208 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             ],
           ),
           const SizedBox(height: 14),
+
+          if (!readOnly) ...[
+            // ⚡ QUICK FOCUS PRESET BAR (LARGE BUTTONS & DYNAMIC CUSTOM MINUTES)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppPalette.card.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppPalette.accent.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.bolt_rounded, size: 18, color: AppPalette.accent),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'QUICK FOCUS PRESET',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppPalette.accent,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Start From Now toggle button
+                      InkWell(
+                        onTap: () {
+                          SystemSound.play(SystemSoundType.click);
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            final now = DateTime.now();
+                            final currentDur = _endDt.difference(_startDt);
+                            _startDt = now;
+                            _endDt = now.add(currentDur.inMinutes > 0 ? currentDur : const Duration(minutes: 30));
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppPalette.accent.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.play_circle_fill_rounded, size: 14, color: AppPalette.accent),
+                              SizedBox(width: 4),
+                              Text('Set Start = SEKARANG', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppPalette.accent)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Large Preset Buttons (5m, 10m, 14m, 15m, 30m, 45m, 60m, 90m)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [5, 10, 14, 15, 30, 45, 60, 90].map((mins) {
+                        final durMins = _endDt.difference(_startDt).inMinutes;
+                        final isSelected = durMins == mins;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                SystemSound.play(SystemSoundType.click);
+                                HapticFeedback.mediumImpact();
+                                setState(() {
+                                  final now = DateTime.now();
+                                  _startDt = now;
+                                  _endDt = now.add(Duration(minutes: mins));
+                                  if (_titleCtrl.text.isEmpty) {
+                                    _titleCtrl.text = '$mins Min Focused Work';
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 150),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppPalette.accent : AppPalette.bg,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppPalette.accent : AppPalette.stroke,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: AppPalette.accent.withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${mins}m',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: isSelected ? Colors.black : AppPalette.text,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      mins == 14 ? 'Detail 14m' : (mins <= 15 ? 'Quick' : 'Deep Work'),
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected ? Colors.black87 : AppPalette.textDim,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Custom Minute Stepper/Calculator (e.g. 14 menit dari sekarang)
+                  Row(
+                    children: [
+                      const Text('Detail Durasi Custom:', style: TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline_rounded, size: 22, color: AppPalette.accent),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          SystemSound.play(SystemSoundType.click);
+                          HapticFeedback.selectionClick();
+                          final currentDur = _endDt.difference(_startDt).inMinutes;
+                          if (currentDur > 1) {
+                            setState(() {
+                              _endDt = _startDt.add(Duration(minutes: currentDur - 1));
+                            });
+                          }
+                        },
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppPalette.bg,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6)),
+                        ),
+                        child: Text(
+                          '${_endDt.difference(_startDt).inMinutes} Menit',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppPalette.accent),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 22, color: AppPalette.accent),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          SystemSound.play(SystemSoundType.click);
+                          HapticFeedback.selectionClick();
+                          final currentDur = _endDt.difference(_startDt).inMinutes;
+                          setState(() {
+                            _endDt = _startDt.add(Duration(minutes: currentDur + 1));
+                          });
+                        },
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_startDt.hour.toString().padLeft(2, '0')}:${_startDt.minute.toString().padLeft(2, '0')} → ${_endDt.hour.toString().padLeft(2, '0')}:${_endDt.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.textDim),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           Row(
             children: [
               Expanded(
