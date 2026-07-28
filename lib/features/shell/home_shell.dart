@@ -39,6 +39,19 @@ class _HomeShellState extends ConsumerState<HomeShell>
     final initial = ref.read(tabIndexProvider).clamp(0, 2);
     _pc = PageController(initialPage: initial);
     _tc = TabController(length: 3, vsync: this, initialIndex: initial);
+    _tc.addListener(() {
+      if (!_tc.indexIsChanging) {
+        final i = _tc.index;
+        ref.read(tabIndexProvider.notifier).state = i;
+        if (_pc.hasClients && _pc.page?.round() != i) {
+          _pc.animateToPage(
+            i,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
   }
 
   @override
@@ -64,7 +77,20 @@ class _HomeShellState extends ConsumerState<HomeShell>
   @override
   Widget build(BuildContext context) {
     ref.listen<int>(tabIndexProvider, (_, i) {
-      if (_tc.index != i) _tc.animateTo(i);
+      if (_tc.index != i) {
+        _tc.animateTo(i);
+      }
+      if (_pc.hasClients && _pc.page?.round() != i) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_pc.hasClients && _pc.page?.round() != i) {
+            _pc.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        });
+      }
     });
 
     final appMode = ref.watch(selectedAppModeProvider);
@@ -154,7 +180,18 @@ class _HomeShellState extends ConsumerState<HomeShell>
           ],
           bottom: TabBar(
             controller: _tc,
-            onTap: (i) => ref.read(tabIndexProvider.notifier).state = i,
+            onTap: (i) {
+              SystemSound.play(SystemSoundType.click);
+              HapticFeedback.selectionClick();
+              ref.read(tabIndexProvider.notifier).state = i;
+              if (_pc.hasClients && _pc.page?.round() != i) {
+                _pc.animateToPage(
+                  i,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
             indicatorColor: AppPalette.accent,
             indicatorSize: TabBarIndicatorSize.label,
             labelColor: AppPalette.accent,

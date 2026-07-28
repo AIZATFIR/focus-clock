@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
+import '../../widgets/google_auth_dialog.dart';
 
 class LaunchingPage extends ConsumerStatefulWidget {
   const LaunchingPage({super.key});
@@ -69,18 +70,7 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                         builder: (context, ref, child) {
                           final gcalSigned = ref.watch(gcalSignedInProvider);
                           return InkWell(
-                            onTap: () async {
-                              SystemSound.play(SystemSoundType.click);
-                              HapticFeedback.selectionClick();
-                              final svc = ref.read(gcalServiceProvider);
-                              if (gcalSigned) {
-                                await svc.signOut();
-                                ref.read(gcalSignedInProvider.notifier).state = false;
-                              } else {
-                                final ok = await svc.signIn();
-                                ref.read(gcalSignedInProvider.notifier).state = ok;
-                              }
-                            },
+                            onTap: () => showGoogleAuthDialog(context, ref),
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

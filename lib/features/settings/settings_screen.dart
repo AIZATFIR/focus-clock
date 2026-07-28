@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/gcal_service.dart';
+import '../../widgets/google_auth_dialog.dart';
 
 // Provider presets
 const _providerPresets = [
@@ -1227,22 +1228,7 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
   }
 
   Future<void> _toggle() async {
-    setState(() => _loading = true);
-    final svc = ref.read(gcalServiceProvider);
-    final signedIn = ref.read(gcalSignedInProvider);
-    if (signedIn) {
-      await svc.signOut();
-      ref.read(gcalSignedInProvider.notifier).state = false;
-    } else {
-      final ok = await svc.signIn();
-      ref.read(gcalSignedInProvider.notifier).state = ok;
-      if (!ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sinkronisasi Google dibatalkan')),
-        );
-      }
-    }
-    if (mounted) setState(() => _loading = false);
+    showGoogleAuthDialog(context, ref);
   }
 
   @override
