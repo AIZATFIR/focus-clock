@@ -57,11 +57,16 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   late DateTime _endDt;
 
   late int _color;
+  late String _iconKey;
   late String _recurrence;
   late int _importance;
   late bool _isLocked;
   DateTime? _deadline;
   final _focusNode = FocusNode();
+
+  static const List<String> _availableIcons = [
+    '🎯', '💻', '📖', '🏃', '🎨', '🎵', '✍️', '🧠', '☕', '🧘', '🔥', '🚀', '💡', '📌', '⚡', '🏋️'
+  ];
 
   @override
   void initState() {
@@ -73,6 +78,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
     _color = a.colorValue;
+    _iconKey = (a.iconKey != null && a.iconKey!.isNotEmpty) ? a.iconKey! : '🎯';
     _recurrence = a.recurrence;
     _importance = a.importance;
     _isLocked = a.isLocked;
@@ -460,8 +466,40 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Color',
-                style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
+            const Text('Pilihan Icon / Emoji Aktivitas',
+                style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _availableIcons.map((emoji) {
+                  final isSelected = _iconKey == emoji;
+                  return GestureDetector(
+                    onTap: () {
+                      SystemSound.play(SystemSoundType.click);
+                      HapticFeedback.selectionClick();
+                      setState(() => _iconKey = emoji);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppPalette.accent.withValues(alpha: 0.2) : AppPalette.bg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected ? AppPalette.accent : AppPalette.stroke,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text('Pilihan Warna (Color Swatch)',
+                style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ColorSwatchPicker(
               value: _color,
@@ -554,7 +592,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     final src = widget.initial;
     return Activity()
       ..presetId = src.presetId
-      ..iconKey = src.iconKey
+      ..iconKey = _iconKey
       ..title = _titleCtrl.text.trim()
       ..startMinute = seg.start
       ..endMinute = seg.end
@@ -642,6 +680,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     if (segments.length == 1 && a.groupId == null) {
       final seg = segments.first;
       a.title = title;
+      a.iconKey = _iconKey;
       a.description = _descCtrl.text.trim();
       a.date = seg.date;
       a.ampmHalf = seg.half;
