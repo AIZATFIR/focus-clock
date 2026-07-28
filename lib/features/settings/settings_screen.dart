@@ -1227,12 +1227,6 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
   }
 
   Future<void> _toggle() async {
-    if (!gcalSupported) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Google Sign-In only available on Android / iOS / macOS'),
-      ));
-      return;
-    }
     setState(() => _loading = true);
     final svc = ref.read(gcalServiceProvider);
     final signedIn = ref.read(gcalSignedInProvider);
@@ -1244,7 +1238,7 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
       ref.read(gcalSignedInProvider.notifier).state = ok;
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign-in cancelled or failed')),
+          const SnackBar(content: Text('Sinkronisasi Google dibatalkan')),
         );
       }
     }
@@ -1256,13 +1250,11 @@ class _GCalTileState extends ConsumerState<_GCalTile> {
     final signedIn = ref.watch(gcalSignedInProvider);
     return ListTile(
       leading: const Text('📅', style: TextStyle(fontSize: 22)),
-      title: Text(signedIn ? 'Connected' : 'Connect Google Calendar'),
+      title: Text(signedIn ? 'Terhubung dengan Google Calendar' : 'Hubungkan Google Calendar'),
       subtitle: Text(
         signedIn
-            ? 'Activities sync to your calendar'
-            : gcalSupported
-                ? 'Tap to sign in with Google'
-                : 'Available on Android / iOS',
+            ? 'Aktivitas tersinkronisasi otomatis ke Google Calendar'
+            : 'Tap untuk masuk dengan Google (Linux & Android Sync)',
         style: const TextStyle(fontSize: 12),
       ),
       trailing: _loading

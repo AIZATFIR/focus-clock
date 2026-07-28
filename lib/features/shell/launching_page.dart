@@ -61,6 +61,56 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Top Row: Google Sync Status
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final gcalSigned = ref.watch(gcalSignedInProvider);
+                          return InkWell(
+                            onTap: () async {
+                              SystemSound.play(SystemSoundType.click);
+                              HapticFeedback.selectionClick();
+                              final svc = ref.read(gcalServiceProvider);
+                              if (gcalSigned) {
+                                await svc.signOut();
+                                ref.read(gcalSignedInProvider.notifier).state = false;
+                              } else {
+                                final ok = await svc.signIn();
+                                ref.read(gcalSignedInProvider.notifier).state = ok;
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: gcalSigned ? AppPalette.accent.withValues(alpha: 0.15) : AppPalette.card,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: gcalSigned ? AppPalette.accent : AppPalette.stroke),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('📅', style: TextStyle(fontSize: 12)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    gcalSigned ? 'Google Sync: Terhubung' : 'Sinkronkan Akun Google',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: gcalSigned ? AppPalette.accent : AppPalette.textDim,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   // Logo Icon
                   Container(
                     padding: const EdgeInsets.all(16),

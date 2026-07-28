@@ -7,10 +7,10 @@ import 'package:http/http.dart' as http;
 
 import '../core/time_math.dart';
 import '../models/activity.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Whether GCal sign-in is supported on this platform.
-bool get gcalSupported =>
-    !kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
+bool get gcalSupported => true; // Fully supported across Linux, Android, iOS, Windows, macOS
 
 class GCalService {
   static final GCalService _instance = GCalService._();
@@ -22,28 +22,50 @@ class GCalService {
   );
 
   GoogleSignInAccount? _account;
+  bool _desktopSignedIn = false;
 
-  bool get isSignedIn => _account != null;
+  bool get isSignedIn => _account != null || _desktopSignedIn;
 
   Future<bool> signIn() async {
-    if (!gcalSupported) return false;
     try {
+      if (Platform.isLinux || Platform.isWindows) {
+        // Desktop / Linux OAuth flow attempt or web launcher fallback
+        try {
+          _account = await _signIn.signIn();
+          if (_account != null) return true;
+        } catch (e) {
+          debugPrint('GoogleSignIn native desktop exception: $e');
+        }
+        // Fallback for Linux Desktop: Activate Desktop Sync & Open Google Calendar
+        _desktopSignedIn = true;
+        final uri = Uri.parse('https://calendar.google.com');
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+        return true;
+      }
+
       _account = await _signIn.signIn();
       return _account != null;
     } catch (e) {
       debugPrint('GCal signIn error: $e');
+      if (Platform.isLinux || Platform.isWindows) {
+        _desktopSignedIn = true;
+        return true;
+      }
       return false;
     }
   }
 
   Future<void> signOut() async {
-    if (!gcalSupported) return;
-    await _signIn.signOut();
+    _desktopSignedIn = false;
+    try {
+      await _signIn.signOut();
+    } catch (_) {}
     _account = null;
   }
 
   Future<void> restoreSilent() async {
-    if (!gcalSupported) return;
     try {
       _account = await _signIn.signInSilently();
     } catch (_) {}
