@@ -16,7 +16,6 @@ import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
-import '../../widgets/floating_quick_ai_bar.dart';
 import 'analog_clock_face.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
@@ -640,34 +639,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                       const SizedBox(width: 8),
 
-                      // Back to Launching Desk
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          ref.read(selectedAppModeProvider.notifier).state = 'launching';
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.arrow_back_rounded, size: 14, color: AppPalette.accent),
-                              SizedBox(width: 4),
-                              Text(
-                                'Desk',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppPalette.text),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
                       // Hero Option: Talking About Your Day (Storytelling & Refleksi)
                       GestureDetector(
                         onTap: () {
@@ -975,12 +946,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               ),
             ),
 
-            // Floating Quick-AI Command Bar ("P info...")
-            const Positioned(
-              bottom: 20,
-              right: 16,
-              child: FloatingQuickAiBar(),
-            ),
           ],
         );
       }),
