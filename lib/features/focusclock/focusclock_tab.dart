@@ -14,7 +14,6 @@ import '../activity_detail/activity_detail_sheet.dart';
 import '../ai_chat/voice_assistant_sheet.dart';
 import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
-import '../../widgets/quick_timer_hub.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
 import '../../widgets/floating_quick_ai_bar.dart';
