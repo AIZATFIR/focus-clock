@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../models/app_settings.dart';
 import '../../providers/providers.dart';
 import '../../services/gcal_service.dart';
+import '../../services/secure_storage_service.dart';
 import '../../widgets/google_auth_dialog.dart';
 
 // Provider presets
@@ -927,6 +928,8 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   bool _showGuide = false;
   String _selectedPreset = 'Google AI';
 
+  bool _voiceEnabled = true;
+
   @override
   void initState() {
     super.initState();
@@ -934,11 +937,30 @@ class _AiConfigTileState extends State<_AiConfigTile> {
     _keyCtrl = TextEditingController(text: widget.s.aiApiKey);
     _modelCtrl = TextEditingController(text: widget.s.aiModel);
 
-    // Detect preset from saved URL
     final match = _providerPresets
         .where((p) => p.$2 == widget.s.aiBaseUrl)
         .firstOrNull;
     _selectedPreset = match?.$1 ?? 'Custom';
+    _loadSecureStorage();
+  }
+
+  Future<void> _loadSecureStorage() async {
+    final storage = SecureStorageService();
+    final geminiKey = await storage.getGeminiApiKey();
+    final serverUrl = await storage.getBackendServerUrl();
+    final vEnabled = await storage.isVoiceEnabled();
+
+    if (mounted) {
+      setState(() {
+        if (geminiKey != null && geminiKey.isNotEmpty) {
+          _keyCtrl.text = geminiKey;
+        }
+        if (serverUrl.isNotEmpty) {
+          _urlCtrl.text = serverUrl;
+        }
+        _voiceEnabled = vEnabled;
+      });
+    }
   }
 
   @override
@@ -1162,6 +1184,18 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             },
           ),
 
+          const SizedBox(height: 10),
+          SwitchListTile(
+            title: const Text('Aura Voice Output (TTS)'),
+            subtitle: const Text('Suara respons AI Aura via Text-to-Speech'),
+            value: _voiceEnabled,
+            activeColor: AppPalette.accent,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) {
+              setState(() => _voiceEnabled = v);
+              SecureStorageService().setVoiceEnabled(v);
+            },
+          ),
           const SizedBox(height: 14),
 
           // Save button + status
@@ -1188,11 +1222,24 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                   backgroundColor: AppPalette.accent,
                   foregroundColor: Colors.black,
                 ),
-                onPressed: () => widget.onSave(
-                  _urlCtrl.text.trim(),
-                  _keyCtrl.text.trim(),
-                  _modelCtrl.text.trim(),
-                ),
+                onPressed: () async {
+                  final key = _keyCtrl.text.trim();
+                  final url = _urlCtrl.text.trim();
+                  final model = _modelCtrl.text.trim();
+
+                  final storage = SecureStorageService();
+                  await storage.setGeminiApiKey(key);
+                  await storage.setBackendServerUrl(url);
+                  await storage.setVoiceEnabled(_voiceEnabled);
+
+                  widget.onSave(url, key, model);
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pengaturan Aura AI & Voice Berhasil Disimpan!')),
+                    );
+                  }
+                },
                 child: const Text('Save'),
               ),
             ],
@@ -1211,7 +1258,7 @@ class _GCalTile extends ConsumerStatefulWidget {
 }
 
 class _GCalTileState extends ConsumerState<_GCalTile> {
-  bool _loading = false;
+  final bool _loading = false;
 
   @override
   void initState() {

@@ -56,3 +56,5 @@ secrets/
 
 # Claude Code local
 .claude/settings.local.json
+
+*.pdf

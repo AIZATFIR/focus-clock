@@ -460,7 +460,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 const Spacer(),
                 Switch(
                   value: _isLocked,
-                  activeColor: AppPalette.accent,
+                  activeTrackColor: AppPalette.accent,
                   onChanged: (v) => setState(() => _isLocked = v),
                 ),
               ],

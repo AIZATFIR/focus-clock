@@ -13,6 +13,7 @@ import '../models/task.dart';
 import '../services/ai_service.dart';
 import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
+import '../services/secure_storage_service.dart';
 
 /// Overridden in main().
 final isarProvider = Provider<Isar>((_) => throw UnimplementedError());
@@ -192,5 +193,6 @@ final aiServiceProvider = Provider<AiService>((ref) {
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
     activityRepo: ref.watch(activityRepoProvider),
     presetRepo: ref.watch(presetRepoProvider),
+    secureStorage: ref.watch(secureStorageServiceProvider),
   );
 });

@@ -382,7 +382,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         return Center(
           child: Transform(
             alignment: Alignment.center,
-            transform: Matrix4.identity()..scale(widthScale, heightScale, 1.0),
+            transform: Matrix4.diagonal3Values(widthScale, heightScale, 1.0),
             child: Container(color: Colors.white, child: child!),
           ),
         );
@@ -541,7 +541,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                           previewEndMinute: _dragEndNotifier.value,
                                           previewColor: candidate.isNotEmpty
                                               ? Color(candidate.first!.colorValue)
-                                              : (isInstant ? const Color(0xFFFFEE99).withOpacity(0.27) : null),
+                                              : (isInstant ? const Color(0xFFFFEE99).withValues(alpha: 0.27) : null),
                                           previewConflict: _dragConflictNotifier.value,
                                           pulse: _pulseCtrl.value,
                                           clockHandsMode: clockHandsMode,

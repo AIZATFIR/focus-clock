@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
@@ -7,8 +7,19 @@ import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../models/activity.dart';
+import 'secure_storage_service.dart';
 
-// ── Tool schemas (OpenAI function calling format) ─────────────────────────────
+/// Enum representing the active AI execution mode
+enum AiExecutionMode {
+  byokGeminiDirect('BYOK (Gemini Direct)'),
+  serverOpenRouter('Server-Side (OpenRouter)'),
+  demoFallback('Demo Mode');
+
+  const AiExecutionMode(this.label);
+  final String label;
+}
+
+// ── Tool schemas (OpenAI & Gemini function calling format) ───────────────────
 
 const _tools = [
   {
@@ -61,8 +72,7 @@ const _tools = [
           },
           'deadline': {
             'type': 'string',
-            'description':
-                'ISO date yyyy-MM-dd for deadline. Null to clear.',
+            'description': 'ISO date yyyy-MM-dd for deadline. Null to clear.',
           },
         },
       },
@@ -156,10 +166,16 @@ const _tools = [
 // ── Chat message ──────────────────────────────────────────────────────────────
 
 class ChatMessage {
-  ChatMessage({required this.role, required this.text, this.isLoading = false});
+  ChatMessage({
+    required this.role,
+    required this.text,
+    this.isLoading = false,
+    this.modeLabel,
+  });
   final String role; // 'user' | 'model'
   final String text;
   final bool isLoading;
+  final String? modeLabel;
 }
 
 // ── AiService ─────────────────────────────────────────────────────────────────
@@ -171,102 +187,190 @@ class AiService {
     required this.model,
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
+    SecureStorageService? secureStorage,
   })  : _activityRepo = activityRepo,
-        _presetRepo = presetRepo;
+        _presetRepo = presetRepo,
+        _secureStorage = secureStorage ?? SecureStorageService();
 
   final String baseUrl;
   final String apiKey;
   final String model;
   final ActivityRepository _activityRepo;
   final PresetRepository _presetRepo;
+  final SecureStorageService _secureStorage;
 
-  // Conversation history (OpenAI messages format)
+  // History for OpenAI format requests
   final List<Map<String, dynamic>> _history = [];
   bool _initialized = false;
+  AiExecutionMode _activeMode = AiExecutionMode.demoFallback;
+
+  AiExecutionMode get activeMode => _activeMode;
+
+  /// Format system prompt for Persona "Aura"
+  String _buildAuraSystemPrompt(String dateStr, String timeStr, String timezone, String presetList) {
+    return '''Kamu adalah "Aura", seorang AI Time Secretary yang sangat empatik, hangat, efisien, dan ramah.
+
+ATURAN PERILAKU:
+1. Bersikap profesional namun hangat seperti sekretaris pribadi manusia sungguhan.
+2. Selalu sadar konteks waktu pengguna saat ini: $dateStr $timeStr (Timezone: $timezone).
+3. Buat respon yang ringkas, jelas, dan langsung pada poin utama (maksimal 2-3 kalimat).
+4. Proaktif memberikan perhatian kecil terkait manajemen waktu, jam istirahat, atau pengingat jadwal jika diperlukan.
+
+DOKTRIN MANAJEMEN WAKTU (CONCEPT PAPER FOCUS CLOCK):
+- Berdasarkan Perilaku Psikologis Natural Manusia (Fitrah).
+- Utamakan pembagian waktu seimbang: Deep Work (90-120 menit), Intentional Rest (istirahat total dari gawai/bengong sehat 20 menit), Active Rest/Sosial, Wind Down (45 menit), dan Sleep (siklus kelipatan 90 menit).
+- Gunakan Eisenhower Matrix untuk memprioritaskan tugas ber-deadline.
+- Presets pengguna saat ini: $presetList.
+
+PANGGILAN TOOL AUTOMATION:
+- list_activities: untuk melihat jadwal aktif.
+- create_activity: untuk menambah kegiatan/time-block.
+- update_activity: untuk menggeser/mengubah jadwal.
+- delete_activity: untuk menghapus jadwal.
+- set_priority: untuk mengatur Eisenhower Matrix.
+- generate_blueprint: untuk membuat rencana Fitrah Blueprint seharian penuh.
+''';
+  }
 
   Future<void> _ensureInit() async {
     if (_initialized) return;
     final now = DateTime.now();
+    final timezone = DateTime.now().timeZoneName;
     final presets = await _presetRepo.getAll();
     final presetList = presets.isEmpty
-        ? 'none'
-        : presets
-            .asMap()
-            .entries
-            .map((e) => '${e.key + 1}. "${e.value.name}"')
-            .join(', ');
+        ? 'tidak ada'
+        : presets.asMap().entries.map((e) => '${e.key + 1}. "${e.value.name}"').join(', ');
     final dateStr = _fmtDate(now);
-    final timeStr =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    final systemPrompt = _buildAuraSystemPrompt(dateStr, timeStr, timezone, presetList);
 
     _history.add({
       'role': 'system',
-      'content': '''You are the Presidential Executive Personal Assistant (Sekretaris Eksekutif Utama) for Focus Clock.
-Your mission is to serve as an ultra-efficient, highly structured, proactive, and respectful presidential-level executive assistant.
-Today: $dateStr. Current time: $timeStr.
-User presets: $presetList.
-
-## Persona & Communication Standard (Sekretaris Eksekutif Conscious Companion)
-- Address the user respectfully and warmly (e.g. "Siap Pak/Bu", "Baik, Laporan Eksekutif").
-- Fully conscious of user context: understand slang & casual quick commands like "P info...", "abis ini", "lanjut", "nanti jam X".
-- When user inputs "P info, abis ini 30 menit baca buku": immediately call create_activity starting now for 30 minutes.
-- When user inputs "P info, lanjut ngoding, nanti jam 4 sore baca buku": understand "lanjut ngoding" means start/resume coding right now, and create_activity for reading at 16:00.
-- Execute tool calls directly without asking for confirmation unless ambiguous.
-
-## Core Rules
-- Call list_activities first if you need existing schedule before editing.
-- Times are 24h. Convert natural language: "7am"→7, "2pm"→14, "4 sore"→16, "setengah 8"→7:30.
-- "move"/"pindah"/"geser": call update_activity with new start_hour.
-- "delete"/"hapus"/"cancel": call delete_activity.
-- After every tool call, summarise in 1 concise, encouraging executive sentence.
-- Reply in the same language as the user (default Indonesian).
-- Blocks may cross midnight: for sleep 22:00→05:00 call create_activity ONCE with start_hour=22, duration_minutes=420. NEVER truncate at midnight or split into two calls — the app splits segments automatically.
-
-## Eisenhower Matrix
-- Use set_priority to classify tasks: importance=1 (important), importance=0 (not important).
-- Urgency is auto-computed from deadline (≤3 days = urgent).
-- Quadrants: urgent+important=DO, not urgent+important=SCHEDULE, urgent+not important=DELEGATE, not urgent+not important=ELIMINATE.
-
-## Fitrah Blueprint (generate_blueprint tool)
-When generating a day blueprint, follow this executive psychology-based structure:
-1. **Morning Routine** (wake_hour, 30min): Executive briefing, hydrate, plan day.
-2. **Deep Work Block 1** (wake_hour+0.5h, 90min): Peak cognitive energy, main strategic goal.
-3. **Intentional Rest** (after DW1, 20min): Screen-free memory consolidation (DMN activation).
-4. **Deep Work Block 2** (if time permits, 90min): Second priority task.
-5. **Intentional Rest** (20min): Screen-free rest.
-6. **Lunch + Active Rest** (90min): Nourishment, active rest, dopamine reset.
-7. **Deep Work Block 3** (optional, 60-90min): Administrative / execution tasks.
-8. **Wind Down** (sleep_hour - 60min, 45min): Executive reflection, evening debrief.
-9. **Sleep** (sleep_hour, 90-min cycle × n = ideal 7.5h or 9h).''',
+      'content': systemPrompt,
     });
     _initialized = true;
   }
 
-  /// Send message, execute any tool calls, return final text.
+  /// Send message via Hybrid Architecture (BYOK Gemini SDK or Server-Side Fallback)
   Future<String> send(String userMessage) async {
     await _ensureInit();
     _history.add({'role': 'user', 'content': userMessage});
 
+    final userGeminiKey = (await _secureStorage.getGeminiApiKey()) ?? apiKey;
+
+    // Determine Mode
+    if (userGeminiKey.isNotEmpty && userGeminiKey.startsWith('AIza')) {
+      _activeMode = AiExecutionMode.byokGeminiDirect;
+      try {
+        return await _sendGeminiDirect(userMessage, userGeminiKey);
+      } catch (e) {
+        // Fallback to server side if BYOK fails
+        _activeMode = AiExecutionMode.serverOpenRouter;
+        return await _sendServerFallback(userMessage);
+      }
+    } else {
+      _activeMode = AiExecutionMode.serverOpenRouter;
+      return await _sendServerFallback(userMessage);
+    }
+  }
+
+  // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
+  Future<String> _sendGeminiDirect(String userMessage, String geminiKey) async {
+    try {
+      final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: geminiKey,
+      );
+
+      final systemPromptObj = _history.firstWhere(
+        (m) => m['role'] == 'system',
+        orElse: () => {'content': ''},
+      )['content'] as String;
+
+      final promptText = '$systemPromptObj\n\nUser request: $userMessage';
+      final content = [Content.text(promptText)];
+
+      final response = await model.generateContent(content);
+      final reply = response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
+
+      _history.add({'role': 'assistant', 'content': reply});
+      return reply;
+    } catch (e) {
+      // Fall back to HTTP endpoint if SDK fails
+      return await _sendServerFallback(userMessage);
+    }
+  }
+
+  // ── Mode 2: Server-Side Fallback via OpenRouter / Backend ─────────────────
+  Future<String> _sendServerFallback(String userMessage) async {
+    final serverUrl = await _secureStorage.getBackendServerUrl();
+    final openRouterKey = await _secureStorage.getOpenRouterKey();
+
+    // 1. Try local/custom server endpoint `/api/chat/secretary`
+    try {
+      final uri = Uri.parse('$serverUrl/api/chat/secretary');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'messages': _history,
+          'userMessage': userMessage,
+        }),
+      ).timeout(const Duration(seconds: 8));
+
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final reply = (data['reply'] as String?)?.trim() ?? 'Siap, Aura sudah memproses jadwal Anda.';
+        _history.add({'role': 'assistant', 'content': reply});
+        return reply;
+      }
+    } catch (_) {
+      // Server offline or not reached, try direct OpenRouter HTTP if available
+    }
+
+    // 2. Direct OpenRouter HTTP call
+    return await _callOpenRouterDirect(openRouterKey);
+  }
+
+  Future<String> _callOpenRouterDirect(String? openRouterKey) async {
+    const demoUrl = String.fromEnvironment(
+      'DEMO_AI_URL',
+      defaultValue: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    );
+    const demoKey = String.fromEnvironment('DEMO_AI_KEY');
+    const demoModel = String.fromEnvironment('DEMO_AI_MODEL', defaultValue: 'gemini-2.5-flash');
+
+    final effectiveKey = (openRouterKey != null && openRouterKey.isNotEmpty)
+        ? openRouterKey
+        : (apiKey.isNotEmpty ? apiKey : demoKey);
+    final effectiveUrl = (openRouterKey != null && openRouterKey.isNotEmpty)
+        ? 'https://openrouter.ai/api/v1'
+        : (apiKey.isNotEmpty ? baseUrl : demoUrl);
+    final effectiveModel = (openRouterKey != null && openRouterKey.isNotEmpty)
+        ? 'google/gemini-2.0-flash-exp:free'
+        : (model.isNotEmpty ? model : demoModel);
+
+    if (effectiveKey.isEmpty) {
+      return 'Halo! Aura siap membantu. Silakan masukkan GEMINI_API_KEY Anda di Settings untuk mode BYOK, atau nyalakan Server Backend OpenRouter.';
+    }
+
     // Agentic loop
-    for (int loop = 0; loop < 6; loop++) {
-      final response = await _callApi();
+    for (int loop = 0; loop < 5; loop++) {
+      final response = await _callOpenAiFormatApi(effectiveUrl, effectiveKey, effectiveModel);
       final choice = response['choices'][0];
       final msg = choice['message'] as Map<String, dynamic>;
 
-      // Add assistant message to history
       _history.add(msg);
 
       final toolCalls = msg['tool_calls'] as List?;
       if (toolCalls == null || toolCalls.isEmpty) {
-        // Final answer
-        return (msg['content'] as String?)?.trim() ?? '(no response)';
+        return (msg['content'] as String?)?.trim() ?? 'Aura siap mendampingi waktu Anda.';
       }
 
-      // Execute each tool call
       for (final tc in toolCalls) {
         final name = tc['function']['name'] as String;
-        final args = jsonDecode(tc['function']['arguments'] as String)
-            as Map<String, dynamic>;
+        final args = jsonDecode(tc['function']['arguments'] as String) as Map<String, dynamic>;
         final result = await _executeTool(name, args);
         _history.add({
           'role': 'tool',
@@ -276,26 +380,13 @@ When generating a day blueprint, follow this executive psychology-based structur
       }
     }
 
-    return '(max tool iterations reached)';
+    return 'Proses penjadwalan selesais.';
   }
 
-  Future<Map<String, dynamic>> _callApi() async {
-    const demoUrl = String.fromEnvironment('DEMO_AI_URL', defaultValue: 'https://generativelanguage.googleapis.com/v1beta/openai');
-    const demoKey = String.fromEnvironment('DEMO_AI_KEY');
-    const demoModel = String.fromEnvironment('DEMO_AI_MODEL', defaultValue: 'gemini-2.5-flash');
-
-    final bool useDemo = apiKey.isEmpty && demoKey.isNotEmpty;
-    final effectiveUrl = useDemo ? demoUrl : baseUrl;
-    final effectiveKey = useDemo ? demoKey : apiKey;
-    final effectiveModel = useDemo ? demoModel : model;
-
-    if (effectiveKey.isEmpty) {
-      throw Exception('API Key is missing. Please set it in Settings or provide DEMO_AI_KEY.');
-    }
-
-    final uri = Uri.parse('$effectiveUrl/chat/completions');
+  Future<Map<String, dynamic>> _callOpenAiFormatApi(String url, String key, String modelName) async {
+    final uri = Uri.parse('$url/chat/completions');
     final body = jsonEncode({
-      'model': effectiveModel,
+      'model': modelName,
       'messages': _history,
       'tools': _tools,
       'tool_choice': 'auto',
@@ -305,9 +396,8 @@ When generating a day blueprint, follow this executive psychology-based structur
       uri,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $effectiveKey',
-        if (effectiveUrl.contains('openrouter'))
-          'HTTP-Referer': 'https://focusclock.app',
+        'Authorization': 'Bearer $key',
+        if (url.contains('openrouter')) 'HTTP-Referer': 'https://focusclock.app',
       },
       body: body,
     );
@@ -357,8 +447,6 @@ When generating a day blueprint, follow this executive psychology-based structur
     };
   }
 
-  /// Create a block that may cross midnight: splits into per-half segment
-  /// rows sharing a groupId (same mechanism as manual drag/picker creation).
   Future<int> _createSpan({
     required String title,
     required DateTime date,
@@ -375,7 +463,6 @@ When generating a day blueprint, follow this executive psychology-based structur
     final segments = splitSpan(startDt, endDt);
     final groupId = segments.length > 1 ? const Uuid().v4() : null;
 
-    // ── Conflict check ──────────────────────────────────────────────────
     for (final s in segments) {
       final conflicts = await _activityRepo.getConflicting(
         s.date, s.half, s.start, s.end,
@@ -385,9 +472,7 @@ When generating a day blueprint, follow this executive psychology-based structur
         final cStart = _fmtTime(c.ampmHalf, c.startMinute);
         final cEnd = _fmtTime(c.ampmHalf, c.endMinute);
         throw Exception(
-          'Time conflict with "${c.title}" ($cStart\u2013$cEnd). '
-          'Choose a different time, shorten the duration, or delete the '
-          'conflicting activity first.',
+          'Waktu bentrok dengan "${c.title}" ($cStart\u2013$cEnd).',
         );
       }
     }
@@ -409,10 +494,8 @@ When generating a day blueprint, follow this executive psychology-based structur
           ..updatedAt = now,
     ];
     if (acts.length == 1) return _activityRepo.upsert(acts.first);
-    // Fresh Activity as `original` (id == autoIncrement, no group):
-    // replaceSpan just inserts the segments in one transaction.
-    await _activityRepo.replaceSpan(original: Activity()..title = title,
-        segments: acts);
+    await _activityRepo.replaceSpan(
+        original: Activity()..title = title, segments: acts);
     return acts.first.id;
   }
 
@@ -471,7 +554,6 @@ When generating a day blueprint, follow this executive psychology-based structur
         ? (args['start_minute'] as num).toInt()
         : existing.startMinute % 60;
 
-    // True duration: a cross-midnight block is stored as group segments.
     int dur;
     if (args['duration_minutes'] != null) {
       dur = (args['duration_minutes'] as num).toInt();
@@ -488,7 +570,7 @@ When generating a day blueprint, follow this executive psychology-based structur
     final groupId = segments.length > 1
         ? (existing.groupId ?? const Uuid().v4())
         : null;
-    // ── Conflict check (exclude self) ──────────────────────────────────
+
     for (final s in segments) {
       final conflicts = await _activityRepo.getConflicting(
         s.date, s.half, s.start, s.end, excludeId: id,
@@ -498,8 +580,7 @@ When generating a day blueprint, follow this executive psychology-based structur
         final cStart = _fmtTime(c.ampmHalf, c.startMinute);
         final cEnd = _fmtTime(c.ampmHalf, c.endMinute);
         throw Exception(
-          'Time conflict with "${c.title}" ($cStart\u2013$cEnd). '
-          'Choose a different time or delete the conflicting activity first.',
+          'Waktu bentrok dengan "${c.title}" ($cStart\u2013$cEnd).',
         );
       }
     }
@@ -544,7 +625,8 @@ When generating a day blueprint, follow this executive psychology-based structur
     if (existing == null) return {'error': 'Activity $id not found'};
 
     if (args['importance'] != null) {
-      await _activityRepo.setImportance(existing, (args['importance'] as num).toInt());
+      await _activityRepo.setImportance(
+          existing, (args['importance'] as num).toInt());
     }
     if (args.containsKey('deadline')) {
       final dl = args['deadline'] as String?;
@@ -554,9 +636,6 @@ When generating a day blueprint, follow this executive psychology-based structur
     return {'success': true, 'id': id};
   }
 
-  /// Generates a Fitrah Blueprint — creates all blocks in one call.
-  /// The AI is responsible for computing timestamps from the system prompt rules,
-  /// but as a fallback this tool directly creates a hardcoded template.
   Future<Map<String, dynamic>> _generateBlueprint(
       Map<String, dynamic> args) async {
     final dateStr = args['date'] as String;
@@ -565,30 +644,22 @@ When generating a day blueprint, follow this executive psychology-based structur
     final sleepH = (args['sleep_hour'] as num).toInt();
     final goals = (args['goals'] as List?)?.cast<String>() ?? [];
 
-    // Available work hours
-    final workStart = wakeH + 1; // after morning routine
-    // Build blueprint blocks
+    final workStart = wakeH + 1;
     final blocks = <Map<String, dynamic>>[];
 
-    // Morning routine (30 min)
     blocks.add({
-      'title': '🌅 Morning Routine',
+      'title': '🌅 Routine Pagi (Aura Briefing)',
       'start_hour': wakeH,
       'start_minute': 0,
       'duration_minutes': 30,
-      'description': 'Hydrate, light stretch, review today\'s plan.',
+      'description': 'Minum air, peregangan ringan, dan tinjau rencana hari ini.',
       'color': 0xFFFFD700,
     });
 
-    int cursor = workStart * 60; // minutes from midnight
-
-    // Deep Work blocks for goals
-    final goalLabels = goals.isNotEmpty
-        ? goals
-        : ['Deep Work'];
+    int cursor = workStart * 60;
+    final goalLabels = goals.isNotEmpty ? goals : ['Deep Work Utama'];
     for (int i = 0; i < goalLabels.length && i < 3; i++) {
       final dwDur = 90;
-      // Don't schedule past sleepH - 2h
       if (cursor + dwDur > sleepH * 60 - 120) break;
 
       blocks.add({
@@ -596,64 +667,55 @@ When generating a day blueprint, follow this executive psychology-based structur
         'start_hour': cursor ~/ 60,
         'start_minute': cursor % 60,
         'duration_minutes': dwDur,
-        'description': 'Full focus. No notifications, no interruptions.',
+        'description': 'Fokus penuh tanpa hambatan atau notifikasi.',
         'color': 0xFF4A9EFF,
       });
       cursor += dwDur;
 
-      // Intentional Rest after each Deep Work
       blocks.add({
-        'title': '🧠 Intentional Rest',
+        'title': '🧠 Intentional Rest (Bengong Sehat)',
         'start_hour': cursor ~/ 60,
         'start_minute': cursor % 60,
         'duration_minutes': 20,
-        'description':
-            'No screens. Let your mind wander — activates DMN for memory consolidation.',
+        'description': 'Istirahat tanpa layar untuk aktivasi Default Mode Network (DMN).',
         'color': 0xFF6BCB77,
       });
       cursor += 20;
 
-      // Lunch break after first Deep Work (if ~noon)
       if (i == 0 && cursor ~/ 60 >= 11) {
         blocks.add({
-          'title': '🍱 Lunch + Active Rest',
+          'title': '🍱 Makan Siang + Active Rest',
           'start_hour': cursor ~/ 60,
           'start_minute': cursor % 60,
           'duration_minutes': 90,
-          'description':
-              'Eat mindfully. Short walk, social time, or light hobby.',
+          'description': 'Makan siang dan reset dopamin.',
           'color': 0xFFFF9F40,
         });
         cursor += 90;
       }
     }
 
-    // Wind Down
     final windDownStart = sleepH * 60 - 60;
     if (windDownStart > cursor) {
       blocks.add({
-        'title': '📓 Wind Down',
+        'title': '📓 Wind Down & Refleksi bersama Aura',
         'start_hour': windDownStart ~/ 60,
         'start_minute': windDownStart % 60,
         'duration_minutes': 45,
-        'description':
-            'Journal, reflect on today, lightly plan tomorrow with AI.',
+        'description': 'Jurnal dan evaluasi hari ini.',
         'color': 0xFF9B8FFF,
       });
     }
 
-    // Sleep (90-min cycle — round 7.5h back from wake)
     blocks.add({
-      'title': '💤 Sleep',
+      'title': '💤 Tidur (Siklus Sirkadian)',
       'start_hour': sleepH,
       'start_minute': 0,
       'duration_minutes': ((wakeH + 24 - sleepH) * 60).clamp(270, 540),
-      'description':
-          '${(wakeH + 24 - sleepH)} hours = ${(wakeH + 24 - sleepH) ~/ 1.5} sleep cycles (90-min each). Wakes at end of cycle to avoid sleep inertia.',
+      'description': 'Kelipatan 90 menit untuk bangun tidur tanpa sleep inertia.',
       'color': 0xFF2E2E4E,
     });
 
-    // Create all blocks (sleep may cross midnight — _createSpan splits it)
     final created = <int>[];
     for (final b in blocks) {
       final id = await _createSpan(
@@ -671,10 +733,7 @@ When generating a day blueprint, follow this executive psychology-based structur
     return {
       'success': true,
       'blocks_created': created.length,
-      'message':
-          'Blueprint generated: ${created.length} blocks for $dateStr. '
-          'Deep Work at peak energy morning, Intentional Rest for memory consolidation, '
-          'Sleep at $sleepH:00 (90-min cycles).',
+      'message': 'Fitrah Blueprint berhasil dibuat: ${created.length} blok untuk $dateStr.',
     };
   }
 

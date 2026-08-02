@@ -256,7 +256,7 @@ class _ClockPainter extends CustomPainter {
       canvas.drawCircle(center, outerRadius + 2, bezelPaint);
     } else {
       final double borderWidth = theme == 6 ? 2.0 : 1.5;
-      final Color borderColor = theme == 6 ? AppPalette.stroke : AppPalette.stroke.withOpacity(0.5);
+      final Color borderColor = theme == 6 ? AppPalette.stroke : AppPalette.stroke.withValues(alpha: 0.5);
       canvas.drawCircle(
         center,
         outerRadius + (borderWidth / 2),
@@ -448,7 +448,7 @@ class _ClockPainter extends CustomPainter {
           label,
           9.0,
           FontWeight.w600,
-          (theme >= 5) ? themeAccentColor.withOpacity(0.85) : Colors.white.withValues(alpha: 0.12),
+          (theme >= 5) ? themeAccentColor.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.12),
         );
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
@@ -492,7 +492,7 @@ class _ClockPainter extends CustomPainter {
       // Paint capsule background
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = theme >= 5 ? themeAccentColor : Colors.black.withOpacity(0.80),
+        Paint()..color = theme >= 5 ? themeAccentColor : Colors.black.withValues(alpha: 0.80),
       );
       if (theme < 5) {
         canvas.drawRRect(
@@ -500,7 +500,7 @@ class _ClockPainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.0
-            ..color = themeAccentColor.withOpacity(0.35),
+            ..color = themeAccentColor.withValues(alpha: 0.35),
         );
       }
       
@@ -773,7 +773,7 @@ class _ClockPainter extends CustomPainter {
       // Paint capsule background
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withOpacity(0.80),
+        Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withValues(alpha: 0.80),
       );
       if (clockFaceTheme < 5) {
         canvas.drawRRect(
@@ -781,7 +781,7 @@ class _ClockPainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.0
-            ..color = accentColor.withOpacity(0.35),
+            ..color = accentColor.withValues(alpha: 0.35),
         );
       }
     }

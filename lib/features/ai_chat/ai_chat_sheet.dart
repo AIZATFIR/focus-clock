@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../services/ai_service.dart';
+import '../../services/voice_assistant_service.dart';
 
 /// Embeddable chat panel — lives in the pull-up sheet under the Clock tab.
 /// Transcript is provider-backed: conversation continues across open/close.
@@ -45,22 +46,11 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     ref.read(aiTranscriptProvider.notifier).state = list;
   }
 
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
+  Future<void> _send([String? customText]) async {
+    final text = (customText ?? _ctrl.text).trim();
     if (text.isEmpty || _sending) return;
 
-    final settings = ref.read(settingsProvider).valueOrNull;
-    final apiKey = settings?.aiApiKey ?? '';
-    if (apiKey.isEmpty) {
-      _append(ChatMessage(
-        role: 'model',
-        text:
-            'Mode AI sedang offline. Silakan masukkan API Key Google Gemini di menu Settings.',
-      ));
-      return;
-    }
-
-    _ctrl.clear();
+    if (customText == null) _ctrl.clear();
     _append(ChatMessage(role: 'user', text: text));
     _append(ChatMessage(role: 'model', text: '', isLoading: true));
     setState(() => _sending = true);
@@ -69,10 +59,15 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     try {
       final ai = ref.read(aiServiceProvider);
       final reply = await ai.send(text);
-      _replaceLast(ChatMessage(role: 'model', text: reply));
+      final modeLabel = ai.activeMode.label;
+
+      _replaceLast(ChatMessage(role: 'model', text: reply, modeLabel: modeLabel));
+
+      // Aura Voice Output (TTS)
+      ref.read(voiceAssistantServiceProvider).speak(reply);
     } catch (e) {
       _replaceLast(
-          ChatMessage(role: 'model', text: '❌ Error: ${e.toString()}'));
+          ChatMessage(role: 'model', text: '❌ Aura error: ${e.toString()}'));
     } finally {
       if (mounted) setState(() => _sending = false);
       _scrollToBottom();
@@ -80,7 +75,22 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     }
   }
 
+  void _triggerVoiceInput() {
+    final voice = ref.read(voiceAssistantServiceProvider);
+    if (voice.isListening.value) {
+      voice.stopListening();
+    } else {
+      widget.onExpandSheet?.call();
+      voice.startListening(onResult: (spokenText) {
+        if (spokenText.trim().isNotEmpty) {
+          _ctrl.text = spokenText;
+        }
+      });
+    }
+  }
+
   void _newChat() {
+    ref.read(voiceAssistantServiceProvider).stopSpeaking();
     ref.read(aiServiceProvider).reset();
     ref.read(aiTranscriptProvider.notifier).state = <ChatMessage>[];
   }
@@ -99,7 +109,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Generate a psychologically balanced day:\n'
+              'Rancang jadwal seimbang berbasis psikologis:\n'
               'Deep Work → Intentional Rest → Active Rest → Sleep.',
               style: TextStyle(fontSize: 13),
             ),
@@ -110,7 +120,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Wake up', style: TextStyle(fontSize: 12)),
+                      const Text('Jam Bangun', style: TextStyle(fontSize: 12)),
                       Slider(
                         value: wakeH.toDouble(),
                         min: 3, max: 10, divisions: 7,
@@ -127,7 +137,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Sleep at', style: TextStyle(fontSize: 12)),
+                      const Text('Jam Tidur', style: TextStyle(fontSize: 12)),
                       Slider(
                         value: sleepH.toDouble(),
                         min: 19, max: 26, divisions: 7,
@@ -145,8 +155,8 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
             TextField(
               controller: goalCtrl,
               decoration: const InputDecoration(
-                labelText: 'Goals (comma separated)',
-                hintText: 'e.g. Math study, Gym, Project',
+                labelText: 'Target/Tugas (pisahkan dengan koma)',
+                hintText: 'misal: Belajar Matematika, Koding, Olahraga',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -155,7 +165,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppPalette.accent,
@@ -172,13 +182,13 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
               final goalsStr =
                   goals.isEmpty ? '' : ' Goals: ${goals.join(', ')}.';
-              _ctrl.text =
-                  'Generate Fitrah Blueprint for today ($dateStr). '
-                  'Wake: ${wakeH.toString().padLeft(2, '0')}:00, '
-                  'Sleep: ${(sleepH % 24).toString().padLeft(2, '0')}:00.$goalsStr';
-              _send();
+              final prompt =
+                  'Buatkan Fitrah Blueprint untuk hari ini ($dateStr). '
+                  'Bangun: ${wakeH.toString().padLeft(2, '0')}:00, '
+                  'Tidur: ${(sleepH % 24).toString().padLeft(2, '0')}:00.$goalsStr';
+              _send(prompt);
             },
-            child: const Text('Generate'),
+            child: const Text('Buat Blueprint'),
           ),
         ],
       ),
@@ -187,7 +197,6 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
   }
 
   void _scrollToBottom() {
-    // Expand the sheet first so the list has room, then scroll to bottom.
     widget.onExpandSheet?.call();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_listCtrl.hasClients) {
@@ -204,10 +213,12 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
   Widget build(BuildContext context) {
     final pad = MediaQuery.of(context).viewInsets.bottom;
     final messages = ref.watch(aiTranscriptProvider);
+    final voice = ref.watch(voiceAssistantServiceProvider);
+    final activeMode = ref.watch(aiServiceProvider).activeMode;
 
     return Column(
       children: [
-        // Panel header: title + blueprint + new session
+        // Panel header: title + mode badge + blueprint + mic + new session
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
           child: Row(
@@ -215,13 +226,27 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
               const Icon(Icons.auto_awesome, size: 18, color: AppPalette.accent),
               const SizedBox(width: 8),
               const Text(
-                'AI Assistant',
+                'Aura Secretary',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
+              const SizedBox(width: 6),
+              // Mode badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppPalette.accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppPalette.accent.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  activeMode.label,
+                  style: const TextStyle(fontSize: 10, color: AppPalette.accent, fontWeight: FontWeight.w500),
+                ),
+              ),
               const Spacer(),
-              // Fitrah Blueprint quick launch
+              // Blueprint Launch
               Tooltip(
-                message: 'Generate Fitrah Blueprint',
+                message: 'Fitrah Blueprint',
                 child: IconButton(
                   onPressed: () => _showBlueprintDialog(context),
                   icon: const Icon(Icons.psychology, size: 20, color: AppPalette.accent),
@@ -232,7 +257,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
               TextButton.icon(
                 onPressed: messages.isEmpty ? null : _newChat,
                 icon: const Icon(Icons.add_comment_outlined, size: 15),
-                label: const Text('New chat', style: TextStyle(fontSize: 12)),
+                label: const Text('New', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
                   foregroundColor: AppPalette.textDim,
                 ),
@@ -253,7 +278,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                 ),
         ),
 
-        // Input bar
+        // Input bar with Microphone Voice button
         Container(
           padding: EdgeInsets.fromLTRB(12, 8, 12, 12 + pad),
           decoration: const BoxDecoration(
@@ -261,6 +286,43 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
           ),
           child: Row(
             children: [
+              // Mic Voice Input Button
+              ValueListenableBuilder<bool>(
+                valueListenable: voice.isListening,
+                builder: (context, listening, _) {
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: voice.isSpeaking,
+                    builder: (context, speaking, _) {
+                      return IconButton(
+                        style: IconButton.styleFrom(
+                          backgroundColor: listening
+                              ? Colors.redAccent
+                              : (speaking
+                                  ? AppPalette.accent
+                                  : AppPalette.bg),
+                          foregroundColor: listening || speaking
+                              ? Colors.white
+                              : AppPalette.accent,
+                        ),
+                        icon: Icon(
+                          listening
+                              ? Icons.mic
+                              : (speaking ? Icons.volume_up : Icons.mic_none),
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          if (speaking) {
+                            voice.stopSpeaking();
+                          } else {
+                            _triggerVoiceInput();
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: TextField(
                   controller: _ctrl,
@@ -269,7 +331,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   onSubmitted: (_) => _send(),
                   maxLines: null,
                   decoration: InputDecoration(
-                    hintText: 'Tambah gym jam 7 pagi...',
+                    hintText: 'Tanya Aura atau jadwalkan sesuatu...',
                     hintStyle: const TextStyle(
                         color: AppPalette.textDim, fontSize: 14),
                     filled: true,
@@ -304,7 +366,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                           padding: const EdgeInsets.all(10),
                         ),
                         icon: const Icon(Icons.send_rounded, size: 20),
-                        onPressed: _send,
+                        onPressed: () => _send(),
                       ),
               ),
             ],
@@ -388,8 +450,6 @@ class _Bubble extends StatelessWidget {
   }
 }
 
-// ── Typing indicator ───────────────────────────────────────────────────────
-
 class _ThreeDots extends StatefulWidget {
   const _ThreeDots();
 
@@ -443,8 +503,6 @@ class _ThreeDotsState extends State<_ThreeDots>
   }
 }
 
-// ── Empty state ────────────────────────────────────────────────────────────
-
 class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -457,20 +515,20 @@ class _EmptyState extends StatelessWidget {
             const Icon(Icons.auto_awesome, size: 48, color: AppPalette.accent),
             const SizedBox(height: 12),
             const Text(
-              'AI Schedule Assistant',
+              'Aura - AI Time Secretary',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Contoh perintah:',
+              'Empati, Efisien, & Berbasis Psikologis Manusia',
               style: TextStyle(color: AppPalette.textDim, fontSize: 13),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             ...const [
+              '"Aura, buatkan Fitrah Blueprint untuk hari ini"',
               '"Tambah gym jam 6 pagi besok"',
-              '"Pindahkan meeting ke jam 3 sore"',
-              '"Hapus semua kegiatan hari ini"',
-              '"Apa saja jadwal saya hari ini?"',
+              '"Geser jadwal meeting ke jam 3 sore"',
+              '"Apa kegiatan utama saya hari ini?"',
             ].map((s) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: Text(
