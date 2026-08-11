@@ -21,21 +21,33 @@ Future<void> main() async {
       size: Size(1000, 700),
       minimumSize: Size(800, 600),
       center: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Color(0xFF0F0F1A),
       title: 'Focus Clock',
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
-      // Intercept the close button to implement standby (hide instead of close)
-      await windowManager.setPreventClose(true);
+      try {
+        await windowManager.setPreventClose(true);
+      } catch (_) {}
     });
   }
 
-  final isarService = await IsarService.open();
+  late final IsarService isarService;
+  try {
+    isarService = await IsarService.open();
+  } catch (e) {
+    debugPrint('IsarService initialization error: $e');
+    isarService = IsarService.fallback();
+  }
+
   final notifier = NotificationService();
-  await notifier.init();
-  
+  try {
+    await notifier.init();
+  } catch (e) {
+    debugPrint('NotificationService initialization error: $e');
+  }
+
   runApp(
     ProviderScope(
       overrides: [

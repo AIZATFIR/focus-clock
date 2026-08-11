@@ -14,8 +14,8 @@ extension GetPresetCollection on Isar {
 }
 
 const PresetSchema = CollectionSchema(
-  name: r'Preset',
-  id: -7604157809264403462,
+  name: r'Preset227440',
+  id: 4727396763174827,
   properties: {
     r'colorValue': PropertySchema(
       id: 0,

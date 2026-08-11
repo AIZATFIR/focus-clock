@@ -4,6 +4,7 @@ import '../core/time_math.dart';
 part 'activity.g.dart';
 
 @collection
+@Name('Activity81850')
 class Activity {
   Id id = Isar.autoIncrement;
 
@@ -20,7 +21,7 @@ class Activity {
   late AmPmHalf ampmHalf;
 
   /// Calendar date (time zeroed).
-  @Index()
+  @Index(name: 'date15200')
   late DateTime date;
 
   String description = '';
@@ -30,7 +31,7 @@ class Activity {
   String recurrence = 'none';
 
   /// Segments of one cross-midnight block share a groupId (null = standalone).
-  @Index()
+  @Index(name: 'groupId210300')
   String? groupId;
 
   /// Eisenhower importance: 0 = low, 1 = high.

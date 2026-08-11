@@ -14,8 +14,8 @@ extension GetAppSettingsCollection on Isar {
 }
 
 const AppSettingsSchema = CollectionSchema(
-  name: r'AppSettings',
-  id: -5633561779022347008,
+  name: r'AppSettings209780',
+  id: 4711668582438879,
   properties: {
     r'aiApiKey': PropertySchema(
       id: 0,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -9,9 +10,26 @@ import '../core/theme.dart';
 
 class IsarService {
   IsarService._(this.isar);
-  final Isar isar;
+  IsarService.fallback() : isar = null;
+  final Isar? isar;
 
   static Future<IsarService> open() async {
+    if (kIsWeb) {
+      try {
+        await Isar.initializeIsarCore(download: true);
+        final isar = await Isar.open(
+          [PresetSchema, ActivitySchema, AppSettingsSchema, TaskSchema],
+          directory: '',
+          inspector: false,
+        );
+        await _seed(isar);
+        return IsarService._(isar);
+      } catch (e) {
+        debugPrint('Isar Web fallback mode activated: $e');
+        return IsarService.fallback();
+      }
+    }
+
     final dir = await getApplicationDocumentsDirectory();
     final isar = await Isar.open(
       [PresetSchema, ActivitySchema, AppSettingsSchema, TaskSchema],

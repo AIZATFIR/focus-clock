@@ -8,10 +8,11 @@ import '../../services/notification_service.dart';
 
 class ActivityRepository {
   ActivityRepository(this._isar, this._notifier);
-  final Isar _isar;
+  final Isar? _isar;
   final NotificationService _notifier;
 
   Stream<List<Activity>> watchByDateAndHalf(DateTime date, AmPmHalf half) {
+    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
     // Direct activities for this date+half
     final direct = _isar.activitys
@@ -26,6 +27,7 @@ class ActivityRepository {
   }
 
   Stream<List<Activity>> watchByDate(DateTime date) {
+    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
     final direct = _isar.activitys
         .filter()
@@ -61,6 +63,7 @@ class ActivityRepository {
 
   Future<List<Activity>> _getRecurring(DateTime targetDate,
       {AmPmHalf? half}) async {
+    if (_isar == null) return [];
     // Fetch all recurring activities
     final all = await _isar.activitys
         .filter()
@@ -108,6 +111,7 @@ class ActivityRepository {
 
   Future<int> upsert(Activity a, {int notifLeadMinutes = 1}) async {
     a.updatedAt = DateTime.now();
+    if (_isar == null) return a.id;
     final id = await _isar.writeTxn(() => _isar.activitys.put(a));
     await _notifier.scheduleForActivity(a, leadMinutes: notifLeadMinutes);
     return id;
@@ -115,6 +119,7 @@ class ActivityRepository {
 
   /// Delete only a single instance of a recurring activity for [targetDate].
   Future<void> deleteSingleInstance(Activity a, DateTime targetDate) async {
+    if (_isar == null) return;
     final target = dateOnly(targetDate);
     final dbActivity = await _isar.activitys.get(a.id);
 
@@ -131,6 +136,7 @@ class ActivityRepository {
 
   /// Duplicate [a] as a new standalone activity on [targetDate].
   Future<int> duplicateActivity(Activity a, DateTime targetDate) async {
+    if (_isar == null) return a.id;
     final now = DateTime.now();
     final copy = Activity()
       ..presetId = a.presetId
@@ -155,6 +161,7 @@ class ActivityRepository {
 
   /// Toggle lock status of [a].
   Future<void> toggleLock(Activity a, bool locked) async {
+    if (_isar == null) return;
     final dbActivity = await _isar.activitys.get(a.id);
     if (dbActivity == null) return;
     dbActivity.isLocked = locked;
@@ -162,8 +169,10 @@ class ActivityRepository {
     await _isar.writeTxn(() => _isar.activitys.put(dbActivity));
   }
 
-  Future<List<Activity>> getGroup(String groupId) =>
-      _isar.activitys.filter().groupIdEqualTo(groupId).sortByDate().findAll();
+  Future<List<Activity>> getGroup(String groupId) async {
+    if (_isar == null) return [];
+    return _isar.activitys.filter().groupIdEqualTo(groupId).sortByDate().findAll();
+  }
 
   /// Replace [original] (and its whole group, if any) with [segments]
   /// in one transaction. Used for cross-midnight spans.
@@ -172,6 +181,7 @@ class ActivityRepository {
     required List<Activity> segments,
     int notifLeadMinutes = 1,
   }) async {
+    if (_isar == null) return;
     final now = DateTime.now();
     for (final s in segments) {
       s.updatedAt = now;
@@ -201,6 +211,7 @@ class ActivityRepository {
 
   /// Delete activity; if it belongs to a group, delete every segment.
   Future<void> deleteGroupOf(Activity a) async {
+    if (_isar == null) return;
     if (a.groupId == null) {
       await delete(a.id);
       return;
@@ -215,13 +226,18 @@ class ActivityRepository {
 
   Future<bool> delete(int id) async {
     await _notifier.cancelForActivity(id);
+    if (_isar == null) return true;
     return _isar.writeTxn(() => _isar.activitys.delete(id));
   }
 
-  Future<Activity?> get(int id) => _isar.activitys.get(id);
+  Future<Activity?> get(int id) async {
+    if (_isar == null) return null;
+    return _isar.activitys.get(id);
+  }
 
   /// Watch activities for a whole week (Mon–Sun containing [date]).
   Stream<List<Activity>> watchWeek(DateTime date) {
+    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
     final monday = d.subtract(Duration(days: d.weekday - 1));
     final sunday = monday.add(const Duration(days: 6));
@@ -236,6 +252,7 @@ class ActivityRepository {
 
   /// Watch all activities from today through the next [days] days (for Eisenhower).
   Stream<List<Activity>> watchUpcoming({int days = 14}) {
+    if (_isar == null) return Stream.value(const []);
     final today = dateOnly(DateTime.now());
     final end = today.add(Duration(days: days));
     return _isar.activitys
@@ -248,6 +265,7 @@ class ActivityRepository {
   }
 
   Future<void> markComplete(Activity activity, bool done) async {
+    if (_isar == null) return;
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
     
@@ -262,6 +280,7 @@ class ActivityRepository {
   }
 
   Future<void> setImportance(Activity activity, int importance) async {
+    if (_isar == null) return;
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
@@ -276,6 +295,7 @@ class ActivityRepository {
   }
 
   Future<void> setDeadline(Activity activity, DateTime? deadline) async {
+    if (_isar == null) return;
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
@@ -309,6 +329,7 @@ class ActivityRepository {
   }
 
   Future<List<Activity>> getByDate(DateTime date) async {
+    if (_isar == null) return [];
     final d = dateOnly(date);
     final direct = await _isar.activitys
         .filter()

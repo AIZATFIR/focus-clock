@@ -28,7 +28,7 @@ class GCalService {
 
   Future<bool> signIn() async {
     try {
-      if (Platform.isLinux || Platform.isWindows) {
+      if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {
         // Desktop / Linux OAuth flow attempt or web launcher fallback
         try {
           _account = await _signIn.signIn();
@@ -49,7 +49,7 @@ class GCalService {
       return _account != null;
     } catch (e) {
       debugPrint('GCal signIn error: $e');
-      if (Platform.isLinux || Platform.isWindows) {
+      if (!kIsWeb && (Platform.isLinux || Platform.isWindows)) {
         _desktopSignedIn = true;
         return true;
       }

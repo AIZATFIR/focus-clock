@@ -5,6 +5,7 @@ import '../core/time_math.dart';
 part 'task.g.dart';
 
 @collection
+@Name('Task62620')
 class Task {
   Id id = Isar.autoIncrement;
 

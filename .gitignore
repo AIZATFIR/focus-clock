@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+focus-clock-linux-x64.tar.gz
 .DS_Store
 .atom/
 .build/
@@ -58,3 +59,4 @@ secrets/
 .claude/settings.local.json
 
 *.pdf
+.vercel

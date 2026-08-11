@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 part 'app_settings.g.dart';
 
 @collection
+@Name('AppSettings209780')
 class AppSettings {
   Id id = 0;
 

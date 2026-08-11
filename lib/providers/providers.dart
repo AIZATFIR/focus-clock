@@ -16,7 +16,7 @@ import '../services/notification_service.dart';
 import '../services/secure_storage_service.dart';
 
 /// Overridden in main().
-final isarProvider = Provider<Isar>((_) => throw UnimplementedError());
+final isarProvider = Provider<Isar?>((_) => null);
 final notificationServiceProvider =
     Provider<NotificationService>((_) => throw UnimplementedError());
 

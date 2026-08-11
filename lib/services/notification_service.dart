@@ -23,6 +23,10 @@ class NotificationService {
 
   Future<void> init() async {
     if (_ready) return;
+    if (kIsWeb) {
+      _ready = true;
+      return;
+    }
     tzdata.initializeTimeZones();
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const linux = LinuxInitializationSettings(defaultActionName: 'Open');

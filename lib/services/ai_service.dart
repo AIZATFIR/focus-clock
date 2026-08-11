@@ -161,6 +161,42 @@ const _tools = [
       },
     },
   },
+  {
+    'type': 'function',
+    'function': {
+      'name': 'schedule_adaptive_goal',
+      'description':
+          'Analyze a long-term target goal (e.g. LKS IT Software Solutions, Juara Competition, Master Skill) '
+          'and adaptively schedule required daily practice/study blocks from current date until target event date. '
+          'Calculates target daily hours and plots flexible recurring blocks into empty clock face slots.',
+      'parameters': {
+        'type': 'object',
+        'required': ['goal_title', 'target_date', 'daily_hours'],
+        'properties': {
+          'goal_title': {
+            'type': 'string',
+            'description': 'Title of goal/identity, e.g. "Juara 1 LKS IT Software Solutions"',
+          },
+          'target_date': {
+            'type': 'string',
+            'description': 'Target event date ISO yyyy-MM-dd (e.g. 2027-07-15)',
+          },
+          'daily_hours': {
+            'type': 'number',
+            'description': 'Required target practice hours per day, e.g. 3.0',
+          },
+          'preferred_time': {
+            'type': 'string',
+            'description': 'Preferred time slot: "morning" | "afternoon" | "evening" | "flexible"',
+          },
+          'days_per_week': {
+            'type': 'integer',
+            'description': 'Days per week (1-7). Default 6.',
+          },
+        },
+      },
+    },
+  },
 ];
 
 // ── Chat message ──────────────────────────────────────────────────────────────
@@ -217,10 +253,17 @@ ATURAN PERILAKU:
 4. Proaktif memberikan perhatian kecil terkait manajemen waktu, jam istirahat, atau pengingat jadwal jika diperlukan.
 
 DOKTRIN MANAJEMEN WAKTU (CONCEPT PAPER FOCUS CLOCK):
-- Berdasarkan Perilaku Psikologis Natural Manusia (Fitrah).
+- Berdasarkan Perilaku Psikologis Natural Manusia (Fitrah & Identity-Based Habits).
 - Utamakan pembagian waktu seimbang: Deep Work (90-120 menit), Intentional Rest (istirahat total dari gawai/bengong sehat 20 menit), Active Rest/Sosial, Wind Down (45 menit), dan Sleep (siklus kelipatan 90 menit).
 - Gunakan Eisenhower Matrix untuk memprioritaskan tugas ber-deadline.
 - Presets pengguna saat ini: $presetList.
+
+IDENTITAS & ADAPTIVE GOAL SCHEDULING:
+- Apabila pengguna menyebutkan target/lomba/persiapan jangka panjang (misal: "menang LKS IT Software Solutions bulan Juli", "persiapan lomba", "target 500 jam latihan"):
+  1. Analisis jangka waktu dari hari ini ($dateStr) sampai tanggal target.
+  2. Hitung alokasi jam latihan harian/mingguan yang realistis (misal 2-4 jam per hari).
+  3. Panggil tool `schedule_adaptive_goal` untuk menanamkan blok latihan berulang (fleksibel) ke dalam jam fokus.
+  4. Berikan dorongan identitas psikologis: "Setiap jam latihan ini memperkuat identitasmu sebagai seorang [Goal Title]."
 
 PANGGILAN TOOL AUTOMATION:
 - list_activities: untuk melihat jadwal aktif.
@@ -229,6 +272,7 @@ PANGGILAN TOOL AUTOMATION:
 - delete_activity: untuk menghapus jadwal.
 - set_priority: untuk mengatur Eisenhower Matrix.
 - generate_blueprint: untuk membuat rencana Fitrah Blueprint seharian penuh.
+- schedule_adaptive_goal: untuk menganalisis & menanamkan blok latihan target jangka panjang (lomba/identitas).
 ''';
   }
 
@@ -420,6 +464,7 @@ PANGGILAN TOOL AUTOMATION:
         'delete_activity' => await _deleteActivity(args),
         'set_priority' => await _setPriority(args),
         'generate_blueprint' => await _generateBlueprint(args),
+        'schedule_adaptive_goal' => await _scheduleAdaptiveGoal(args),
         _ => {'error': 'Unknown tool: $name'},
       };
     } catch (e) {
@@ -734,6 +779,66 @@ PANGGILAN TOOL AUTOMATION:
       'success': true,
       'blocks_created': created.length,
       'message': 'Fitrah Blueprint berhasil dibuat: ${created.length} blok untuk $dateStr.',
+    };
+  }
+
+  Future<Map<String, dynamic>> _scheduleAdaptiveGoal(
+      Map<String, dynamic> args) async {
+    final goalTitle = args['goal_title'] as String;
+    final targetDateStr = args['target_date'] as String;
+    final dailyHours = (args['daily_hours'] as num).toDouble();
+    final preferredTime = (args['preferred_time'] as String?) ?? 'afternoon';
+    final daysPerWeek = (args['days_per_week'] as num?)?.toInt() ?? 6;
+
+    final today = DateTime.now();
+    final targetDate = DateTime.parse(targetDateStr);
+    final totalDays = targetDate.difference(today).inDays;
+    if (totalDays <= 0) {
+      return {'error': 'Target date must be in the future.'};
+    }
+
+    final totalTargetHours =
+        (totalDays * (daysPerWeek / 7.0) * dailyHours).round();
+
+    int startHour = 14;
+    if (preferredTime == 'morning') startHour = 8;
+    if (preferredTime == 'evening') startHour = 19;
+
+    final durationMins = (dailyHours * 60).round().clamp(30, 240);
+
+    final primaryId = await _createSpan(
+      title: '🎯 Latihan $goalTitle',
+      date: dateOnly(today),
+      startHour: startHour,
+      startMin: 0,
+      durationMinutes: durationMins,
+      description:
+          'Latihan intensif & simulasi target $goalTitle. (Estimasi: $totalTargetHours jam total hingga ${_fmtDate(targetDate)}).',
+      recurrence: daysPerWeek >= 6 ? 'daily' : 'weekday',
+      colorValue: 0xFF4A9EFF,
+    );
+
+    await _createSpan(
+      title: '🏆 HARI-H: $goalTitle',
+      date: dateOnly(targetDate),
+      startHour: 8,
+      startMin: 0,
+      durationMinutes: 480,
+      description: 'Hari pelaksanaan target $goalTitle!',
+      recurrence: 'none',
+      colorValue: 0xFFFFD700,
+    );
+
+    return {
+      'success': true,
+      'goal_title': goalTitle,
+      'target_date': _fmtDate(targetDate),
+      'days_remaining': totalDays,
+      'total_hours_planned': totalTargetHours,
+      'daily_hours': dailyHours,
+      'primary_activity_id': primaryId,
+      'message':
+          'Jadwal latihan adaptif $goalTitle ($dailyHours jam/hari) berhasil ditanamkan ke dalam jam fokus hingga ${_fmtDate(targetDate)}.',
     };
   }
 

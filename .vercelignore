@@ -1,0 +1,14 @@
+.git
+.dart_tool
+build/app
+build/linux
+build/windows
+android
+ios
+linux
+windows
+macos
+test
+server
+*.apk
+*.zip

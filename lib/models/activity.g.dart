@@ -14,8 +14,8 @@ extension GetActivityCollection on Isar {
 }
 
 const ActivitySchema = CollectionSchema(
-  name: r'Activity',
-  id: -6099828696840999229,
+  name: r'Activity81850',
+  id: 7577928743684601,
   properties: {
     r'ampmHalf': PropertySchema(
       id: 0,
@@ -125,9 +125,9 @@ const ActivitySchema = CollectionSchema(
   deserializeProp: _activityDeserializeProp,
   idName: r'id',
   indexes: {
-    r'date': IndexSchema(
-      id: -7552997827385218417,
-      name: r'date',
+    r'date15200': IndexSchema(
+      id: 3846558610796325,
+      name: r'date15200',
       unique: false,
       replace: false,
       properties: [
@@ -138,9 +138,9 @@ const ActivitySchema = CollectionSchema(
         )
       ],
     ),
-    r'groupId': IndexSchema(
-      id: -8523216633229774932,
-      name: r'groupId',
+    r'groupId210300': IndexSchema(
+      id: 5336215921218833,
+      name: r'groupId210300',
       unique: false,
       replace: false,
       properties: [
@@ -328,7 +328,7 @@ extension ActivityQueryWhereSort on QueryBuilder<Activity, Activity, QWhere> {
   QueryBuilder<Activity, Activity, QAfterWhere> anyDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
-        const IndexWhereClause.any(indexName: r'date'),
+        const IndexWhereClause.any(indexName: r'date15200'),
       );
     });
   }
@@ -404,7 +404,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       DateTime date) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'date',
+        indexName: r'date15200',
         value: [date],
       ));
     });
@@ -416,13 +416,13 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
+              indexName: r'date15200',
               lower: [],
               upper: [date],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
+              indexName: r'date15200',
               lower: [date],
               includeLower: false,
               upper: [],
@@ -430,13 +430,13 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
+              indexName: r'date15200',
               lower: [date],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'date',
+              indexName: r'date15200',
               lower: [],
               upper: [date],
               includeUpper: false,
@@ -451,7 +451,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
+        indexName: r'date15200',
         lower: [date],
         includeLower: include,
         upper: [],
@@ -465,7 +465,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
+        indexName: r'date15200',
         lower: [],
         upper: [date],
         includeUpper: include,
@@ -481,7 +481,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'date',
+        indexName: r'date15200',
         lower: [lowerDate],
         includeLower: includeLower,
         upper: [upperDate],
@@ -493,7 +493,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
   QueryBuilder<Activity, Activity, QAfterWhereClause> groupIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'groupId',
+        indexName: r'groupId210300',
         value: [null],
       ));
     });
@@ -502,7 +502,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
   QueryBuilder<Activity, Activity, QAfterWhereClause> groupIdIsNotNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.between(
-        indexName: r'groupId',
+        indexName: r'groupId210300',
         lower: [null],
         includeLower: false,
         upper: [],
@@ -514,7 +514,7 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       String? groupId) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(IndexWhereClause.equalTo(
-        indexName: r'groupId',
+        indexName: r'groupId210300',
         value: [groupId],
       ));
     });
@@ -526,13 +526,13 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       if (query.whereSort == Sort.asc) {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'groupId',
+              indexName: r'groupId210300',
               lower: [],
               upper: [groupId],
               includeUpper: false,
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'groupId',
+              indexName: r'groupId210300',
               lower: [groupId],
               includeLower: false,
               upper: [],
@@ -540,13 +540,13 @@ extension ActivityQueryWhere on QueryBuilder<Activity, Activity, QWhereClause> {
       } else {
         return query
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'groupId',
+              indexName: r'groupId210300',
               lower: [groupId],
               includeLower: false,
               upper: [],
             ))
             .addWhereClause(IndexWhereClause.between(
-              indexName: r'groupId',
+              indexName: r'groupId210300',
               lower: [],
               upper: [groupId],
               includeUpper: false,
