@@ -10,7 +10,15 @@ class AppPalette {
   static const textDim = Color(0xFF9A9A9A);
   static const stroke = Color(0xFF2A2A2A);
   static const danger = Color(0xFFE5484D); // conflict / destructive
+  // Glassmorphism & Gemini design tokens
   static const glassSurface = Color(0xD91A1A1A); // 85% opacity, frosted sheets
+  static const geminiGlassBg = Color(0xCC18181F); // Frosted Gemini ambient container
+  static const geminiGlassBorder = Color(0x26FFFFFF); // Subtle 1px frosted stroke
+  static const geminiGlow = Color(0x40E6B800); // Ambient gold glow shadow
+
+  // Responsive Breakpoints
+  static const double mobileBreakpoint = 600.0;
+  static const double tabletBreakpoint = 1024.0;
 
   // True black (AMOLED)
   static const blackBg = Color(0xFF000000);
@@ -23,6 +31,15 @@ class AppPalette {
   static const lightTextDim = Color(0xFF757575);
   static const lightStroke = Color(0xFFE8E8E8);
   static const lightAccent = Color(0xFFD4A800); // darker gold for light bg
+}
+
+class GeminiMotion {
+  static const Duration fast = Duration(milliseconds: 180);
+  static const Duration medium = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 450);
+
+  static const Curve springCurve = Curves.easeOutCubic;
+  static const Curve bouncyCurve = Curves.elasticOut;
 }
 
 ThemeData buildDarkTheme([String palette = 'executive']) {

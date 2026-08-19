@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
 import '../features/ai_chat/voice_assistant_sheet.dart';
+import '../features/flowchart/flowchart_canvas_view.dart';
 import '../features/settings/settings_screen.dart';
 import '../providers/providers.dart';
 
@@ -129,6 +130,18 @@ class _CommandPaletteModalState extends ConsumerState<CommandPaletteModal> {
         onExecute: (context, ref) {
           ref.read(planningModeProvider.notifier).update((s) => !s);
           Navigator.pop(context);
+        },
+      ),
+      _CommandItem(
+        icon: Icons.account_tree_rounded,
+        title: 'Buka Flowchart Canvas Mode (Ultra-Minimalist)',
+        subtitle: 'Kanvas 2D tanpa tombol floating untuk alur fokus',
+        category: 'Mode Canvas',
+        onExecute: (context, ref) {
+          Navigator.pop(context);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const FlowchartCanvasView()),
+          );
         },
       ),
       _CommandItem(

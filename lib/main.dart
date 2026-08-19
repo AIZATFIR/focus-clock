@@ -116,6 +116,12 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
           label: '⏩ Reschedule (+15 Menit)',
         ),
         MenuItem.separator(),
+      ] else ...[
+        MenuItem(
+          key: 'start_25m',
+          label: '⚡ Mulai Fokus 25m Sekarang',
+        ),
+        MenuItem.separator(),
       ],
       MenuItem(
         key: 'show_window',
@@ -147,6 +153,13 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
     if (menuItem.key == 'show_window') {
       windowManager.show();
       windowManager.focus();
+    } else if (menuItem.key == 'start_25m') {
+      final now = DateTime.now();
+      ref.read(activeTimerTitleProvider.notifier).state = 'Focus Session 25m';
+      ref.read(activeTimerTotalSecondsProvider.notifier).state = 1500;
+      ref.read(activeTimerIsPausedProvider.notifier).state = false;
+      ref.read(activeTimerEndTimeProvider.notifier).state = now.add(const Duration(minutes: 25));
+      _updateTrayMenu();
     } else if (menuItem.key == 'stop_timer') {
       ref.read(activeTimerEndTimeProvider.notifier).state = null;
       ref.read(activeTimerIsPausedProvider.notifier).state = false;

@@ -62,6 +62,45 @@ class AgendaTab extends ConsumerWidget {
                   ),
                 ),
               ),
+              Consumer(
+                builder: (context, ref, _) {
+                  final isGCalSignedIn = ref.watch(gcalSignedInProvider);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isGCalSignedIn
+                          ? Colors.greenAccent.withValues(alpha: 0.15)
+                          : AppPalette.stroke.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isGCalSignedIn
+                            ? Colors.greenAccent.withValues(alpha: 0.4)
+                            : AppPalette.stroke,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.sync_rounded,
+                          size: 11,
+                          color: isGCalSignedIn ? Colors.greenAccent : AppPalette.textDim,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isGCalSignedIn ? 'GCal' : 'Lokal',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: isGCalSignedIn ? Colors.greenAccent : AppPalette.textDim,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppPalette.textDim),
                 onPressed: () {

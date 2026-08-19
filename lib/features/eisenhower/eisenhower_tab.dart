@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
@@ -384,19 +385,26 @@ class _TaskTile extends StatelessWidget {
               ],
             ),
           ),
-          // Schedule button
+          // Schedule button to Analog Clock
           GestureDetector(
             onTap: () {
               ref.read(schedulingTaskProvider.notifier).state = t;
-              Navigator.of(context).pop(); // Close bottom sheet
+              ref.read(tabIndexProvider.notifier).state = 1; // Switch to Focus Clock tab
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+              HapticFeedback.selectionClick();
             },
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.transparent,
-              child: Icon(
-                Icons.calendar_today_rounded,
-                size: 18,
-                color: AppPalette.accent.withValues(alpha: 0.8),
+            child: Tooltip(
+              message: 'Jadwalkan ke Jam Analog',
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.transparent,
+                child: const Icon(
+                  Icons.schedule_send_rounded,
+                  size: 18,
+                  color: AppPalette.accent,
+                ),
               ),
             ),
           ),

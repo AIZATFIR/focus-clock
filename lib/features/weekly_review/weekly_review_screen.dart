@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
@@ -44,6 +45,30 @@ class _WeeklyReviewScreenState extends ConsumerState<WeeklyReviewScreen> {
       appBar: AppBar(
         title: const Text('Weekly Review'),
         actions: [
+          IconButton(
+            tooltip: 'Salin Ringkasan Minggu Ini',
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            onPressed: async.valueOrNull == null
+                ? null
+                : () {
+                    final activities = async.valueOrNull!;
+                    final stats = _computeStats(activities);
+                    final rate = stats.total > 0 ? (stats.done / stats.total * 100).toStringAsFixed(0) : '0';
+                    final summary = '''📊 FOCUS CLOCK - RINGKASAN MINGGU INI
+• Aktivitas Selesai: ${stats.done}/${stats.total} ($rate%)
+• Waktu Deep Work: ${stats.deepWorkMinutes ~/ 60}j ${stats.deepWorkMinutes % 60}m
+• Tugas Penting: ${stats.importantDone}/${stats.importantTotal}''';
+                    
+                    Clipboard.setData(ClipboardData(text: summary));
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Ringkasan mingguan berhasil disalin ke clipboard!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+          ),
           IconButton(
             tooltip: 'AI Consultation',
             icon: const Text('✨', style: TextStyle(fontSize: 18)),

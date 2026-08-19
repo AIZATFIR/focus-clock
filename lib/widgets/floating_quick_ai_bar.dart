@@ -111,95 +111,178 @@ class _FloatingQuickAiBarState extends ConsumerState<FloatingQuickAiBar> {
             ),
           ),
 
-        // Quick Floating Action Pill / Input Bar
+        // Quick Floating Action Pill / Gemini Prompt Ambient Bar
         AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          width: _isExpanded ? 380 : 160,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          duration: GeminiMotion.medium,
+          curve: GeminiMotion.springCurve,
+          width: _isExpanded ? 440 : 210,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: AppPalette.card,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 1.5),
+            border: Border.all(
+              color: _isExpanded
+                  ? AppPalette.accent.withValues(alpha: 0.8)
+                  : AppPalette.accent.withValues(alpha: 0.35),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppPalette.accent.withValues(alpha: 0.25),
-                blurRadius: 16,
-                spreadRadius: 1,
+                color: AppPalette.accent.withValues(alpha: 0.20),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+              const BoxShadow(
+                color: Colors.black45,
+                blurRadius: 10,
+                offset: Offset(0, 4),
               ),
             ],
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Collapsed Toggle / Preset Pill
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _isExpanded = !_isExpanded);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppPalette.accent,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.black),
-                      const SizedBox(width: 6),
-                      Text(
-                        _isExpanded ? 'Tutup' : 'P info...',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+              Row(
+                children: [
+                  // Collapsed Toggle / Preset Pill
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _isExpanded = !_isExpanded);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppPalette.accent,
+                            AppPalette.accent.withValues(alpha: 0.85),
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppPalette.accent.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.black),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isExpanded ? 'Tutup Prompt' : 'Gemini AI Focus',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  if (_isExpanded) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _textCtrl,
+                        autofocus: true,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        onSubmitted: (val) => _submitCommand(val),
+                        decoration: const InputDecoration(
+                          hintText: 'Tulis prompt... e.g. Fokus 25m nulis',
+                          hintStyle: TextStyle(color: AppPalette.textDim, fontSize: 11),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 6),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.mic_rounded, size: 18, color: AppPalette.accent),
+                      tooltip: 'Suara Input',
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        final voiceService = ref.read(voiceAssistantServiceProvider);
+                        voiceService.startListening();
+                      },
+                    ),
+                    IconButton(
+                      icon: _isProcessing
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.accent),
+                            )
+                          : const Icon(Icons.send_rounded, size: 16, color: AppPalette.accent),
+                      onPressed: _isProcessing ? null : () => _submitCommand(),
+                    ),
+                  ],
+                ],
+              ),
+
+              // Quick Chips when expanded
+              if (_isExpanded) ...[
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _QuickChip(
+                        label: '⚡ Fokus 25 m',
+                        onTap: () => _submitCommand('Buatkan blok fokus 25 menit sekarang'),
+                      ),
+                      const SizedBox(width: 6),
+                      _QuickChip(
+                        label: '📅 Rapikan Agenda',
+                        onTap: () => _submitCommand('Rapikan jadwal dan hindari konflik waktu'),
+                      ),
+                      const SizedBox(width: 6),
+                      _QuickChip(
+                        label: '📊 Insight Hari Ini',
+                        onTap: () => _submitCommand('Beri ringkasan produktivitas saya hari ini'),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              if (_isExpanded) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _textCtrl,
-                    autofocus: true,
-                    style: const TextStyle(fontSize: 12),
-                    onSubmitted: (val) => _submitCommand(val),
-                    decoration: const InputDecoration(
-                      hintText: 'misal: lanjut ngoding, jam 4 baca buku',
-                      hintStyle: TextStyle(color: AppPalette.textDim, fontSize: 11),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 6),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mic_rounded, size: 18, color: AppPalette.accent),
-                  tooltip: 'Voice Input',
-                  onPressed: () {
-                    final voiceService = ref.read(voiceAssistantServiceProvider);
-                    voiceService.startListening();
-                  },
-                ),
-                IconButton(
-                  icon: _isProcessing
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppPalette.accent),
-                        )
-                      : const Icon(Icons.send_rounded, size: 16, color: AppPalette.accent),
-                  onPressed: _isProcessing ? null : () => _submitCommand(),
                 ),
               ],
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppPalette.bg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppPalette.stroke),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+        ),
+      ),
     );
   }
 }

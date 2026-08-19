@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../providers/providers.dart';
 import '../../widgets/command_palette.dart';
+import '../../widgets/floating_quick_ai_bar.dart';
 import '../../widgets/hotkeys_modal.dart';
 import 'launching_page.dart';
 import 'simple_mode_view.dart';
@@ -171,6 +172,48 @@ class _HomeShellState extends ConsumerState<HomeShell>
             ]),
           ),
           actions: [
+            if (MediaQuery.of(context).size.width < 900 && enableLeft)
+              IconButton(
+                icon: const Icon(Icons.task_outlined, size: 20),
+                tooltip: 'Buka Task & Agenda Panel',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (ctx) => Container(
+                      height: MediaQuery.of(context).size.height * 0.85,
+                      decoration: const BoxDecoration(
+                        color: AppPalette.bg,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      child: LeftPanel(onClose: () => Navigator.of(ctx).pop()),
+                    ),
+                  );
+                },
+              ),
+            if (MediaQuery.of(context).size.width < 900 && enableRight)
+              IconButton(
+                icon: const Icon(Icons.grid_view_rounded, size: 20),
+                tooltip: 'Buka Matrix Eisenhower',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (ctx) => Container(
+                      height: MediaQuery.of(context).size.height * 0.85,
+                      decoration: const BoxDecoration(
+                        color: AppPalette.bg,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      child: RightPanel(onClose: () => Navigator.of(ctx).pop()),
+                    ),
+                  );
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.settings_outlined),
               onPressed: () => Navigator.of(context).push(
@@ -326,6 +369,14 @@ class _HomeShellState extends ConsumerState<HomeShell>
                   isExpanded: _rightExpanded,
                   onTap: () => setState(() => _rightExpanded = !_rightExpanded),
                 ),
+              ),
+
+            // Gemini Ambient Floating Bar
+            if (enableAi && !_showAi)
+              const Positioned(
+                bottom: 20,
+                right: 20,
+                child: FloatingQuickAiBar(),
               ),
             
             if (_showAi)
