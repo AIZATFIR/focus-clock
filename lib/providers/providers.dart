@@ -3,14 +3,17 @@ import 'package:isar/isar.dart';
 
 import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
+import '../data/repositories/blueprint_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/task_repository.dart';
 import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
+import '../models/routine_blueprint.dart';
 import '../models/task.dart';
 import '../services/ai_service.dart';
+import '../services/blueprint_applier_service.dart';
 import '../services/gcal_service.dart';
 import '../services/notification_service.dart';
 import '../services/secure_storage_service.dart';
@@ -23,6 +26,16 @@ final notificationServiceProvider =
 final presetRepoProvider = Provider<PresetRepository>(
   (ref) => PresetRepository(ref.watch(isarProvider)),
 );
+
+final blueprintRepoProvider = Provider<BlueprintRepository>((_) => BlueprintRepository());
+
+final blueprintsProvider = StreamProvider<List<RoutineBlueprint>>((ref) {
+  return ref.watch(blueprintRepoProvider).watchAll();
+});
+
+final blueprintApplierServiceProvider = Provider<BlueprintApplierService>((ref) {
+  return BlueprintApplierService(ref.watch(activityRepoProvider));
+});
 
 final activityRepoProvider = Provider<ActivityRepository>(
   (ref) => ActivityRepository(

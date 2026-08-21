@@ -3,7 +3,7 @@
 *.log
 *.pyc
 *.swp
-focus-clock-linux-x64.tar.gz
+*.tar.gz
 .DS_Store
 .atom/
 .build/

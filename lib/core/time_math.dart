@@ -42,6 +42,9 @@ int snapDelta(int delta) {
   return sign * ((abs + 2) ~/ 5) * 5;
 }
 
+String formatMinute(int minute, AmPmHalf half, {bool is24h = true}) =>
+    formatMinuteOfHalf(minute, half, is24h: is24h);
+
 String formatMinuteOfHalf(int minute, AmPmHalf half, {required bool is24h}) {
   final h12 = (minute ~/ 60) % 12;
   final m = minute % 60;
