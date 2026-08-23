@@ -1,9 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo 'Deploying static Flutter Web bundle'",
-  "outputDirectory": "build/web",
   "cleanUrls": true,
-  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
