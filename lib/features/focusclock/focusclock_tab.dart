@@ -639,7 +639,39 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       ),
                       const SizedBox(width: 8),
 
-                      // Hero Option: Talking About Your Day (Storytelling & Refleksi)
+                      // Hero Option 1: Routine Templates Studio
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.mediumImpact();
+                          ref.read(tabIndexProvider.notifier).state = 0;
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppPalette.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.auto_stories_rounded, size: 14, color: AppPalette.accent),
+                              SizedBox(width: 6),
+                              Text(
+                                '📚 Routine Templates',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppPalette.accent,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Hero Option 2: Talking About Your Day (Storytelling & Refleksi)
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.mediumImpact();
@@ -660,10 +692,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.auto_stories_rounded, size: 14, color: AppPalette.accent),
+                              Icon(Icons.record_voice_over_rounded, size: 14, color: AppPalette.accent),
                               SizedBox(width: 6),
                               Text(
-                                '📖 Talking About Your Day',
+                                '📖 Reflect & Storytelling',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,

@@ -1,36 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// AppPalette — Obsidian Warm Bookpaper Aesthetic Design System
 class AppPalette {
-  // Dark
-  static const bg = Color(0xFF1E1E1E);
-  static const card = Color(0xFF2D2D2D);
-  static const accent = Color(0xFFE6B800); // muted gold
-  static const text = Color(0xFFE0E0E0);
-  static const textDim = Color(0xFF9A9A9A);
-  static const stroke = Color(0xFF2A2A2A);
-  static const danger = Color(0xFFE5484D); // conflict / destructive
+  // Dark Obsidian & Warm Bookpaper Tones
+  static const bg = Color(0xFF18181F);
+  static const card = Color(0xFF23222B);
+  static const accent = Color(0xFFF0C987); // Warm Bookpaper Amber Gold
+  static const text = Color(0xFFF5EBE6); // Warm Cream Text
+  static const textDim = Color(0xFFA69F95); // Muted Warm Slate
+  static const stroke = Color(0xFF363340); // Soft Obsidian Border
+  static const danger = Color(0xFFE5484D); // Conflict / Destructive
+
+  // Bookpaper Journaling Environment Tokens
+  static const bookpaperFieldBg = Color(0xFF2B2933);
+  static const bookpaperBorder = Color(0xFF403C4B);
+  static const bookpaperText = Color(0xFFF4E8D1);
+
   // Glassmorphism & Gemini design tokens
-  static const glassSurface = Color(0xD91A1A1A); // 85% opacity, frosted sheets
-  static const geminiGlassBg = Color(0xCC18181F); // Frosted Gemini ambient container
-  static const geminiGlassBorder = Color(0x26FFFFFF); // Subtle 1px frosted stroke
-  static const geminiGlow = Color(0x40E6B800); // Ambient gold glow shadow
+  static const glassSurface = Color(0xF21C1B24); // Frosted Warm Slate
+  static const geminiGlassBg = Color(0xE6201F29); // Frosted Obsidian Container
+  static const geminiGlassBorder = Color(0x33F0C987); // Soft Gold Frosted Stroke
+  static const geminiGlow = Color(0x40F0C987); // Ambient warm gold glow
 
   // Responsive Breakpoints
   static const double mobileBreakpoint = 600.0;
   static const double tabletBreakpoint = 1024.0;
 
   // True black (AMOLED)
-  static const blackBg = Color(0xFF000000);
-  static const blackCard = Color(0xFF141414);
+  static const blackBg = Color(0xFF0C0C0F);
+  static const blackCard = Color(0xFF16151A);
 
-  // Light equivalents (used inline in buildLightTheme)
-  static const lightBg = Color(0xFFF5F5F5);
+  // Light equivalents
+  static const lightBg = Color(0xFFF7F3EB); // Soft Sepia Cream Paper
   static const lightCard = Color(0xFFFFFFFF);
-  static const lightText = Color(0xFF1A1A1A);
-  static const lightTextDim = Color(0xFF757575);
-  static const lightStroke = Color(0xFFE8E8E8);
-  static const lightAccent = Color(0xFFD4A800); // darker gold for light bg
+  static const lightText = Color(0xFF2B2823);
+  static const lightTextDim = Color(0xFF7A746B);
+  static const lightStroke = Color(0xFFE6DFC9);
+  static const lightAccent = Color(0xFFD49A35);
 }
 
 class GeminiMotion {
@@ -43,6 +50,7 @@ class GeminiMotion {
 }
 
 ThemeData buildDarkTheme([String palette = 'executive']) {
+  // Default to Obsidian Warm Bookpaper Theme
   Color bg = AppPalette.bg;
   Color card = AppPalette.card;
   Color accent = AppPalette.accent;
@@ -53,11 +61,11 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     card = const Color(0xFF1C2723);
     accent = const Color(0xFF4EAA86);
     stroke = const Color(0xFF273831);
-  } else if (palette == 'sepia') {
-    bg = const Color(0xFF1A1714);
-    card = const Color(0xFF26211C);
-    accent = const Color(0xFFD99B26);
-    stroke = const Color(0xFF382F27);
+  } else if (palette == 'sepia' || palette == 'bookpaper') {
+    bg = const Color(0xFF181714);
+    card = const Color(0xFF25211C);
+    accent = const Color(0xFFF0C987);
+    stroke = const Color(0xFF383127);
   } else if (palette == 'cream') {
     bg = const Color(0xFF17181F);
     card = const Color(0xFF222430);
@@ -85,9 +93,28 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     ),
     cardColor: card,
     dividerColor: stroke,
-    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
       bodyColor: AppPalette.text,
       displayColor: AppPalette.text,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: AppPalette.bookpaperFieldBg,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.accent, width: 1.5),
+      ),
+      hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 14),
+      labelStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: card,
@@ -161,7 +188,7 @@ ThemeData buildLightTheme() {
     ),
     cardColor: AppPalette.lightCard,
     dividerColor: AppPalette.lightStroke,
-    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
       bodyColor: AppPalette.lightText,
       displayColor: AppPalette.lightText,
     ),
@@ -179,23 +206,14 @@ ThemeData buildLightTheme() {
         side: const BorderSide(color: AppPalette.lightStroke),
       ),
     ),
-    inputDecorationTheme: const InputDecorationTheme(
-      border: OutlineInputBorder(),
-      labelStyle: TextStyle(color: AppPalette.lightTextDim),
-    ),
-    segmentedButtonTheme: SegmentedButtonThemeData(
-      style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? AppPalette.lightAccent
-              : AppPalette.lightCard,
-        ),
-        foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? Colors.white
-              : AppPalette.lightText,
-        ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppPalette.lightStroke),
       ),
+      labelStyle: const TextStyle(color: AppPalette.lightTextDim),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppPalette.lightCard,

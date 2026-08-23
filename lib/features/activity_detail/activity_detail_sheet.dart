@@ -23,15 +23,21 @@ Future<void> showActivityDetailSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            color: AppPalette.glassSurface,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: _DetailSheet(initial: activity, initialMode: mode),
+      builder: (_) => Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                color: AppPalette.glassSurface,
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: _DetailSheet(initial: activity, initialMode: mode),
+                ),
+              ),
             ),
           ),
         ),
@@ -72,9 +78,20 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
-    _titleCtrl = TextEditingController(text: widget.initial.title);
-    _descCtrl = TextEditingController(text: widget.initial.description);
     final a = widget.initial;
+
+    // Empty out default text so user doesn't have to delete prefilled text
+    final isGenericDefault = _mode == DetailMode.create ||
+        a.title.contains('Focused Work') ||
+        a.title.contains('Quick Focus') ||
+        a.title == 'New Activity';
+
+    _titleCtrl = TextEditingController(text: isGenericDefault ? '' : a.title);
+    _descCtrl = TextEditingController(
+        text: (isGenericDefault || (a.description?.contains('created via Simple Mode') ?? false))
+            ? ''
+            : (a.description ?? ''));
+
     _startDt = toDateTime(a.date, a.ampmHalf, a.startMinute);
     _endDt = toDateTime(a.date, a.ampmHalf, a.endMinute);
     _color = a.colorValue;
@@ -451,20 +468,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             ),
           ),
           if (!readOnly) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.lock_outline_rounded, size: 18, color: AppPalette.accent),
-                const SizedBox(width: 8),
-                const Text('Kunci Aktivitas (Lock)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                const Spacer(),
-                Switch(
-                  value: _isLocked,
-                  activeTrackColor: AppPalette.accent,
-                  onChanged: (v) => setState(() => _isLocked = v),
-                ),
-              ],
-            ),
             const SizedBox(height: 12),
             const Text('Pilihan Icon / Emoji Aktivitas',
                 style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.bold)),
