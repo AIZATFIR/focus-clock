@@ -115,7 +115,7 @@ class SimpleModeView extends ConsumerWidget {
 
                       // Title & Intro
                       const Text(
-                        'Pusat Fokus Instant',
+                        'Simple Mode',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -124,7 +124,7 @@ class SimpleModeView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Buat aktivitas fokus instant dengan Pilihan Icon, Pilihan Warna, & Kalkulator Waktu.',
+                        'Aktivitas fokus cepat dan praktis.',
                         style: TextStyle(
                           fontSize: 13,
                           color: AppPalette.textDim,

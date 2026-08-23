@@ -133,7 +133,7 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Your private time secretary to help you seize the day & fulfill your life.',
+                    'Private time secretary',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -195,12 +195,12 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                                 ),
                                 const SizedBox(height: 8),
                                 const Text(
-                                  'Quick Input & Asisten Instant (Hemat Energi)',
+                                  'Fokus Cepat',
                                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 10),
                                 const Text(
-                                  '1-tap quick focus input, preset durasi, kontrol Stop & Reschedule, serta asisten suara.',
+                                  'Input 1-tap, preset durasi, dan asisten suara.',
                                   style: TextStyle(fontSize: 12, color: AppPalette.textDim, height: 1.4),
                                 ),
                               ],
@@ -220,14 +220,7 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                             decoration: BoxDecoration(
                               color: AppPalette.card,
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.3),
-                                  blurRadius: 16,
-                                  spreadRadius: 1,
-                                ),
-                              ],
+                              border: Border.all(color: AppPalette.stroke),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,15 +234,15 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                                         borderRadius: BorderRadius.circular(14),
                                         border: Border.all(color: AppPalette.stroke),
                                       ),
-                                      child: const Icon(Icons.access_time_filled_rounded, size: 28, color: AppPalette.accent),
+                                      child: const Icon(Icons.pie_chart_rounded, size: 28, color: AppPalette.accent),
                                     ),
                                     const Spacer(),
-                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 24),
+                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.textDim, size: 24),
                                   ],
                                 ),
                                 const SizedBox(height: 22),
                                 const Text(
-                                  'FOCUS CLOCK MODE',
+                                  'FOCUS CLOCK',
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w900,
@@ -259,12 +252,12 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                                 ),
                                 const SizedBox(height: 8),
                                 const Text(
-                                  'Visual Clock Dial Drag & Sadar Waktu',
+                                  'Visualisasi Jam 24-Jam',
                                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 10),
                                 const Text(
-                                  'Tarik dial jam visual 24 jam, buat aktivitas presisi, linimasa visual, & Eisenhower matrix.',
+                                  'Dial jam 24-jam interaktif dan jurnal refleksi.',
                                   style: TextStyle(fontSize: 12, color: AppPalette.textDim, height: 1.4),
                                 ),
                               ],

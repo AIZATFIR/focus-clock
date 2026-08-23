@@ -217,7 +217,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                       const Icon(Icons.bolt_rounded, size: 18, color: AppPalette.accent),
                       const SizedBox(width: 6),
                       const Text(
-                        'QUICK FOCUS PRESET',
+                        'Preset',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
@@ -251,7 +251,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                             children: [
                               Icon(Icons.play_circle_fill_rounded, size: 14, color: AppPalette.accent),
                               SizedBox(width: 4),
-                              Text('Set Start = SEKARANG', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppPalette.accent)),
+                              Text('Sekarang', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppPalette.accent)),
                             ],
                           ),
                         ),
@@ -279,9 +279,6 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                                   final now = DateTime.now();
                                   _startDt = now;
                                   _endDt = now.add(Duration(minutes: mins));
-                                  if (_titleCtrl.text.isEmpty) {
-                                    _titleCtrl.text = '$mins Min Focused Work';
-                                  }
                                 });
                               },
                               borderRadius: BorderRadius.circular(12),
@@ -339,7 +336,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                   // Custom Minute Stepper/Calculator (e.g. 14 menit dari sekarang)
                   Row(
                     children: [
-                      const Text('Detail Durasi Custom:', style: TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.bold)),
+                      const Text('Durasi', style: TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline_rounded, size: 22, color: AppPalette.accent),
@@ -440,7 +437,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                     size: 13, color: AppPalette.accent),
                 const SizedBox(width: 6),
                 Text(
-                  'Overnight — ends next day',
+                  'Overnight',
                   style: const TextStyle(
                       color: AppPalette.accent, fontSize: 12),
                 ),
@@ -452,7 +449,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             controller: _titleCtrl,
             readOnly: readOnly,
             decoration: const InputDecoration(
-              labelText: 'Activity',
+              labelText: 'Aktivitas',
               border: OutlineInputBorder(),
             ),
           ),
@@ -462,14 +459,13 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
             readOnly: readOnly,
             maxLines: 2,
             decoration: const InputDecoration(
-              labelText: 'Reason / Benefits',
-              hintText: 'Why this activity?',
+              labelText: 'Catatan',
               border: OutlineInputBorder(),
             ),
           ),
           if (!readOnly) ...[
             const SizedBox(height: 12),
-            const Text('Pilihan Icon / Emoji Aktivitas',
+            const Text('Icon',
                 style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             SingleChildScrollView(
@@ -501,7 +497,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               ),
             ),
             const SizedBox(height: 14),
-            const Text('Pilihan Warna (Color Swatch)',
+            const Text('Warna',
                 style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             ColorSwatchPicker(
@@ -509,7 +505,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
               onChanged: (c) => setState(() => _color = c),
             ),
 
-            const Text('Repeat', style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
+            const Text('Ulangi', style: TextStyle(color: AppPalette.textDim, fontSize: 13)),
             const SizedBox(height: 6),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
