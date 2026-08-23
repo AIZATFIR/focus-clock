@@ -28,8 +28,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
     with SingleTickerProviderStateMixin {
   late final PageController _pc;
   late final TabController _tc;
-  bool _leftExpanded = true;
-  bool _rightExpanded = true;
+  bool _leftExpanded = false;
+  bool _rightExpanded = false;
   bool _showAi = false;
 
   final FocusNode _shellFocusNode = FocusNode();
@@ -244,11 +244,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
             dividerColor: Colors.transparent,
             tabs: const [
               Tab(icon: Icon(Icons.auto_stories_rounded, size: 20),
-                  text: '📚 Routine Templates', height: 52),
+                  text: 'Routine Templates', height: 52),
               Tab(icon: Icon(Icons.access_time_filled_rounded, size: 20),
-                  text: '⚡ Focus Clock', height: 52),
+                  text: 'Focus Clock', height: 52),
               Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
-                  text: '📅 Agenda & Tasks', height: 52),
+                  text: 'Agenda & Tasks', height: 52),
             ],
           ),
         ),

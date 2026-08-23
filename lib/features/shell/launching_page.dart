@@ -19,11 +19,11 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
   late Timer _timer;
 
   static const List<String> _affirmations = [
-    '✨ Beri makna pada setiap detikan energimu.',
-    '🌿 Salurkan kreativitasmu, lindungi kedamaian pikiranmu.',
-    '🌟 Setiap langkah kecil hari ini adalah karya emas hidupmu.',
-    '⚡ Hadir sepenuhnya. Seize the day & fulfill your life.',
-    '🛡️ Kamu memegang kendali penuh atas waktumu.',
+    'Beri makna pada setiap detikan energimu.',
+    'Salurkan kreativitasmu, lindungi kedamaian pikiranmu.',
+    'Setiap langkah kecil hari ini adalah karya emas hidupmu.',
+    'Hadir sepenuhnya. Seize the day & fulfill your life.',
+    'Kamu memegang kendali penuh atas waktumu.',
   ];
 
   @override
@@ -58,7 +58,7 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
+              constraints: const BoxConstraints(maxWidth: 720),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -73,7 +73,7 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                             onTap: () => showGoogleAuthDialog(context, ref),
                             borderRadius: BorderRadius.circular(10),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: gcalSigned ? AppPalette.accent.withValues(alpha: 0.15) : AppPalette.card,
                                 borderRadius: BorderRadius.circular(10),
@@ -82,12 +82,12 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('📅', style: TextStyle(fontSize: 12)),
+                                  const Icon(Icons.sync_rounded, size: 14, color: AppPalette.accent),
                                   const SizedBox(width: 6),
                                   Text(
                                     gcalSigned ? 'Google Sync: Terhubung' : 'Sinkronkan Akun Google',
                                     style: TextStyle(
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
                                       color: gcalSigned ? AppPalette.accent : AppPalette.textDim,
                                     ),
@@ -100,91 +100,130 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  // Logo Icon
+                  const SizedBox(height: 20),
+
+                  // Logo Icon (Enlarged)
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
                       color: AppPalette.accent.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 1.5),
+                      border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5), width: 2.0),
                       boxShadow: [
                         BoxShadow(
                           color: AppPalette.accent.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          spreadRadius: 2,
+                          blurRadius: 28,
+                          spreadRadius: 3,
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.schedule_rounded, size: 52, color: AppPalette.accent),
+                    child: const Icon(Icons.schedule_rounded, size: 64, color: AppPalette.accent),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Title & Tagline
+                  // Title & Tagline (Enlarged UI)
                   const Text(
                     'FOCUS CLOCK',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 34,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 4.0,
+                      letterSpacing: 4.5,
                       color: AppPalette.text,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   const Text(
                     'Your private time secretary to help you seize the day & fulfill your life.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       color: AppPalette.textDim,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Rolling Subconscious Kind Affirmation Banner
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 600),
-                    child: Container(
-                      key: ValueKey<int>(_quoteIndex),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppPalette.card,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.35)),
-                      ),
-                      child: Text(
-                        _affirmations[_quoteIndex],
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppPalette.accent,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 36),
 
-                  // 2 PRIMARY HERO CARDS (Simple Mode vs Overview Mode)
+                  // 2 LARGE PRIMARY HERO BUTTONS (Simple Mode vs Focus Clock Mode)
                   Row(
                     children: [
-                      // HERO CARD 1: SIMPLE MODE
+                      // HERO CARD 1: SIMPLE MODE (Large button filling width)
                       Expanded(
                         child: InkWell(
                           onTap: () => _selectMode('simple'),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           child: Container(
-                            padding: const EdgeInsets.all(22),
+                            padding: const EdgeInsets.all(28),
                             decoration: BoxDecoration(
                               color: AppPalette.card,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppPalette.accent, width: 2),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppPalette.accent, width: 2.5),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppPalette.accent.withValues(alpha: 0.2),
+                                  color: AppPalette.accent.withValues(alpha: 0.25),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: AppPalette.accent,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: const Icon(Icons.bolt_rounded, size: 28, color: Colors.black),
+                                    ),
+                                    const Spacer(),
+                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 24),
+                                  ],
+                                ),
+                                const SizedBox(height: 22),
+                                const Text(
+                                  'SIMPLE MODE',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppPalette.accent,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Quick Input & Asisten Instant (Hemat Energi)',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  '1-tap quick focus input, preset durasi, kontrol Stop & Reschedule, serta asisten suara.',
+                                  style: TextStyle(fontSize: 12, color: AppPalette.textDim, height: 1.4),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+
+                      // HERO CARD 2: FOCUS CLOCK MODE (Large button filling width)
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _selectMode('overview'),
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: AppPalette.card,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
                                   blurRadius: 16,
                                   spreadRadius: 1,
                                 ),
@@ -196,93 +235,37 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                                 Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppPalette.accent,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(Icons.bolt_rounded, size: 22, color: Colors.black),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 20),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-                                const Text(
-                                  '⚡ SIMPLE MODE',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppPalette.accent,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Quick Input & Asisten Instant (Hemat Energi)',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                const Text(
-                                  '1-tap quick focus input, preset 15m/30m/45m/60m, kontrol Stop & Reschedule, serta asisten suara.',
-                                  style: TextStyle(fontSize: 11, color: AppPalette.textDim, height: 1.4),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // HERO CARD 2: OVERVIEW MODE
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _selectMode('overview'),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.all(22),
-                            decoration: BoxDecoration(
-                              color: AppPalette.card,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppPalette.stroke, width: 1.5),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
                                         color: AppPalette.bg,
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(14),
                                         border: Border.all(color: AppPalette.stroke),
                                       ),
-                                      child: const Icon(Icons.pie_chart_rounded, size: 22, color: AppPalette.text),
+                                      child: const Icon(Icons.access_time_filled_rounded, size: 28, color: AppPalette.accent),
                                     ),
                                     const Spacer(),
-                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.textDim, size: 20),
+                                    const Icon(Icons.arrow_forward_rounded, color: AppPalette.accent, size: 24),
                                   ],
                                 ),
-                                const SizedBox(height: 18),
+                                const SizedBox(height: 22),
                                 const Text(
-                                  '📊 OVERVIEW MODE',
+                                  'FOCUS CLOCK MODE',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.w900,
                                     color: AppPalette.text,
-                                    letterSpacing: 1.0,
+                                    letterSpacing: 1.2,
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Sadar Hari & Visual Clock Face Dial Drag',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 8),
                                 const Text(
-                                  'Tarik dial jam untuk buat/geser aktivitas 24 jam, lihat linimasa visual, & Eisenhower matrix.',
-                                  style: TextStyle(fontSize: 11, color: AppPalette.textDim, height: 1.4),
+                                  'Visual Clock Dial Drag & Sadar Waktu',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Tarik dial jam visual 24 jam, buat aktivitas presisi, linimasa visual, & Eisenhower matrix.',
+                                  style: TextStyle(fontSize: 12, color: AppPalette.textDim, height: 1.4),
                                 ),
                               ],
                             ),
@@ -290,6 +273,29 @@ class _LaunchingPageState extends ConsumerState<LaunchingPage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 48),
+
+                  // Rolling Subconscious Kind Affirmation Banner (Placed at bottom, BORDERLESS without outline)
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 600),
+                    child: Container(
+                      key: ValueKey<int>(_quoteIndex),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent, // Borderless, clean text display at bottom
+                      ),
+                      child: Text(
+                        _affirmations[_quoteIndex],
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppPalette.accent.withValues(alpha: 0.85),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

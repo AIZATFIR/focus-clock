@@ -116,12 +116,12 @@ class VoiceAssistantService {
           listenOptions: stt.SpeechListenOptions(localeId: 'id_ID'),
         );
       } else {
-        statusMessage.value = 'Perangkat mikrofon tidak tersedia. Silakan ketik perintah.';
+        statusMessage.value = 'Mikrofon tidak tersedia di platform ini. Ketik perintah di bawah.';
         isListening.value = false;
       }
     } catch (e) {
       isListening.value = false;
-      statusMessage.value = 'Gagal membuka mikrofon: ${e.toString()}';
+      statusMessage.value = 'Audio input belum tersedia. Gunakan kolom teks di bawah.';
     }
   }
 
