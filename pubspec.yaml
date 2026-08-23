@@ -1,7 +1,7 @@
 name: focus_clock
 description: "Time-blocking app with analog clock workspace."
 publish_to: 'none'
-version: 0.3.3
+version: 0.4.0
 
 environment:
   sdk: ^3.11.4
