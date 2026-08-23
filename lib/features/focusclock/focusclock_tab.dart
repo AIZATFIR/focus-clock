@@ -946,6 +946,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               ),
             ),
 
+            // Focus Tools Control Bar (Slider + Menit/Jam Unit Toggle Button + Quick Chips)
+            Positioned(
+              left: 14,
+              bottom: 12,
+              child: const _FocusToolsControlBar(),
+            ),
           ],
         );
       }),
@@ -1511,6 +1517,222 @@ class _AmPmMini extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: active ? Colors.black : AppPalette.textDim,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FocusToolsControlBar extends ConsumerStatefulWidget {
+  const _FocusToolsControlBar();
+
+  @override
+  ConsumerState<_FocusToolsControlBar> createState() => _FocusToolsControlBarState();
+}
+
+class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
+  bool _isHourUnit = false;
+  double _sliderValue = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentMinutes = _isHourUnit ? (_sliderValue * 60).round() : _sliderValue.round();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: 320),
+      decoration: BoxDecoration(
+        color: AppPalette.card.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.accent.withValues(alpha: 0.18),
+            blurRadius: 16,
+            spreadRadius: 1,
+          ),
+          const BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Unit Switcher Button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    _isHourUnit = !_isHourUnit;
+                    if (_isHourUnit) {
+                      _sliderValue = (_sliderValue / 60).clamp(0.5, 12.0);
+                    } else {
+                      _sliderValue = (_sliderValue * 60).clamp(1.0, 180.0);
+                    }
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppPalette.accent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppPalette.accent.withValues(alpha: 0.6)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, size: 12, color: AppPalette.accent),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isHourUnit ? 'JAM' : 'MENIT',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppPalette.accent,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Duration Display
+              Text(
+                _isHourUnit
+                    ? '${_sliderValue.toStringAsFixed(1)} Jam'
+                    : '${currentMinutes}m',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppPalette.text,
+                ),
+              ),
+              const SizedBox(width: 6),
+
+              // Interactive Slider
+              Expanded(
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    activeTrackColor: AppPalette.accent,
+                    inactiveTrackColor: AppPalette.stroke,
+                    thumbColor: AppPalette.accent,
+                  ),
+                  child: Slider(
+                    value: _sliderValue,
+                    min: _isHourUnit ? 0.5 : 1,
+                    max: _isHourUnit ? 12.0 : 180,
+                    divisions: _isHourUnit ? 23 : 179,
+                    onChanged: (val) {
+                      setState(() => _sliderValue = val);
+                      ref.read(instantIntervalProvider.notifier).state = currentMinutes;
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Quick Presets Chips Bar
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _QuickPresetChip(
+                  label: '15m',
+                  onTap: () {
+                    setState(() {
+                      _isHourUnit = false;
+                      _sliderValue = 15;
+                    });
+                    ref.read(instantIntervalProvider.notifier).state = 15;
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+                const SizedBox(width: 4),
+                _QuickPresetChip(
+                  label: '30m',
+                  onTap: () {
+                    setState(() {
+                      _isHourUnit = false;
+                      _sliderValue = 30;
+                    });
+                    ref.read(instantIntervalProvider.notifier).state = 30;
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+                const SizedBox(width: 4),
+                _QuickPresetChip(
+                  label: '45m',
+                  onTap: () {
+                    setState(() {
+                      _isHourUnit = false;
+                      _sliderValue = 45;
+                    });
+                    ref.read(instantIntervalProvider.notifier).state = 45;
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+                const SizedBox(width: 4),
+                _QuickPresetChip(
+                  label: '1 Jam',
+                  onTap: () {
+                    setState(() {
+                      _isHourUnit = true;
+                      _sliderValue = 1.0;
+                    });
+                    ref.read(instantIntervalProvider.notifier).state = 60;
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+                const SizedBox(width: 4),
+                _QuickPresetChip(
+                  label: '2 Jam',
+                  onTap: () {
+                    setState(() {
+                      _isHourUnit = true;
+                      _sliderValue = 2.0;
+                    });
+                    ref.read(instantIntervalProvider.notifier).state = 120;
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickPresetChip extends StatelessWidget {
+  const _QuickPresetChip({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppPalette.bg,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: AppPalette.stroke),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 9, color: AppPalette.textDim, fontWeight: FontWeight.w600),
         ),
       ),
     );

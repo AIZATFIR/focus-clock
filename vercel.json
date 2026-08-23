@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "bash scripts/vercel_build.sh",
   "outputDirectory": "build/web",
   "cleanUrls": true,
   "framework": null,
