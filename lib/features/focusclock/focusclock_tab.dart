@@ -509,17 +509,18 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                       }
                                     },
                                     onPanStart: (e) {
-                                      if (!isInstant) {
-                                        _onPanStart(e.localPosition, c.biggest);
-                                      }
+                                      _onPanStart(e.localPosition, c.biggest);
                                     },
                                     onPanUpdate: (e) {
-                                      if (!isInstant) {
-                                        _onPanUpdate(e.localPosition, c.biggest, activities);
-                                      }
+                                      _onPanUpdate(e.localPosition, c.biggest, activities);
                                     },
                                     onPanEnd: (_) {
-                                      if (!isInstant) {
+                                      if (ref.read(isInstantModeProvider)) {
+                                        if (_hasDragged && _dragStartNotifier.value != null && _dragEndNotifier.value != null) {
+                                          final themeAccentColor = AppPalette.accent;
+                                          _onInstantModeTap(date, themeAccentColor);
+                                        }
+                                      } else {
                                         _onPanEnd();
                                       }
                                     },
@@ -798,7 +799,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                   const Icon(Icons.calendar_month_rounded, size: 13, color: AppPalette.accent),
                                   const SizedBox(width: 6),
                                   Text(
-                                    '${now.day} ${_monthName(now.month)} ${now.year}',
+                                    '${date.day} ${_monthName(date.month)} ${date.year}',
                                     style: const TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
@@ -808,6 +809,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                 ],
                               ),
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Top Prominent AM/PM Capsule
+                          _AmPmMini(
+                            half: half,
+                            onChanged: (h) {
+                              HapticFeedback.selectionClick();
+                              ref.read(ampmHalfProvider.notifier).state = h;
+                            },
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -1130,8 +1140,21 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final centered = _toCenter(p, size);
     final is24h = _is24h;
     final raw = offsetToMinute(centered, is24h: is24h);
-    final clickMin = _dragClickMinute!;
+    final isInstant = ref.read(isInstantModeProvider);
     final prevEnd = _dragEndNotifier.value;
+
+    if (isInstant) {
+      final interval = ref.read(instantIntervalProvider);
+      final rawSnapped = _snap(raw);
+      _dragStartNotifier.value = rawSnapped;
+      _dragEndNotifier.value = rawSnapped + interval;
+      _dragConflictNotifier.value = _hasConflict(rawSnapped, rawSnapped + interval, activities, is24h: is24h);
+      _hoverMinuteNotifier.value = rawSnapped;
+      if (rawSnapped != prevEnd) HapticFeedback.selectionClick();
+      return;
+    }
+
+    final clickMin = _dragClickMinute!;
 
     final last = _lastPanMinute ?? raw;
     final scale = is24h ? 1440 : 720;
@@ -1186,6 +1209,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final isToday = dateOnly(selectedDates.first) == dateOnly(DateTime.now());
+
           return Dialog(
             backgroundColor: AppPalette.card,
             shape: RoundedRectangleBorder(
@@ -1202,43 +1227,52 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                     children: [
                       const Icon(Icons.calendar_month_rounded, color: AppPalette.accent, size: 20),
                       const SizedBox(width: 8),
-                      const Text(
-                        'Pilih Tanggal',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      Text(
+                        isBatchMode ? 'Batch Duplikasi Jadwal' : 'Pilih Tanggal Jam',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
                       // Mode Switch: Pindah Hari vs Batch Mode
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            isBatchMode ? 'Batch Mode' : 'Pindah Hari',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isBatchMode ? AppPalette.accent : AppPalette.textDim,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppPalette.bg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isBatchMode ? AppPalette.accent.withValues(alpha: 0.5) : AppPalette.stroke),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isBatchMode ? 'Batch Mode' : 'Pindah Hari',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isBatchMode ? AppPalette.accent : AppPalette.text,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Transform.scale(
-                            scale: 0.75,
-                            child: Switch(
-                              value: isBatchMode,
-                              activeTrackColor: AppPalette.accent,
-                              onChanged: (val) {
-                                setDialogState(() {
-                                  isBatchMode = val;
-                                  if (!isBatchMode && selectedDates.length > 1) {
-                                    final first = selectedDates.first;
-                                    selectedDates.clear();
-                                    selectedDates.add(first);
-                                  }
-                                });
-                              },
+                            const SizedBox(width: 4),
+                            Transform.scale(
+                              scale: 0.75,
+                              child: Switch(
+                                value: isBatchMode,
+                                activeTrackColor: AppPalette.accent,
+                                onChanged: (val) {
+                                  setDialogState(() {
+                                    isBatchMode = val;
+                                    if (!isBatchMode && selectedDates.length > 1) {
+                                      final first = selectedDates.first;
+                                      selectedDates.clear();
+                                      selectedDates.add(first);
+                                    }
+                                  });
+                                },
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(Icons.close_rounded, color: AppPalette.textDim),
                         onPressed: () => Navigator.pop(ctx),
@@ -1247,7 +1281,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                   ),
                   const SizedBox(height: 12),
                   CalendarDatePicker(
-                    initialDate: currentDate,
+                    initialDate: selectedDates.first,
                     firstDate: DateTime.now().subtract(const Duration(days: 365)),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     onDateChanged: (picked) {
@@ -1285,9 +1319,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           child: Text(
                             isBatchMode
                                 ? (selectedDates.length == 1
-                                    ? 'Batch Mode: Pilih tanggal tujuan duplikasi'
+                                    ? 'Batch Mode: Pilih beberapa tanggal tujuan'
                                     : 'Batch Duplikasi ke ${selectedDates.length} Hari Terpilih')
-                                : 'Pindah ke Tanggal: ${selectedDates.first.day}/${selectedDates.first.month}/${selectedDates.first.year}',
+                                : 'Tanggal Aktif: ${selectedDates.first.day}/${selectedDates.first.month}/${selectedDates.first.year}${isToday ? ' (Hari Ini)' : ''}',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -1296,11 +1330,29 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                   ),
                   const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      if (!isToday && !isBatchMode)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            final today = dateOnly(DateTime.now());
+                            setDialogState(() {
+                              selectedDates.clear();
+                              selectedDates.add(today);
+                            });
+                            ref.read(currentDateProvider.notifier).state = today;
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppPalette.accent,
+                            side: BorderSide(color: AppPalette.accent.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                          icon: const Icon(Icons.history_rounded, size: 15),
+                          label: const Text('Hari Ini', style: TextStyle(fontSize: 12)),
+                        ),
+                      const Spacer(),
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Batal'),
+                        child: const Text('Tutup'),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton.icon(
@@ -1309,11 +1361,11 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         ),
-                        icon: const Icon(Icons.check_circle_rounded, size: 18),
+                        icon: Icon(isBatchMode ? Icons.copy_all_rounded : Icons.check_circle_rounded, size: 18),
                         label: Text(
                           isBatchMode
-                              ? (selectedDates.length > 1 ? 'Terapkan Batch (${selectedDates.length} Hari)' : 'Duplikasi Schedule')
-                              : 'Buka Hari Ini',
+                              ? (selectedDates.length > 1 ? 'Terapkan (${selectedDates.length} Hari)' : 'Pilih Hari Tujuan')
+                              : 'Buka Jadwal Tanggal Ini',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         onPressed: () async {

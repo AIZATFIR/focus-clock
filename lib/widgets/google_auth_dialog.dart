@@ -56,7 +56,7 @@ class _GoogleAuthModalState extends ConsumerState<_GoogleAuthModal> {
 
     ref.read(gcalUserEmailProvider.notifier).state = email;
     final svc = ref.read(gcalServiceProvider);
-    await svc.signIn();
+    await svc.signIn(fallbackEmail: email);
 
     if (mounted) {
       ref.read(gcalSignedInProvider.notifier).state = true;

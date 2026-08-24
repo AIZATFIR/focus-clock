@@ -38,7 +38,7 @@ int snapDelta(int delta) {
   final sign = delta < 0 ? -1 : 1;
   final abs = delta.abs();
   final nearestHour = ((abs + 30) ~/ 60) * 60;
-  if ((abs - nearestHour).abs() <= 8) return sign * nearestHour;
+  if (nearestHour > 0 && (abs - nearestHour).abs() <= 8) return sign * nearestHour;
   return sign * ((abs + 2) ~/ 5) * 5;
 }
 

@@ -1,5 +1,5 @@
-import 'dart:io';
-
+import 'dart:io' show Platform;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +8,22 @@ import 'package:tray_manager/tray_manager.dart';
 
 import 'app.dart';
 import 'data/isar_service.dart';
+import 'firebase_options.dart';
 import 'providers/providers.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase (Web, Mobile, Desktop)
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('🔥 Firebase initialized successfully');
+  } catch (e) {
+    debugPrint('Firebase initialization warning: $e');
+  }
 
   // Initialize Desktop Window Manager
   if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
