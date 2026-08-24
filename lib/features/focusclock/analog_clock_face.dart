@@ -197,7 +197,7 @@ class _ClockPainter extends CustomPainter {
     // Theme Color Configurations
     final int theme = clockFaceTheme;
     final Color themeAccentColor;
-    final bool enableGlows = theme <= 4 && glowStyle != 'off';
+    final bool enableGlows = theme <= 4 && glowStyle == 'neon';
 
     switch (theme) {
       case 2: // Elegance (White-Glow)
@@ -215,45 +215,49 @@ class _ClockPainter extends CustomPainter {
       case 6: // Simple Classic
         themeAccentColor = const Color(0xFFFFD54F);
         break;
+      case 7: // Pastel Book / Warm Journal (Parchment Paper - Eye Friendly)
+        themeAccentColor = const Color(0xFFD6BE93);
+        break;
       case 1:
-      default: // Default Yellow-Black
-        themeAccentColor = AppPalette.accent; // Color(0xFFFFEE99)
+      default: // Default Warm Amber
+        themeAccentColor = AppPalette.accent;
         break;
     }
 
-    // 1. Dual-layer soft shadow & glowing aura (disabled in Simple theme or when subtle/off)
-    if (enableGlows && glowStyle != 'subtle') {
+    // 1. Dual-layer soft shadow (only when explicitly in neon glow mode)
+    if (enableGlows) {
       canvas.drawCircle(
         center,
-        outerRadius + 22,
+        outerRadius + 14,
         Paint()
-          ..color = themeAccentColor.withValues(alpha: 0.08)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28),
-      );
-
-      canvas.drawCircle(
-        center,
-        outerRadius,
-        Paint()
-          ..color = Colors.black.withValues(alpha: 0.65)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18),
+          ..color = themeAccentColor.withValues(alpha: 0.05)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
       );
     }
 
-    // 2. Bezel (Embossed 3D border - flatter in simple theme)
-    if (enableGlows) {
+    // 2. Bezel (Embossed or clean bookbinding border)
+    if (theme == 7) {
+      canvas.drawCircle(
+        center,
+        outerRadius + 1,
+        Paint()
+          ..color = const Color(0xFF423B32)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    } else if (enableGlows) {
       final bezelPaint = Paint()
         ..shader = ui.Gradient.linear(
           Offset(center.dx - outerRadius, center.dy - outerRadius),
           Offset(center.dx + outerRadius, center.dy + outerRadius),
           [
-            Colors.white.withValues(alpha: 0.20), // Light highlight top-left
+            Colors.white.withValues(alpha: 0.15),
             Colors.white.withValues(alpha: 0.02),
-            Colors.black.withValues(alpha: 0.50), // Shadow bottom-right
+            Colors.black.withValues(alpha: 0.40),
           ],
           [0.0, 0.5, 1.0],
         );
-      canvas.drawCircle(center, outerRadius + 2, bezelPaint);
+      canvas.drawCircle(center, outerRadius + 1.5, bezelPaint);
     } else {
       final double borderWidth = theme == 6 ? 2.0 : 1.5;
       final Color borderColor = theme == 6 ? AppPalette.stroke : AppPalette.stroke.withValues(alpha: 0.5);
@@ -267,9 +271,11 @@ class _ClockPainter extends CustomPainter {
       );
     }
 
-    // 3. Face with radial gradient (Obsidian look) or Flat color for Simple
+    // 3. Face with radial gradient or Flat Paper color
     final Paint facePaint;
-    if (enableGlows) {
+    if (theme == 7) {
+      facePaint = Paint()..color = const Color(0xFF221F1B); // Eye-friendly warm journal charcoal
+    } else if (enableGlows) {
       facePaint = Paint()
         ..shader = ui.Gradient.radial(
           center,
@@ -610,7 +616,12 @@ class _ClockPainter extends CustomPainter {
       ..close();
 
     final Paint paint;
-    if (clockFaceTheme >= 5) {
+    if (clockFaceTheme == 7) {
+      // Soft eye-friendly matte pastel journal style
+      paint = Paint()
+        ..color = Color.lerp(color, const Color(0xFFD6BE93), 0.12)!
+        ..style = PaintingStyle.fill;
+    } else if (clockFaceTheme >= 5) {
       paint = Paint()..color = color..style = PaintingStyle.fill;
     } else {
       paint = Paint()

@@ -1020,14 +1020,6 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       );
                     }
                   ),
-                  _AmPmMini(
-                    half: half,
-                    onChanged: (h) {
-                      HapticFeedback.selectionClick();
-                      ref.read(ampmHalfProvider.notifier).state = h;
-                    },
-                  ),
-                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -1766,8 +1758,8 @@ class _AmPmMini extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: AppPalette.card,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppPalette.stroke),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1787,16 +1779,16 @@ class _AmPmMini extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: active ? AppPalette.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
           value.label,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w900,
             color: active ? Colors.black : AppPalette.textDim,
           ),
         ),

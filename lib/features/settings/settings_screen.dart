@@ -451,9 +451,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(),
               const _Section(title: 'Eye-Friendly Palette'),
               RadioListTile(
-                title: const Text('OLED Executive Gold'),
-                subtitle: const Text('Muted gold & obsidian midnight'),
-                value: 'executive',
+                title: const Text('📖 Full Book / Journal Paper'),
+                subtitle: const Text('Vintage warm paper & ink aesthetic (Anti-Glare & Ultra Eye-Friendly)'),
+                value: 'full_book',
+                groupValue: _themePalette ?? 'executive',
+                activeColor: AppPalette.accent,
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() => _themePalette = v);
+                    _save(s, themePalette: v);
+                  }
+                },
+              ),
+              RadioListTile(
+                title: const Text('Warm Sunset Sepia'),
+                subtitle: const Text('Warm amber tones with blue-light reduction'),
+                value: 'sepia',
                 groupValue: _themePalette ?? 'executive',
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -477,9 +490,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 },
               ),
               RadioListTile(
-                title: const Text('Warm Sunset Sepia'),
-                subtitle: const Text('Warm amber tones with blue-light reduction'),
-                value: 'sepia',
+                title: const Text('OLED Executive Gold'),
+                subtitle: const Text('Muted gold & obsidian midnight'),
+                value: 'executive',
                 groupValue: _themePalette ?? 'executive',
                 activeColor: AppPalette.accent,
                 onChanged: (v) {
@@ -504,11 +517,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
 
               // ── Clock Face Theme ─────────────────────────────────────────────
-              if (curClockFaceTheme < 5) ...[
+              if (curClockFaceTheme < 5 || curClockFaceTheme == 7) ...[
                 const Divider(),
                 const _Section(title: 'Clock Face Theme'),
                 RadioListTile<int>(
-                  title: const Text('Default (Yellow-Black)'),
+                  title: const Text('📖 Pastel Book (Parchment & Inked Serif)'),
+                  subtitle: const Text('Calming muted pastel tones, zero glare, ultra lightweight'),
+                  value: 7,
+                  groupValue: curClockFaceTheme,
+                  activeColor: AppPalette.accent,
+                  onChanged: (v) {
+                    if (v != null) {
+                      setState(() {
+                        _clockFaceTheme = v;
+                      });
+                      _save(s, clockFaceTheme: v);
+                    }
+                  },
+                ),
+                RadioListTile<int>(
+                  title: const Text('Default (Warm Amber)'),
                   value: 1,
                   groupValue: curClockFaceTheme,
                   activeColor: AppPalette.accent,

@@ -61,11 +61,11 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     card = const Color(0xFF1C2723);
     accent = const Color(0xFF4EAA86);
     stroke = const Color(0xFF273831);
-  } else if (palette == 'sepia' || palette == 'bookpaper') {
-    bg = const Color(0xFF181714);
-    card = const Color(0xFF25211C);
-    accent = const Color(0xFFF0C987);
-    stroke = const Color(0xFF383127);
+  } else if (palette == 'full_book' || palette == 'bookpaper' || palette == 'sepia') {
+    bg = const Color(0xFF1B1916);
+    card = const Color(0xFF26231E);
+    accent = const Color(0xFFE2BE82);
+    stroke = const Color(0xFF3B352D);
   } else if (palette == 'cream') {
     bg = const Color(0xFF17181F);
     card = const Color(0xFF222430);
@@ -239,6 +239,25 @@ ThemeData buildLightTheme() {
     ),
   );
 }
+
+/// Full Book / Warm Journal theme with gentle paper aesthetic
+ThemeData buildFullBookTheme() {
+  return buildDarkTheme('full_book');
+}
+
+/// Pastel Book Palette — Eye-Friendly & Relaxing Muted Tones
+const pastelBookColors = <int>[
+  0xFF8DA399, // Muted Sage Green
+  0xFFC89F98, // Dusty Rose
+  0xFF9CAAC6, // Soft Periwinkle
+  0xFFD6BE93, // Warm Ochre
+  0xFFB2A3C4, // Soft Lavender
+  0xFFA8B896, // Matcha Tea
+  0xFFCFA085, // Soft Terracotta
+  0xFF8DB8B2, // Dusty Teal
+  0xFFD4B28C, // Muted Sand
+  0xFFA69C90, // Warm Slate
+];
 
 const presetColors = <int>[
   0xFFF44336, // Red
