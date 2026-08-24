@@ -17,6 +17,7 @@ import '../ai_chat/storytelling_sheet.dart';
 import '../presets/presets_tab.dart';
 import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
+import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
@@ -469,6 +470,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                     },
                                     onTapUp: (e) {
                                       if (isInstant) {
+                                        final centered = _toCenter(e.localPosition, c.biggest);
+                                        final rawMin = _snap(offsetToMinute(centered, is24h: is24h));
+                                        final interval = ref.read(instantIntervalProvider);
+                                        _dragStartNotifier.value = rawMin;
+                                        _dragEndNotifier.value = rawMin + interval;
+
                                         final Color themeAccentColor;
                                         if (clockFaceTheme == 2) {
                                           themeAccentColor = Colors.white;
@@ -1098,9 +1105,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final dbStart = toDbMinute(start24);
     final dbHalf = toDbHalf(start24);
     final dbEnd = toDbEndMinute(end24, dbHalf);
+    final duration = end24 - start24;
     
     final activity = Activity()
-      ..title = ''
+      ..title = 'Fokus ${duration}m'
       ..startMinute = dbStart
       ..endMinute = dbEnd
       ..ampmHalf = dbHalf
@@ -1111,8 +1119,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       ..createdAt = DateTime.now()
       ..updatedAt = DateTime.now();
 
-    HapticFeedback.lightImpact();
-    await showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
+    final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+    await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+    try {
+      ref.read(firebaseSyncServiceProvider).syncActivity(activity);
+    } catch (_) {}
+
+    HapticFeedback.mediumImpact();
   }
 
   void _onPanStart(Offset p, Size size) {
@@ -1436,16 +1449,23 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       );
       final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
       await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+      try {
+        ref.read(firebaseSyncServiceProvider).syncActivity(activity);
+      } catch (_) {}
     } else {
+      final duration = end24 - start24;
       final activity = Activity()
-        ..title = ''
+        ..title = 'Blok ${duration}m'
         ..date = date
         ..ampmHalf = dbHalf
         ..startMinute = dbStart
         ..endMinute = dbEnd
         ..colorValue = presetColors.first;
-      if (!mounted) return;
-      await showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
+      final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+      await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+      try {
+        ref.read(firebaseSyncServiceProvider).syncActivity(activity);
+      } catch (_) {}
     }
   }
 
