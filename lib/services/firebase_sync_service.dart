@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/time_math.dart';
 import '../models/activity.dart';
@@ -24,6 +25,38 @@ class FirebaseSyncService {
 
   User? get currentUser => _auth.currentUser;
   bool get isAuthenticated => currentUser != null;
+
+  /// Real Sign in with Google (Web & Mobile)
+  Future<UserCredential?> signInWithGoogle() async {
+    try {
+      if (kIsWeb) {
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+        final cred = await _auth.signInWithPopup(googleProvider);
+        debugPrint('🔥 Firebase Google Sign-In Success: ${cred.user?.email}');
+        return cred;
+      } else {
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          scopes: ['email', 'profile', 'https://www.googleapis.com/auth/calendar'],
+        );
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) return null;
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final cred = await _auth.signInWithCredential(credential);
+        debugPrint('🔥 Native Google Sign-In Success: ${cred.user?.email}');
+        return cred;
+      }
+    } catch (e) {
+      debugPrint('Firebase signInWithGoogle error: $e');
+      rethrow;
+    }
+  }
 
   /// Sign in anonymously for seamless instant sync
   Future<UserCredential?> signInAnonymously() async {
