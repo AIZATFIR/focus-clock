@@ -1003,16 +1003,14 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       );
                     }
                   ),
-                  if (!is24h) ...[
-                    _AmPmMini(
-                      half: half,
-                      onChanged: (h) {
-                        HapticFeedback.selectionClick();
-                        ref.read(ampmHalfProvider.notifier).state = h;
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                  ],
+                  _AmPmMini(
+                    half: half,
+                    onChanged: (h) {
+                      HapticFeedback.selectionClick();
+                      ref.read(ampmHalfProvider.notifier).state = h;
+                    },
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.selectionClick();
@@ -1182,6 +1180,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
   Future<void> _showLargeCalendarBatchPicker(BuildContext context, DateTime currentDate) async {
     final selectedDates = <DateTime>{dateOnly(currentDate)};
+    bool isBatchMode = false;
+
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1200,13 +1200,45 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_month_rounded, color: AppPalette.accent, size: 22),
-                      const SizedBox(width: 10),
+                      const Icon(Icons.calendar_month_rounded, color: AppPalette.accent, size: 20),
+                      const SizedBox(width: 8),
                       const Text(
-                        'Pilih Tanggal & Batch Schedule',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        'Pilih Tanggal',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       const Spacer(),
+                      // Mode Switch: Pindah Hari vs Batch Mode
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            isBatchMode ? 'Batch Mode' : 'Pindah Hari',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isBatchMode ? AppPalette.accent : AppPalette.textDim,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Transform.scale(
+                            scale: 0.75,
+                            child: Switch(
+                              value: isBatchMode,
+                              activeTrackColor: AppPalette.accent,
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  isBatchMode = val;
+                                  if (!isBatchMode && selectedDates.length > 1) {
+                                    final first = selectedDates.first;
+                                    selectedDates.clear();
+                                    selectedDates.add(first);
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded, color: AppPalette.textDim),
                         onPressed: () => Navigator.pop(ctx),
@@ -1219,14 +1251,22 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                     firstDate: DateTime.now().subtract(const Duration(days: 365)),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     onDateChanged: (picked) {
+                      final key = dateOnly(picked);
                       setDialogState(() {
-                        final key = dateOnly(picked);
-                        if (selectedDates.contains(key) && selectedDates.length > 1) {
-                          selectedDates.remove(key);
+                        if (isBatchMode) {
+                          if (selectedDates.contains(key) && selectedDates.length > 1) {
+                            selectedDates.remove(key);
+                          } else {
+                            selectedDates.add(key);
+                          }
                         } else {
+                          selectedDates.clear();
                           selectedDates.add(key);
                         }
                       });
+                      if (!isBatchMode) {
+                        ref.read(currentDateProvider.notifier).state = key;
+                      }
                     },
                   ),
                   const SizedBox(height: 14),
@@ -1239,13 +1279,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.copy_rounded, size: 16, color: AppPalette.accent),
+                        Icon(isBatchMode ? Icons.copy_rounded : Icons.today_rounded, size: 16, color: AppPalette.accent),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            selectedDates.length == 1
-                                ? 'Terpilih: 1 hari (${selectedDates.first.day}/${selectedDates.first.month})'
-                                : 'Batch Duplikasi ke ${selectedDates.length} Hari Terpilih',
+                            isBatchMode
+                                ? (selectedDates.length == 1
+                                    ? 'Batch Mode: Pilih tanggal tujuan duplikasi'
+                                    : 'Batch Duplikasi ke ${selectedDates.length} Hari Terpilih')
+                                : 'Pindah ke Tanggal: ${selectedDates.first.day}/${selectedDates.first.month}/${selectedDates.first.year}',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
@@ -1269,13 +1311,15 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         ),
                         icon: const Icon(Icons.check_circle_rounded, size: 18),
                         label: Text(
-                          selectedDates.length > 1 ? 'Terapkan Batch (${selectedDates.length} Hari)' : 'Buka Tanggal Ini',
+                          isBatchMode
+                              ? (selectedDates.length > 1 ? 'Terapkan Batch (${selectedDates.length} Hari)' : 'Duplikasi Schedule')
+                              : 'Buka Hari Ini',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         onPressed: () async {
                           final primaryDate = selectedDates.first;
                           ref.read(currentDateProvider.notifier).state = primaryDate;
-                          if (selectedDates.length > 1) {
+                          if (isBatchMode && selectedDates.length > 1) {
                             final targets = selectedDates.where((d) => d != currentDate).toList();
                             await _copyScheduleToDates(context, currentDate, targets);
                           }
@@ -1819,13 +1863,14 @@ class _FocusToolsControlBarState extends ConsumerState<_FocusToolsControlBar> {
                       thumbColor: AppPalette.accent,
                     ),
                     child: Slider(
-                      value: _sliderValue,
-                      min: _isHourUnit ? 0.5 : 1,
-                      max: _isHourUnit ? 12.0 : 180,
-                      divisions: _isHourUnit ? 23 : 179,
+                      value: _sliderValue.clamp(_isHourUnit ? 0.5 : 5.0, _isHourUnit ? 12.0 : 180.0),
+                      min: _isHourUnit ? 0.5 : 5.0,
+                      max: _isHourUnit ? 12.0 : 180.0,
+                      divisions: _isHourUnit ? 23 : 35,
                       onChanged: (val) {
-                        setState(() => _sliderValue = val);
-                        ref.read(instantIntervalProvider.notifier).state = currentMinutes;
+                        final snapped = _isHourUnit ? val : (val / 5).round() * 5.0;
+                        setState(() => _sliderValue = snapped);
+                        ref.read(instantIntervalProvider.notifier).state = _isHourUnit ? (snapped * 60).round() : snapped.round();
                       },
                     ),
                   ),
