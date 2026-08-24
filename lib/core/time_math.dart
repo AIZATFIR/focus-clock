@@ -129,7 +129,7 @@ List<SpanSegment> splitSpan(DateTime startDt, DateTime endDt) {
       half = AmPmHalf.pm;
     } else {
       half = AmPmHalf.am;
-      date = date.add(const Duration(days: 1));
+      date = dateOnly(date.add(const Duration(days: 1)));
     }
   }
   return segments;

@@ -1104,7 +1104,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       ..startMinute = dbStart
       ..endMinute = dbEnd
       ..ampmHalf = dbHalf
-      ..date = date
+      ..date = dateOnly(date)
       ..colorValue = accentColor.toARGB32()
       ..description = ''
       ..recurrence = 'none'
@@ -1434,7 +1434,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (result is Preset) {
       final activity = await activityFromPreset(
         preset: result,
-        date: date,
+        date: dateOnly(date),
         half: dbHalf,
         startMinute: dbStart,
         endMinute: dbEnd,
@@ -1444,20 +1444,33 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
       try {
         ref.read(firebaseSyncServiceProvider).syncActivity(activity);
       } catch (_) {}
-    } else {
+    } else if (result == 'custom') {
       final duration = end24 - start24;
       final activity = Activity()
-        ..title = 'Blok ${duration}m'
-        ..date = date
+        ..title = 'Fokus ${duration}m'
+        ..date = dateOnly(date)
         ..ampmHalf = dbHalf
         ..startMinute = dbStart
         ..endMinute = dbEnd
         ..colorValue = presetColors.first;
-      final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-      await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-      try {
-        ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-      } catch (_) {}
+      if (!mounted) return;
+      await showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
+    } else {
+      final duration = end24 - start24;
+      if (duration >= 5) {
+        final activity = Activity()
+          ..title = 'Fokus ${duration}m'
+          ..date = dateOnly(date)
+          ..ampmHalf = dbHalf
+          ..startMinute = dbStart
+          ..endMinute = dbEnd
+          ..colorValue = presetColors.first;
+        final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+        await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+        try {
+          ref.read(firebaseSyncServiceProvider).syncActivity(activity);
+        } catch (_) {}
+      }
     }
   }
 
@@ -1467,10 +1480,10 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     if (hit == null) return;
 
     final a = activities.firstWhere((x) => x.id == hit);
-
-    final schedulingTask = ref.read(schedulingTaskProvider);
-    if (schedulingTask != null) {
+    if (ref.read(schedulingTaskProvider) != null) {
+      final schedulingTask = ref.read(schedulingTaskProvider)!;
       schedulingTask.activityId = a.id;
+      schedulingTask.date = a.date;
       schedulingTask.startMinute = a.startMinute;
       schedulingTask.endMinute = a.endMinute;
       schedulingTask.ampmHalf = a.ampmHalf;
@@ -1530,49 +1543,22 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final end = _dragEndNotifier.value!;
     final is24h = _is24h;
     final half = ref.read(ampmHalfProvider);
-
     final start24 = is24h ? start : (start + (half == AmPmHalf.pm ? 720 : 0));
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
+
+    final dbStart = toDbMinute(start24);
+    final dbHalf = toDbHalf(start24);
+    final dbEnd = toDbEndMinute(end24, dbHalf);
+
+    final a = _draggingActivity!;
+    a.startMinute = dbStart;
+    a.endMinute = dbEnd;
+    a.ampmHalf = dbHalf;
+    await ref.read(activityRepoProvider).upsert(a, notifLeadMinutes: leadMinutes);
+    try {
+      ref.read(firebaseSyncServiceProvider).syncActivity(a);
+    } catch (_) {}
     
-    _draggingActivity!.startMinute = toDbMinute(start24);
-    _draggingActivity!.ampmHalf = toDbHalf(start24);
-    _draggingActivity!.endMinute = toDbEndMinute(end24, _draggingActivity!.ampmHalf);
-
-    await ref
-        .read(activityRepoProvider)
-        .upsert(_draggingActivity!, notifLeadMinutes: leadMinutes);
-
-    final tasks = ref.read(eisenhowerTasksProvider).valueOrNull ?? const [];
-    final childTasks = tasks.where((t) => t.activityId == _draggingActivity!.id).toList();
-    for (final t in childTasks) {
-      bool changed = false;
-      final uiActStart = start;
-      final uiActEnd = end;
-      final tStart = toUiMinute(t.startMinute!, t.ampmHalf, is24h: is24h);
-      final tEnd = toUiMinute(t.endMinute!, t.ampmHalf, is24h: is24h);
-      
-      var newTStart = tStart;
-      var newTEnd = tEnd;
-      
-      if (tStart < uiActStart) {
-        newTStart = uiActStart;
-        changed = true;
-      }
-      if (tEnd > uiActEnd) {
-        newTEnd = uiActEnd;
-        changed = true;
-      }
-      if (changed) {
-        final newTStart24 = is24h ? newTStart : (newTStart + (half == AmPmHalf.pm ? 720 : 0));
-        final newTEnd24 = is24h ? newTEnd : (newTEnd + (half == AmPmHalf.pm ? 720 : 0));
-        t.startMinute = toDbMinute(newTStart24);
-        t.endMinute = toDbMinute(newTEnd24);
-        t.ampmHalf = toDbHalf(newTStart24);
-        await ref.read(taskRepoProvider).update(t);
-      }
-    }
-
-    HapticFeedback.lightImpact();
     _draggingActivity = null;
     _dragStartNotifier.value = null;
     _dragEndNotifier.value = null;
@@ -1585,8 +1571,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     final date = ref.read(currentDateProvider);
     final is24h = _is24h;
     final half = ref.read(ampmHalfProvider);
-    final start = snap5(now.hour * 60 + now.minute);
-    final end = (start + 60).clamp(0, 1440);
+    final dropMin = _hoverMinuteNotifier.value ?? snap5(is24h ? (now.hour * 60 + now.minute) : minuteOfHalf(now));
+    final start = dropMin;
+    final end = is24h ? (start + 60).clamp(0, 1440) : (start + 60).clamp(0, 720);
     
     final start24 = is24h ? start : (start + (half == AmPmHalf.pm ? 720 : 0));
     final end24 = is24h ? end : (end + (half == AmPmHalf.pm ? 720 : 0));
@@ -1597,7 +1584,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
 
     final a = await activityFromPreset(
       preset: p,
-      date: date,
+      date: dateOnly(date),
       half: dbHalf,
       startMinute: dbStart,
       endMinute: dbEnd,

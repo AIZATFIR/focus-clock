@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:isar/isar.dart';
 
 import '../../models/task.dart';
@@ -7,6 +8,7 @@ class TaskRepository {
   final Isar? isar;
 
   final List<Task> _memoryTasks = [];
+  final StreamController<void> _memController = StreamController<void>.broadcast();
 
   Future<List<Task>> getAll() async {
     if (isar == null) return List.unmodifiable(_memoryTasks);
@@ -14,17 +16,32 @@ class TaskRepository {
   }
 
   Stream<List<Task>> watchAll() {
-    if (isar == null) return Stream.value(_memoryTasks);
+    if (isar == null) {
+      return _watchMemoryAll();
+    }
     return isar!.tasks.where().sortByCreatedAtDesc().watch(fireImmediately: true);
+  }
+
+  Stream<List<Task>> _watchMemoryAll() async* {
+    yield List.unmodifiable(_memoryTasks);
+    await for (final _ in _memController.stream) {
+      yield List.unmodifiable(_memoryTasks);
+    }
   }
 
   Stream<List<Task>> watchByActivity(int activityId) {
     if (isar == null) {
-      return Stream.value(
-        _memoryTasks.where((t) => t.activityId == activityId).toList(),
-      );
+      return _watchMemoryByActivity(activityId);
     }
     return isar!.tasks.filter().activityIdEqualTo(activityId).watch(fireImmediately: true);
+  }
+
+  Stream<List<Task>> _watchMemoryByActivity(int activityId) async* {
+    List<Task> query() => _memoryTasks.where((t) => t.activityId == activityId).toList();
+    yield query();
+    await for (final _ in _memController.stream) {
+      yield query();
+    }
   }
 
   Future<int> add(Task task) async {
@@ -32,6 +49,7 @@ class TaskRepository {
       task.createdAt = DateTime.now();
       task.id = _memoryTasks.length + 1;
       _memoryTasks.add(task);
+      _memController.add(null);
       return task.id;
     }
     return isar!.writeTxn(() async {
@@ -45,6 +63,7 @@ class TaskRepository {
       task.updatedAt = DateTime.now();
       final idx = _memoryTasks.indexWhere((t) => t.id == task.id);
       if (idx >= 0) _memoryTasks[idx] = task;
+      _memController.add(null);
       return true;
     }
     return isar!.writeTxn(() async {
@@ -57,6 +76,7 @@ class TaskRepository {
   Future<bool> delete(int id) async {
     if (isar == null) {
       _memoryTasks.removeWhere((t) => t.id == id);
+      _memController.add(null);
       return true;
     }
     return isar!.writeTxn(() async {
@@ -70,6 +90,7 @@ class TaskRepository {
       if (task.title.isNotEmpty) {
         task.isCompleted = !task.isCompleted;
         task.updatedAt = DateTime.now();
+        _memController.add(null);
       }
       return;
     }
@@ -84,7 +105,22 @@ class TaskRepository {
   }
 
   Future<void> updateEisenhower(int id, int quadrant) async {
-    if (isar == null) return;
+    if (isar == null) {
+      final task = _memoryTasks.firstWhere((t) => t.id == id, orElse: () => Task());
+      if (task.title.isNotEmpty) {
+        task.importance = (quadrant == 0 || quadrant == 1) ? 1 : 0;
+        if (quadrant == 0 || quadrant == 2) {
+          if (!task.isUrgent) {
+            task.deadline = DateTime.now();
+          }
+        } else {
+          task.deadline = null;
+        }
+        task.updatedAt = DateTime.now();
+        _memController.add(null);
+      }
+      return;
+    }
     await isar!.writeTxn(() async {
       final task = await isar!.tasks.get(id);
       if (task != null) {

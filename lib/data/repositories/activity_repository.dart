@@ -11,9 +11,16 @@ class ActivityRepository {
   final Isar? _isar;
   final NotificationService _notifier;
 
+  // In-Memory Fallback when Isar is unavailable (Web without IndexedDB/WASM or test runner)
+  final Map<int, Activity> _memStore = {};
+  int _memIdCounter = 1;
+  final StreamController<void> _memController = StreamController<void>.broadcast();
+
   Stream<List<Activity>> watchByDateAndHalf(DateTime date, AmPmHalf half) {
-    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
+    if (_isar == null) {
+      return _watchMemoryByDate(d, half: half);
+    }
     // Direct activities for this date+half
     final direct = _isar.activitys
         .filter()
@@ -27,8 +34,10 @@ class ActivityRepository {
   }
 
   Stream<List<Activity>> watchByDate(DateTime date) {
-    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
+    if (_isar == null) {
+      return _watchMemoryByDate(d);
+    }
     final direct = _isar.activitys
         .filter()
         .dateEqualTo(d)
@@ -37,6 +46,26 @@ class ActivityRepository {
         .watch(fireImmediately: true);
 
     return _mergeWithRecurring(direct, d);
+  }
+
+  Stream<List<Activity>> _watchMemoryByDate(DateTime targetDate, {AmPmHalf? half}) async* {
+    List<Activity> query() {
+      final list = _memStore.values.where((a) {
+        if (dateOnly(a.date) != targetDate) return false;
+        if (half != null && a.ampmHalf != half) return false;
+        return true;
+      }).toList();
+      list.sort((a, b) {
+        final hc = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+        return hc != 0 ? hc : a.startMinute.compareTo(b.startMinute);
+      });
+      return list;
+    }
+
+    yield query();
+    await for (final _ in _memController.stream) {
+      yield query();
+    }
   }
 
   /// Merges direct activities with projected recurring activities.
@@ -110,8 +139,16 @@ class ActivityRepository {
   }
 
   Future<int> upsert(Activity a, {int notifLeadMinutes = 1}) async {
+    a.date = dateOnly(a.date);
     a.updatedAt = DateTime.now();
-    if (_isar == null) return a.id;
+    if (_isar == null) {
+      if (a.id == Isar.autoIncrement || a.id <= 0) {
+        a.id = _memIdCounter++;
+      }
+      _memStore[a.id] = a;
+      _memController.add(null);
+      return a.id;
+    }
     final id = await _isar.writeTxn(() => _isar.activitys.put(a));
     await _notifier.scheduleForActivity(a, leadMinutes: notifLeadMinutes);
     return id;
@@ -119,8 +156,12 @@ class ActivityRepository {
 
   /// Delete only a single instance of a recurring activity for [targetDate].
   Future<void> deleteSingleInstance(Activity a, DateTime targetDate) async {
-    if (_isar == null) return;
     final target = dateOnly(targetDate);
+    if (_isar == null) {
+      _memStore.remove(a.id);
+      _memController.add(null);
+      return;
+    }
     final dbActivity = await _isar.activitys.get(a.id);
 
     if (dbActivity != null && dbActivity.recurrence != 'none') {
@@ -136,7 +177,6 @@ class ActivityRepository {
 
   /// Duplicate [a] as a new standalone activity on [targetDate].
   Future<int> duplicateActivity(Activity a, DateTime targetDate) async {
-    if (_isar == null) return a.id;
     final now = DateTime.now();
     final copy = Activity()
       ..presetId = a.presetId
@@ -161,7 +201,14 @@ class ActivityRepository {
 
   /// Toggle lock status of [a].
   Future<void> toggleLock(Activity a, bool locked) async {
-    if (_isar == null) return;
+    if (_isar == null) {
+      final memAct = _memStore[a.id];
+      if (memAct != null) {
+        memAct.isLocked = locked;
+        _memController.add(null);
+      }
+      return;
+    }
     final dbActivity = await _isar.activitys.get(a.id);
     if (dbActivity == null) return;
     dbActivity.isLocked = locked;
@@ -170,7 +217,9 @@ class ActivityRepository {
   }
 
   Future<List<Activity>> getGroup(String groupId) async {
-    if (_isar == null) return [];
+    if (_isar == null) {
+      return _memStore.values.where((a) => a.groupId == groupId).toList();
+    }
     return _isar.activitys.filter().groupIdEqualTo(groupId).sortByDate().findAll();
   }
 
@@ -181,10 +230,25 @@ class ActivityRepository {
     required List<Activity> segments,
     int notifLeadMinutes = 1,
   }) async {
-    if (_isar == null) return;
     final now = DateTime.now();
     for (final s in segments) {
+      s.date = dateOnly(s.date);
       s.updatedAt = now;
+    }
+    if (_isar == null) {
+      if (original.groupId != null) {
+        _memStore.removeWhere((_, a) => a.groupId == original.groupId);
+      } else {
+        _memStore.remove(original.id);
+      }
+      for (final s in segments) {
+        if (s.id == Isar.autoIncrement || s.id <= 0) {
+          s.id = _memIdCounter++;
+        }
+        _memStore[s.id] = s;
+      }
+      _memController.add(null);
+      return;
     }
     final oldIds = <int>[];
     await _isar.writeTxn(() async {
@@ -211,36 +275,55 @@ class ActivityRepository {
 
   /// Delete activity; if it belongs to a group, delete every segment.
   Future<void> deleteGroupOf(Activity a) async {
-    if (_isar == null) return;
+    if (_isar == null) {
+      if (a.groupId == null) {
+        _memStore.remove(a.id);
+      } else {
+        _memStore.removeWhere((_, act) => act.groupId == a.groupId);
+      }
+      _memController.add(null);
+      return;
+    }
     if (a.groupId == null) {
       await delete(a.id);
       return;
     }
     final group = await getGroup(a.groupId!);
     await _isar.writeTxn(
-        () => _isar.activitys.deleteAll(group.map((g) => g.id).toList()));
+      () => _isar.activitys.deleteAll(group.map((x) => x.id).toList()),
+    );
     for (final g in group) {
       await _notifier.cancelForActivity(g.id);
     }
   }
 
   Future<bool> delete(int id) async {
+    if (_isar == null) {
+      _memStore.remove(id);
+      _memController.add(null);
+      return true;
+    }
+    final result = await _isar.writeTxn(() => _isar.activitys.delete(id));
     await _notifier.cancelForActivity(id);
-    if (_isar == null) return true;
-    return _isar.writeTxn(() => _isar.activitys.delete(id));
+    return result;
   }
 
   Future<Activity?> get(int id) async {
-    if (_isar == null) return null;
+    if (_isar == null) return _memStore[id];
     return _isar.activitys.get(id);
   }
 
   /// Watch activities for a whole week (Mon–Sun containing [date]).
   Stream<List<Activity>> watchWeek(DateTime date) {
-    if (_isar == null) return Stream.value(const []);
     final d = dateOnly(date);
     final monday = d.subtract(Duration(days: d.weekday - 1));
     final sunday = monday.add(const Duration(days: 6));
+    if (_isar == null) {
+      return Stream.value(_memStore.values.where((a) {
+        final ad = dateOnly(a.date);
+        return !ad.isBefore(monday) && !ad.isAfter(sunday);
+      }).toList());
+    }
     return _isar.activitys
         .filter()
         .dateBetween(monday, sunday)
@@ -252,9 +335,14 @@ class ActivityRepository {
 
   /// Watch all activities from today through the next [days] days (for Eisenhower).
   Stream<List<Activity>> watchUpcoming({int days = 14}) {
-    if (_isar == null) return Stream.value(const []);
     final today = dateOnly(DateTime.now());
     final end = today.add(Duration(days: days));
+    if (_isar == null) {
+      return Stream.value(_memStore.values.where((a) {
+        final ad = dateOnly(a.date);
+        return !ad.isBefore(today) && !ad.isAfter(end);
+      }).toList());
+    }
     return _isar.activitys
         .filter()
         .dateBetween(today, end)
@@ -265,7 +353,14 @@ class ActivityRepository {
   }
 
   Future<void> markComplete(Activity activity, bool done) async {
-    if (_isar == null) return;
+    if (_isar == null) {
+      final act = _memStore[activity.id];
+      if (act != null) {
+        act.isCompleted = done;
+        _memController.add(null);
+      }
+      return;
+    }
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
     
@@ -280,7 +375,14 @@ class ActivityRepository {
   }
 
   Future<void> setImportance(Activity activity, int importance) async {
-    if (_isar == null) return;
+    if (_isar == null) {
+      final act = _memStore[activity.id];
+      if (act != null) {
+        act.importance = importance;
+        _memController.add(null);
+      }
+      return;
+    }
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
@@ -295,7 +397,14 @@ class ActivityRepository {
   }
 
   Future<void> setDeadline(Activity activity, DateTime? deadline) async {
-    if (_isar == null) return;
+    if (_isar == null) {
+      final act = _memStore[activity.id];
+      if (act != null) {
+        act.deadline = deadline;
+        _memController.add(null);
+      }
+      return;
+    }
     final dbActivity = await _isar.activitys.get(activity.id);
     if (dbActivity == null) return;
 
@@ -320,7 +429,7 @@ class ActivityRepository {
       ..date = dateOnly(targetDate)
       ..description = dbActivity.description
       ..colorValue = dbActivity.colorValue
-      ..recurrence = 'none' // Break recurrence for this specific instance
+      ..recurrence = 'none'
       ..importance = dbActivity.importance
       ..deadline = dbActivity.deadline
       ..isCompleted = dbActivity.isCompleted
@@ -329,8 +438,15 @@ class ActivityRepository {
   }
 
   Future<List<Activity>> getByDate(DateTime date) async {
-    if (_isar == null) return [];
     final d = dateOnly(date);
+    if (_isar == null) {
+      final list = _memStore.values.where((a) => dateOnly(a.date) == d).toList();
+      list.sort((a, b) {
+        final hc = a.ampmHalf.index.compareTo(b.ampmHalf.index);
+        return hc != 0 ? hc : a.startMinute.compareTo(b.startMinute);
+      });
+      return list;
+    }
     final direct = await _isar.activitys
         .filter()
         .dateEqualTo(d)
@@ -350,8 +466,6 @@ class ActivityRepository {
     return all;
   }
 
-  /// Find activities that overlap with [start..end) on [date]+[half].
-  /// Optionally exclude one activity by [excludeId] (for updates).
   Future<List<Activity>> getConflicting(
     DateTime date,
     AmPmHalf half,
