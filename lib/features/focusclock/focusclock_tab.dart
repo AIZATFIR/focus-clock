@@ -19,6 +19,8 @@ import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
 import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
+import 'widgets/now_next_card.dart';
+import 'widgets/focus_session_view.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
 /// Returns false (via pop with no result) if user dismissed.
@@ -617,61 +619,150 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
             ),
   
             // Top Header Action Bar & Quick Timer Hub
+            // Calm Minimal Header Overlay
             Positioned(
-              top: 10,
-              left: 14,
-              right: 14,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              top: 14,
+              left: 18,
+              right: 18,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      // Exit App
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          _exitApp();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Icon(
-                            Icons.power_settings_new_rounded,
-                            size: 16,
-                            color: AppPalette.danger,
-                          ),
+                  // App Title & Contextual Menu (Routines & Reflection)
+                  PopupMenuButton<String>(
+                    tooltip: 'Menu Fokus',
+                    color: AppPalette.card,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: AppPalette.stroke),
+                    ),
+                    onSelected: (val) {
+                      HapticFeedback.mediumImpact();
+                      if (val == 'routines') {
+                        ref.read(tabIndexProvider.notifier).state = 0;
+                      } else if (val == 'reflect') {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (_) => const StorytellingSheet(),
+                        );
+                      } else if (val == 'command') {
+                        showDialog(
+                          context: context,
+                          builder: (_) => const CommandPaletteModal(),
+                        );
+                      } else if (val == 'hotkeys') {
+                        showDialog(
+                          context: context,
+                          builder: (_) => const HotkeysModal(),
+                        );
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'routines',
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_stories_rounded, size: 16, color: AppPalette.accent),
+                            SizedBox(width: 10),
+                            Text('Routine Templates', style: TextStyle(fontSize: 13)),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const PopupMenuItem(
+                        value: 'reflect',
+                        child: Row(
+                          children: [
+                            Icon(Icons.spa_rounded, size: 16, color: AppPalette.accent),
+                            SizedBox(width: 10),
+                            Text('Refleksi & Story', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'command',
+                        child: Row(
+                          children: [
+                            Icon(Icons.terminal_rounded, size: 16, color: AppPalette.textDim),
+                            SizedBox(width: 10),
+                            Text('Command Palette (Ctrl+K)', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'hotkeys',
+                        child: Row(
+                          children: [
+                            Icon(Icons.help_outline_rounded, size: 16, color: AppPalette.textDim),
+                            SizedBox(width: 10),
+                            Text('Bantuan Shortcut', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppPalette.card,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppPalette.stroke),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'FOCUS',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                              color: AppPalette.text,
+                            ),
+                          ),
+                          Text(
+                            'CLOCK',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                              color: AppPalette.accent,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: AppPalette.textDim),
+                        ],
+                      ),
+                    ),
+                  ),
 
-                      // Hero Option 1: Routine Templates Studio
+                  const Spacer(),
+
+                  // Current Date & Time Display
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       GestureDetector(
                         onTap: () {
                           HapticFeedback.mediumImpact();
-                          ref.read(tabIndexProvider.notifier).state = 0;
+                          _showLargeCalendarBatchPicker(context, date);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.auto_stories_rounded, size: 14, color: AppPalette.accent),
-                              SizedBox(width: 6),
+                              const Icon(Icons.calendar_month_rounded, size: 13, color: AppPalette.accent),
+                              const SizedBox(width: 6),
                               Text(
-                                'Routine Templates',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppPalette.accent,
+                                '${date.day} ${_monthName(date.month)} ${date.year}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppPalette.text,
                                 ),
                               ),
                             ],
@@ -679,375 +770,41 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         ),
                       ),
                       const SizedBox(width: 8),
-
-                      // Hero Option 2: Reflect & Storytelling (Small round glass button)
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            isScrollControlled: true,
-                            builder: (_) => const StorytellingSheet(),
-                          );
+                      _AmPmMini(
+                        half: half,
+                        onChanged: (h) {
+                          HapticFeedback.selectionClick();
+                          ref.read(ampmHalfProvider.notifier).state = h;
                         },
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Icon(
-                            Icons.record_voice_over_rounded,
-                            size: 14,
-                            color: AppPalette.accent,
-                          ),
-                        ),
                       ),
                       const SizedBox(width: 8),
-
-                      // Voice Secretary
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const VoiceAssistantSheet(),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Icon(
-                            Icons.mic_rounded,
-                            size: 14,
-                            color: AppPalette.accent,
-                          ),
+                      Text(
+                        formatTimeOfDay(now, is24h: is24h),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppPalette.accent,
+                          letterSpacing: 0.5,
                         ),
-                      ),
-                      const SizedBox(width: 6),
-
-                      // Command Palette
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.mediumImpact();
-                          showDialog(
-                            context: context,
-                            builder: (_) => const CommandPaletteModal(),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Icon(
-                            Icons.terminal_rounded,
-                            size: 14,
-                            color: AppPalette.textDim,
-                          ),
-                        ),
-                      ),
-
-                      // Hotkeys Cheatsheet
-                      const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          showDialog(
-                            context: context,
-                            builder: (_) => const HotkeysModal(),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Icon(
-                            Icons.help_outline_rounded,
-                            size: 14,
-                            color: AppPalette.textDim,
-                          ),
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Current Date & Time Display (Interactive Large Calendar Launcher)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.mediumImpact();
-                              _showLargeCalendarBatchPicker(context, date);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppPalette.card,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.calendar_month_rounded, size: 13, color: AppPalette.accent),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '${date.day} ${_monthName(date.month)} ${date.year}',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppPalette.text,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Top Prominent AM/PM Capsule
-                          _AmPmMini(
-                            half: half,
-                            onChanged: (h) {
-                              HapticFeedback.selectionClick();
-                              ref.read(ampmHalfProvider.notifier).state = h;
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            formatTimeOfDay(now, is24h: is24h),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppPalette.accent,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-  
-            Positioned(
-              right: 14,
-              bottom: 12,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final isPlanning = ref.watch(planningModeProvider);
-                      if (isPlanning) {
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Quick Input Button in Overview mode
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.mediumImpact();
-                                final now = DateTime.now();
-                                final startM = (now.hour % 12) * 60 + now.minute;
-                                final endM = (startM + 30) % 720;
-                                final activity = Activity()
-                                  ..title = ''
-                                  ..date = ref.read(currentDateProvider)
-                                  ..ampmHalf = ref.read(ampmHalfProvider)
-                                  ..startMinute = startM
-                                  ..endMinute = endM
-                                  ..colorValue = presetColors.first;
-                                showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: AppPalette.accent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppPalette.accent.withValues(alpha: 0.3),
-                                      blurRadius: 6,
-                                    ),
-                                  ],
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.add_rounded, size: 15, color: Colors.black),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      'Quick Add',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () async {
-                                final date = await showDatePicker(
-                                  context: context,
-                                  initialDate: ref.read(currentDateProvider),
-                                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                                );
-                                if (date != null && context.mounted) {
-                                  ref.read(currentDateProvider.notifier).state = dateOnly(date);
-                                }
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: AppPalette.card,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppPalette.stroke),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_rounded, size: 13, color: AppPalette.accent),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${ref.read(currentDateProvider).day}/${ref.read(currentDateProvider).month}',
-                                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.mediumImpact();
-                                ref.read(planningModeProvider.notifier).state = false;
-                                ref.read(currentDateProvider.notifier).state = dateOnly(DateTime.now());
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppPalette.card,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: AppPalette.stroke),
-                                ),
-                                child: const Icon(
-                                  Icons.exit_to_app_rounded,
-                                  size: 16,
-                                  color: AppPalette.danger,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      
-                      return GestureDetector(
-                        onTap: () async {
-                          HapticFeedback.selectionClick();
-                          final RenderBox button = context.findRenderObject() as RenderBox;
-                          final Offset offset = button.localToGlobal(Offset.zero);
-                          final result = await showMenu<String>(
-                            context: context,
-                            position: RelativeRect.fromLTRB(offset.dx, offset.dy - 120, offset.dx + button.size.width, offset.dy),
-                            color: AppPalette.card,
-                            items: [
-                              const PopupMenuItem(value: 'today', child: Text('Today')),
-                              const PopupMenuItem(value: 'tomorrow', child: Text('Tomorrow')),
-                              const PopupMenuItem(value: 'pick', child: Text('Pick Date...')),
-                              const PopupMenuItem(value: 'copy', child: Text('Copy Day Schedule...')),
-                            ],
-                          );
-                          if (result == null) return;
-                          if (result == 'copy') {
-                            if (context.mounted) {
-                              final date = ref.read(currentDateProvider);
-                              await _showCopyScheduleDialog(context, date);
-                            }
-                            return;
-                          }
-                          ref.read(planningModeProvider.notifier).state = true;
-                          if (result == 'today') {
-                            ref.read(currentDateProvider.notifier).state = dateOnly(DateTime.now());
-                          } else if (result == 'tomorrow') {
-                            ref.read(currentDateProvider.notifier).state = dateOnly(DateTime.now().add(const Duration(days: 1)));
-                          } else if (result == 'pick') {
-                            if (!context.mounted) return;
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: ref.read(currentDateProvider),
-                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                              lastDate: DateTime.now().add(const Duration(days: 365)),
-                            );
-                            if (date != null && context.mounted) {
-                              ref.read(currentDateProvider.notifier).state = dateOnly(date);
-                            }
-                          }
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppPalette.stroke),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.push_pin, size: 14, color: AppPalette.textDim),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      ref.read(precisionModeProvider.notifier).state = !_isPrecisionMode;
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: AppPalette.card,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _isPrecisionMode ? AppPalette.accent : AppPalette.stroke),
-                      ),
-                      child: Icon(
-                        Icons.my_location_rounded,
-                        size: 16,
-                        color: _isPrecisionMode ? AppPalette.accent : AppPalette.textDim,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
-            // Focus Tools Control Bar (Slider + Menit/Jam Unit Toggle Button + Quick Chips)
+            // Bottom Contextual Card (Now, Next & Natural Intent Engine)
             Positioned(
-              left: 14,
-              bottom: 12,
-              child: const _FocusToolsControlBar(),
+              left: 0,
+              right: 0,
+              bottom: 8,
+              child: Center(
+                child: NowNextCard(
+                  activities: activities,
+                  now: now,
+                  date: date,
+                ),
+              ),
             ),
           ],
         );

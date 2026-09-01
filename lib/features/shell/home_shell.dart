@@ -146,109 +146,109 @@ class _HomeShellState extends ConsumerState<HomeShell>
       );
     } else {
       mainContent = Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppPalette.accent),
-            tooltip: 'Kembali ke Launching Desk',
-            onPressed: () {
-              SystemSound.play(SystemSoundType.click);
-              HapticFeedback.selectionClick();
-              ref.read(selectedAppModeProvider.notifier).state = 'launching';
-            },
-          ),
-          title: const Text.rich(
-            TextSpan(children: [
-              TextSpan(
-                text: 'FOCUS',
-                style: TextStyle(letterSpacing: 3, fontWeight: FontWeight.w700),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: AppBar(
+            elevation: 0,
+            backgroundColor: AppPalette.bg,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: AppPalette.accent, size: 20),
+              tooltip: 'Kembali ke Launching Desk',
+              onPressed: () {
+                SystemSound.play(SystemSoundType.click);
+                HapticFeedback.selectionClick();
+                ref.read(selectedAppModeProvider.notifier).state = 'launching';
+              },
+            ),
+            title: Container(
+              height: 34,
+              constraints: const BoxConstraints(maxWidth: 360),
+              decoration: BoxDecoration(
+                color: AppPalette.card,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppPalette.stroke),
               ),
-              TextSpan(
-                text: 'CLOCK',
-                style: TextStyle(
-                    letterSpacing: 3,
-                    fontWeight: FontWeight.w700,
-                    color: AppPalette.accent),
-              ),
-            ]),
-          ),
-          actions: [
-            if (MediaQuery.of(context).size.width < 900 && enableLeft)
-              IconButton(
-                icon: const Icon(Icons.task_outlined, size: 20),
-                tooltip: 'Buka Task & Agenda Panel',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (ctx) => Container(
-                      height: MediaQuery.of(context).size.height * 0.85,
-                      decoration: const BoxDecoration(
-                        color: AppPalette.bg,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                      ),
-                      child: LeftPanel(onClose: () => Navigator.of(ctx).pop()),
-                    ),
-                  );
+              child: TabBar(
+                controller: _tc,
+                onTap: (i) {
+                  SystemSound.play(SystemSoundType.click);
+                  HapticFeedback.selectionClick();
+                  ref.read(tabIndexProvider.notifier).state = i;
+                  if (_pc.hasClients && _pc.page?.round() != i) {
+                    _pc.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    );
+                  }
                 },
-              ),
-            if (MediaQuery.of(context).size.width < 900 && enableRight)
-              IconButton(
-                icon: const Icon(Icons.grid_view_rounded, size: 20),
-                tooltip: 'Buka Matrix Eisenhower',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (ctx) => Container(
-                      height: MediaQuery.of(context).size.height * 0.85,
-                      decoration: const BoxDecoration(
-                        color: AppPalette.bg,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                      ),
-                      child: RightPanel(onClose: () => Navigator.of(ctx).pop()),
-                    ),
-                  );
-                },
-              ),
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                indicator: BoxDecoration(
+                  color: AppPalette.accent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5)),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelColor: AppPalette.accent,
+                unselectedLabelColor: AppPalette.textDim,
+                labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(text: 'Templates', height: 32),
+                  Tab(text: 'Focus Clock', height: 32),
+                  Tab(text: 'Agenda', height: 32),
+                ],
               ),
             ),
-          ],
-          bottom: TabBar(
-            controller: _tc,
-            onTap: (i) {
-              SystemSound.play(SystemSoundType.click);
-              HapticFeedback.selectionClick();
-              ref.read(tabIndexProvider.notifier).state = i;
-              if (_pc.hasClients && _pc.page?.round() != i) {
-                _pc.animateToPage(
-                  i,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
-            },
-            indicatorColor: AppPalette.accent,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: AppPalette.accent,
-            unselectedLabelColor: AppPalette.textDim,
-            labelStyle:
-                const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            dividerColor: Colors.transparent,
-            tabs: const [
-              Tab(icon: Icon(Icons.auto_stories_rounded, size: 20),
-                  text: 'Routine Templates', height: 52),
-              Tab(icon: Icon(Icons.access_time_filled_rounded, size: 20),
-                  text: 'Focus Clock', height: 52),
-              Tab(icon: Icon(Icons.view_agenda_outlined, size: 20),
-                  text: 'Agenda & Tasks', height: 52),
+            centerTitle: true,
+            actions: [
+              if (MediaQuery.of(context).size.width < 900 && enableLeft)
+                IconButton(
+                  icon: const Icon(Icons.task_outlined, size: 18),
+                  tooltip: 'Task & Agenda Panel',
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (ctx) => Container(
+                        height: MediaQuery.of(context).size.height * 0.85,
+                        decoration: const BoxDecoration(
+                          color: AppPalette.bg,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        child: LeftPanel(onClose: () => Navigator.of(ctx).pop()),
+                      ),
+                    );
+                  },
+                ),
+              if (MediaQuery.of(context).size.width < 900 && enableRight)
+                IconButton(
+                  icon: const Icon(Icons.grid_view_rounded, size: 18),
+                  tooltip: 'Matrix Eisenhower',
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (ctx) => Container(
+                        height: MediaQuery.of(context).size.height * 0.85,
+                        decoration: const BoxDecoration(
+                          color: AppPalette.bg,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        child: RightPanel(onClose: () => Navigator.of(ctx).pop()),
+                      ),
+                    );
+                  },
+                ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined, size: 18),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
+              ),
             ],
           ),
         ),
