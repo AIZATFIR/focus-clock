@@ -11,9 +11,7 @@ import 'simple_mode_view.dart';
 import '../agenda/agenda_tab.dart';
 import '../ai_chat/ai_chat_sheet.dart';
 import '../focusclock/focusclock_tab.dart';
-import '../launcher/fitrah_launcher_shell.dart';
 import '../presets/presets_tab.dart';
-import '../sadar/sadar_home_screen.dart';
 import '../settings/settings_screen.dart';
 import 'left_panel.dart';
 import 'right_panel.dart';
@@ -96,21 +94,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
     });
 
     final appMode = ref.watch(selectedAppModeProvider);
-    if (appMode == 'fitrah') {
-      return const FitrahLauncherShell();
-    }
-
-    if (appMode == 'sadar') {
-      return const SadarHomeScreen();
-    }
-
     if (appMode == 'simple') {
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) {
             SystemSound.play(SystemSoundType.click);
-            ref.read(selectedAppModeProvider.notifier).state = 'fitrah';
+            ref.read(selectedAppModeProvider.notifier).state = 'focus';
           }
         },
         child: KeyboardListener(
@@ -118,7 +108,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
           onKeyEvent: (event) {
             if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
               SystemSound.play(SystemSoundType.click);
-              ref.read(selectedAppModeProvider.notifier).state = 'fitrah';
+              ref.read(selectedAppModeProvider.notifier).state = 'focus';
             }
           },
           child: const SimpleModeView(),

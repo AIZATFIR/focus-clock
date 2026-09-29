@@ -6,10 +6,6 @@ import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
 import '../models/task.dart';
-import '../models/habit.dart';
-import '../models/habit_entry.dart';
-import '../models/daily_reflection.dart';
-import '../models/timer_session.dart';
 import '../core/theme.dart';
 
 class IsarService {
@@ -22,10 +18,6 @@ class IsarService {
     ActivitySchema,
     AppSettingsSchema,
     TaskSchema,
-    HabitSchema,
-    HabitEntrySchema,
-    DailyReflectionSchema,
-    TimerSessionSchema,
   ];
 
   static Future<IsarService> open() async {
@@ -102,59 +94,6 @@ class IsarService {
     if (!hasSettings) {
       await isar.writeTxn(() async {
         await isar.appSettings.put(AppSettings());
-      });
-    }
-
-    final hasHabits = await isar.habits.count() > 0;
-    if (!hasHabits) {
-      await isar.writeTxn(() async {
-        await isar.habits.putAll([
-          Habit()
-            ..name = 'Fokus / Deep Work'
-            ..iconKey = '💻'
-            ..target = 45
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF10B981 // Emerald
-            ..orderIndex = 0
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Olahraga / Exercise'
-            ..iconKey = '🏃'
-            ..target = 30
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFFF97316 // Orange
-            ..orderIndex = 1
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Membaca / Reading'
-            ..iconKey = '📚'
-            ..target = 20
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF8B5CF6 // Purple
-            ..orderIndex = 2
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Meditasi / Mindfulness'
-            ..iconKey = '🧘'
-            ..target = 15
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF06B6D4 // Cyan
-            ..orderIndex = 3
-            ..createdAt = DateTime.now(),
-          Habit()
-            ..name = 'Belajar Bahasa'
-            ..iconKey = '🌐'
-            ..target = 20
-            ..unit = HabitUnit.min
-            ..timerEnabled = true
-            ..colorValue = 0xFF3B82F6 // Blue
-            ..orderIndex = 4
-            ..createdAt = DateTime.now(),
-        ]);
       });
     }
   }

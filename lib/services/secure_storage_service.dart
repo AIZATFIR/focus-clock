@@ -69,18 +69,6 @@ class SecureStorageService {
     await _storage.write(key: _keyVoiceEnabled, value: enabled.toString());
   }
 
-  // ── Sadar Onboarding State ───────────────────────────────────────────────
-  static const _keySadarOnboarding = 'sadar_onboarding_completed';
-
-  Future<bool> isSadarOnboardingDone() async {
-    final val = await _storage.read(key: _keySadarOnboarding);
-    return val == 'true';
-  }
-
-  Future<void> setSadarOnboardingDone(bool done) async {
-    await _storage.write(key: _keySadarOnboarding, value: done.toString());
-  }
-
   // ── Generic Custom Key-Value Storage ──────────────────────────────────────
   Future<String?> readCustomKey(String key) async {
     return await _storage.read(key: key);

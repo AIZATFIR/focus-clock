@@ -152,7 +152,7 @@ final aiTranscriptProvider =
 // ── Planning Mode & App Mode State ───────────────────────────────────────
 
 /// Initial mode based on build flag (--dart-define=APP_MODE=...) or web URL parameter (?app=...)
-/// Defaults directly to 'fitrah' (Fitrah Launcher). NO landing page!
+/// Defaults directly to 'focus' (Focus Clock).
 final initialAppMode = () {
   const envMode = String.fromEnvironment('APP_MODE', defaultValue: '');
   if (envMode.isNotEmpty) return envMode;
@@ -162,15 +162,13 @@ final initialAppMode = () {
       final uri = Uri.base;
       final q = uri.queryParameters['app'] ?? uri.queryParameters['mode'];
       if (q != null && q.isNotEmpty) {
-        if (q == 'sadar') return 'sadar';
-        if (q == 'focus' || q == 'clock') return 'focus';
         if (q == 'simple') return 'simple';
-        if (q == 'fitrah' || q == 'launcher') return 'fitrah';
+        if (q == 'focus' || q == 'clock') return 'focus';
       }
     } catch (_) {}
   }
 
-  return 'fitrah';
+  return 'focus';
 }();
 
 /// Tracks current app mode ('fitrah', 'sadar', 'focus', 'simple')
