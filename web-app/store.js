@@ -47,9 +47,28 @@ class Store {
     this.subscribers = [];
     this.tasks = this.loadTasks();
     this.sessions = this.loadSessions();
-    this.currentTab = 'tasks'; // 'tasks' | 'clock' | 'timer'
+    this.currentTab = 'timer'; // Primary default mode: Focus Timer!
     this.clockHalf = 'am'; // 'am' (00:00-11:59) | 'pm' (12:00-23:59)
     this.activeSession = null; // { taskId, what, where, startedAt, durationSeconds, isRunning }
+  }
+
+  getCurrentAndNextTask() {
+    const now = new Date();
+    const curMin = now.getHours() * 60 + now.getMinutes();
+
+    // 1. Current active task (happening right now based on schedule)
+    const currentTask = this.tasks.find(
+      t => !t.completed && t.startMinute <= curMin && curMin < t.endMinute
+    );
+
+    // 2. Next upcoming task today
+    const upcomingTasks = this.tasks
+      .filter(t => !t.completed && t.startMinute > curMin)
+      .sort((a, b) => a.startMinute - b.startMinute);
+
+    const nextTask = upcomingTasks.length > 0 ? upcomingTasks[0] : null;
+
+    return { currentTask, nextTask, curMin };
   }
 
   loadTasks() {

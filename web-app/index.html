@@ -26,9 +26,9 @@
         </div>
       </div>
 
-      <!-- Tab Navigation (Strict 1 Page = 1 Dedicated Function) -->
+      <!-- Tab Navigation (Tombol 3 = Mode Primary!) -->
       <nav class="tab-nav">
-        <button id="tab-btn-tasks" class="tab-btn active">
+        <button id="tab-btn-tasks" class="tab-btn">
           <span>📋 Tasks</span>
           <span class="tab-key-hint">1</span>
         </button>
@@ -36,8 +36,9 @@
           <span>🕒 Clock Face</span>
           <span class="tab-key-hint">2</span>
         </button>
-        <button id="tab-btn-timer" class="tab-btn">
-          <span>⏱️ Timer</span>
+        <button id="tab-btn-timer" class="tab-btn active primary-tab">
+          <span>⏱️ Focus Timer</span>
+          <span class="primary-badge">PRIMARY</span>
           <span class="tab-key-hint">3</span>
         </button>
       </nav>
@@ -46,13 +47,13 @@
     <!-- Main Views -->
     <main style="flex: 1; display: flex; flex-direction: column;">
       <!-- View 1: 3-Column Tasks (Apa, Dimana, Kapan) -->
-      <section id="view-tasks" class="view-panel active"></section>
+      <section id="view-tasks" class="view-panel"></section>
 
       <!-- View 2: Giant Tactile Clock Face (12-Hour Classic Dial) -->
       <section id="view-clock" class="view-panel"></section>
 
-      <!-- View 3: Zen Focus Timer (Fullscreen / Display-Over-Display) -->
-      <section id="view-timer" class="view-panel"></section>
+      <!-- View 3: Zen Focus Timer (Primary Landing View) -->
+      <section id="view-timer" class="view-panel active"></section>
     </main>
   </div>
 
