@@ -30,23 +30,36 @@ export function renderClockFace(container) {
           <defs>
             <!-- Radial background gradient: warm dark obsidian with soft center warmth -->
             <radialGradient id="dialBgGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#1B1924" />
-              <stop offset="70%" stop-color="#14121B" />
-              <stop offset="100%" stop-color="#0B0A0F" />
+              <stop offset="0%" stop-color="#1E1C28" />
+              <stop offset="65%" stop-color="#14121B" />
+              <stop offset="92%" stop-color="#0E0D13" />
+              <stop offset="100%" stop-color="#07060A" />
             </radialGradient>
+            <!-- Brushed metallic watch bezel gradient -->
+            <linearGradient id="metallicBezel" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4A455A" />
+              <stop offset="25%" stop-color="#24212D" />
+              <stop offset="50%" stop-color="#5E5872" />
+              <stop offset="75%" stop-color="#1A1822" />
+              <stop offset="100%" stop-color="#3A3648" />
+            </linearGradient>
             <!-- Drop shadow for handles and dial -->
             <filter id="handleShadow" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.7"/>
+              <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.8"/>
             </filter>
             <filter id="dialShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="16" stdDeviation="30" flood-color="#000000" flood-opacity="0.8"/>
             </filter>
           </defs>
 
-          <!-- Dial Base Ring with Physical Depth -->
-          <circle cx="270" cy="270" r="260" fill="url(#dialBgGrad)" stroke="rgba(255,255,255,0.1)" stroke-width="2.5" />
-          <circle cx="270" cy="270" r="252" fill="none" stroke="rgba(240, 201, 135, 0.08)" stroke-width="1.5" />
-          <circle cx="270" cy="270" r="118" fill="#100F15" stroke="rgba(255,255,255,0.08)" stroke-width="2" />
+          <!-- Outer Brushed Metallic Bezel Ring -->
+          <circle cx="270" cy="270" r="264" fill="url(#metallicBezel)" />
+          <circle cx="270" cy="270" r="258" fill="url(#dialBgGrad)" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" />
+          
+          <!-- Concentric Precision Vinyl Tracks -->
+          <circle cx="270" cy="270" r="248" fill="none" stroke="rgba(240, 201, 135, 0.06)" stroke-width="1" />
+          <circle cx="270" cy="270" r="160" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1" stroke-dasharray="2, 6" />
+          <circle cx="270" cy="270" r="122" fill="#0C0B10" stroke="rgba(255,255,255,0.08)" stroke-width="2" />
 
           <!-- Hour Ticks & Numbers -->
           <g id="clock-ticks"></g>
@@ -55,13 +68,14 @@ export function renderClockFace(container) {
           <!-- Task Sectors Group -->
           <g id="clock-sectors"></g>
 
-          <!-- Current Time Now Hand (Red accent) -->
+          <!-- Current Time Now Hand (Precision Red Needle with Glow) -->
           <line id="now-hand-line" x1="270" y1="270" x2="270" y2="72" stroke="#F43F5E" stroke-width="3" stroke-linecap="round" />
-          <circle id="now-hand-dot" cx="270" cy="72" r="6" fill="#F43F5E" filter="drop-shadow(0 0 8px rgba(244,63,94,0.9))" />
+          <line id="now-hand-tail" x1="270" y1="270" x2="270" y2="305" stroke="#F43F5E" stroke-width="4.5" stroke-linecap="round" opacity="0.6" />
+          <circle id="now-hand-dot" cx="270" cy="72" r="6" fill="#F43F5E" filter="drop-shadow(0 0 10px rgba(244,63,94,1))" />
 
           <!-- Center Cap (Brass / Gold Watch Dial Pivot) -->
-          <circle cx="270" cy="270" r="18" fill="#1C1A24" stroke="#F0C987" stroke-width="2.5" />
-          <circle cx="270" cy="270" r="6" fill="#F0C987" />
+          <circle cx="270" cy="270" r="20" fill="#1C1A24" stroke="#F0C987" stroke-width="2.5" />
+          <circle cx="270" cy="270" r="7" fill="#F0C987" />
           <text x="270" y="274" fill="#F0C987" font-size="9" font-weight="800" text-anchor="middle" font-family="'JetBrains Mono', monospace">
             ${isAm ? 'AM' : 'PM'}
           </text>
@@ -377,19 +391,28 @@ function setupClockDragging(svg, tooltip, halfOffset) {
 function updateNowHand(container) {
   const line = container.querySelector('#now-hand-line');
   const dot = container.querySelector('#now-hand-dot');
+  const tail = container.querySelector('#now-hand-tail');
   if (!line || !dot) return;
 
   const now = new Date();
   const nowMinuteInHalf = (now.getHours() % 12) * 60 + now.getMinutes();
   const angle = minuteToAngle(nowMinuteInHalf);
 
-  const ptInner = polarToCartesian(270, 270, 36, angle);
+  const ptInner = polarToCartesian(270, 270, 24, angle);
   const ptOuter = polarToCartesian(270, 270, 252, angle);
+  const ptTail = polarToCartesian(270, 270, 38, angle + 180);
 
   line.setAttribute('x1', ptInner.x);
   line.setAttribute('y1', ptInner.y);
   line.setAttribute('x2', ptOuter.x);
   line.setAttribute('y2', ptOuter.y);
+
+  if (tail) {
+    tail.setAttribute('x1', '270');
+    tail.setAttribute('y1', '270');
+    tail.setAttribute('x2', ptTail.x);
+    tail.setAttribute('y2', ptTail.y);
+  }
 
   dot.setAttribute('cx', ptOuter.x);
   dot.setAttribute('cy', ptOuter.y);

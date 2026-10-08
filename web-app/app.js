@@ -2,6 +2,9 @@ import { store } from './store.js';
 import { renderTasksView } from './components/tasks-view.js';
 import { renderClockFace } from './components/clock-face.js';
 import { renderTimerView } from './components/timer-view.js';
+import { AmbientAtmosphere } from './ambient.js';
+
+let ambient = null;
 
 // DOM Elements
 const viewTasks = document.getElementById('view-tasks');
@@ -36,6 +39,13 @@ function releaseWakeLock() {
 // Router & View Renderer
 function updateViews() {
   const current = store.currentTab;
+
+  // Sync 3D ambient atmosphere
+  if (ambient) {
+    const isRunning = Boolean(store.activeSession?.isRunning);
+    const isGolden = Boolean(store.activeSession && store.activeSession.durationSeconds >= 600);
+    ambient.setTimerState(isRunning, isGolden);
+  }
 
   // Toggle Tab Navigation Active Classes
   Object.keys(tabBtns).forEach(tab => {
@@ -91,6 +101,9 @@ function setupKeyboardShortcuts() {
 
 // Initial Setup
 export function initApp() {
+  // Initialize Three.js-inspired 3D ambient atmosphere
+  ambient = new AmbientAtmosphere('ambient-canvas');
+
   // Bind Tab Click Handlers
   tabBtns.tasks.addEventListener('click', () => store.setTab('tasks'));
   tabBtns.clock.addEventListener('click', () => store.setTab('clock'));
