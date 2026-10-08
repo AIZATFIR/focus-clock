@@ -201,6 +201,7 @@ export function renderTasksView(container) {
       sound.playTap();
       store.deleteTask(id);
     } else if (action === 'start-focus') {
+      sound.playTap();
       const task = store.tasks.find(t => t.id === id);
       if (task) {
         store.startTimer(task);

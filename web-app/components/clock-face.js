@@ -152,7 +152,7 @@ export function renderClockFace(container) {
   });
 
   // Attach Drag & Slide Listeners with tactile feedback
-  setupClockDragging(svg, tooltip, halfOffset);
+  setupClockDragging(svg, tooltip, halfOffset, sectorsGroup);
 }
 
 // Convert minute to angle (12-hour dial = 720 minutes = 360 deg -> 0.5 deg / min)
@@ -289,7 +289,7 @@ function renderSectors(group, tasks, halfOffset) {
 }
 
 // Interactive Drag & Slide Engine with Haptic Tick Feedback
-function setupClockDragging(svg, tooltip, halfOffset) {
+function setupClockDragging(svg, tooltip, halfOffset, sectorsGroup) {
   let dragState = null;
   let lastSnappedMinute = -1;
 
@@ -370,7 +370,11 @@ function setupClockDragging(svg, tooltip, halfOffset) {
       lastSnappedMinute = newStart;
     }
 
-    store.updateTask(task.id, { startMinute: newStart, endMinute: newEnd });
+    // Update state silently so UI is NOT wiped by subscribers while dragging
+    store.updateTask(task.id, { startMinute: newStart, endMinute: newEnd }, false);
+
+    // Re-render only the SVG sectors in-place
+    renderSectors(sectorsGroup, store.tasks, halfOffset);
 
     // Update floating live tooltip
     tooltip.textContent = `${task.what}: ${minutesToTime(newStart)} – ${minutesToTime(newEnd)} (${formatDurationMinutes(newEnd - newStart)})`;
@@ -379,8 +383,11 @@ function setupClockDragging(svg, tooltip, halfOffset) {
   const finishDrag = (e) => {
     if (dragState) {
       sound.playTap();
-      dragState = null;
       tooltip.classList.remove('visible');
+      // Save and emit structural change to sync other views cleanly
+      store.saveTasks();
+      store.notify({ type: 'change' });
+      dragState = null;
     }
   };
 

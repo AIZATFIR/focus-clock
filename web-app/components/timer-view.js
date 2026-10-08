@@ -100,9 +100,6 @@ export function renderTimerView(container) {
         </div>
       `}
     </div>
-
-    <!-- Celebration Modal (Hidden initially) -->
-    <div id="session-summary-modal" class="session-modal-overlay"></div>
   `;
 
   // Start internal ticker if not running
@@ -116,7 +113,7 @@ export function renderTimerView(container) {
   // Bind Emergency Stop
   container.querySelector('#btn-emergency-stop').addEventListener('click', () => {
     sound.playTap();
-    handleStop(container);
+    handleStop();
   });
 
   // Bind Fullscreen
@@ -153,8 +150,8 @@ function renderIdleTimer(container) {
         ${currentTask ? `
           <div class="current-badge-row">
             <span class="live-pulse-dot"></span>
-            <span class="current-badge-text">SEDANG BERLANGSUNG SEKARANG (CURRENT SCHEDULE)</span>
-            <span class="current-time-pill">${minutesToTime(currentTask.startMinute)} – ${minutesToTime(currentTask.endMinute)}</span>
+            <span class="current-badge-text">● SEDANG BERLANGSUNG SEKARANG (LIVE SCHEDULE)</span>
+            <span class="current-time-pill">⏰ ${minutesToTime(currentTask.startMinute)} – ${minutesToTime(currentTask.endMinute)}</span>
           </div>
 
           <div class="current-hero-title">
@@ -163,7 +160,9 @@ function renderIdleTimer(container) {
 
           <div class="current-meta-row">
             <span class="tag-location">📍 ${escapeHtml(currentTask.where || 'Meja Belajar')}</span>
-            <span class="tag-duration">⏳ Sisa waktu jadwal: ${Math.max(1, currentTask.endMinute - curMin)} menit</span>
+            <span class="tag-duration" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">
+              ⏳ Sisa Waktu Jadwal: <strong>${Math.max(1, currentTask.endMinute - curMin)} Menit</strong>
+            </span>
             ${nextTask ? `
               <span class="tag-next">Berikutnya: <strong>${escapeHtml(nextTask.what)}</strong> (${minutesToTime(nextTask.startMinute)})</span>
             ` : ''}
@@ -171,15 +170,15 @@ function renderIdleTimer(container) {
 
           <div class="current-action-row">
             <button class="btn-start-current-focus" data-action="start-current" data-id="${currentTask.id}">
-              <span>▶ MULAI FOKUS SEKARANG</span>
-              <span class="golden-hint">Target 10 Menit</span>
+              <span>▶ MULAI FOKUS TUGAS INI SEKARANG</span>
+              <span class="golden-hint">🎯 Target 10 Menit</span>
             </button>
           </div>
         ` : `
           <!-- No Current Task: Free Time or Upcoming -->
           <div class="current-badge-row">
             <span class="free-pulse-dot"></span>
-            <span class="current-badge-text">WAKTU BEBAS SAAT INI</span>
+            <span class="current-badge-text">⚡ WAKTU BEBAS (SIAP FOKUS MANDIRI)</span>
             <span class="current-time-pill">Jam Sekarang: ${minutesToTime(curMin)}</span>
           </div>
 
@@ -190,25 +189,29 @@ function renderIdleTimer(container) {
           <div class="current-meta-row">
             ${nextTask ? `
               <span class="tag-location">📍 ${escapeHtml(nextTask.where || 'Meja Belajar')}</span>
-              <span class="tag-duration">⏰ Jadwal mulai pukul ${minutesToTime(nextTask.startMinute)} (${Math.max(1, nextTask.startMinute - curMin)} menit lagi)</span>
+              <span class="tag-duration" style="background: rgba(240, 201, 135, 0.15); color: var(--accent-gold); border: 1px solid var(--border-accent);">
+                ⏰ Mulai Pukul ${minutesToTime(nextTask.startMinute)} (${Math.max(1, nextTask.startMinute - curMin)} menit lagi)
+              </span>
             ` : `
-              <span class="tag-duration">🎯 Target minimal hanya 10 menit. Stop kapan saja jika ada interupsi.</span>
+              <span class="tag-duration" style="background: rgba(240, 201, 135, 0.15); color: var(--accent-gold); border: 1px solid var(--border-accent);">
+                🎯 Target minimal hanya 10 menit. Stop kapan saja jika ada interupsi kelas!
+              </span>
             `}
           </div>
 
           <div class="current-action-row">
             ${nextTask ? `
               <button class="btn-start-current-focus" data-action="start-current" data-id="${nextTask.id}">
-                <span>▶ MULAI LEBIH AWAL (${escapeHtml(nextTask.what)})</span>
-                <span class="golden-hint">Target 10 Menit</span>
+                <span>▶ MULAI LEBIH AWAL: ${escapeHtml(nextTask.what)}</span>
+                <span class="golden-hint">🎯 Target 10 Menit</span>
               </button>
               <button class="btn-free-focus-subtle" id="btn-free-focus">
-                ⚡ Fokus Bebas
+                ⚡ Atau Mulai Fokus Bebas Mandiri
               </button>
             ` : `
               <button class="btn-start-current-focus" id="btn-free-focus">
                 <span>⚡ MULAI FOKUS BEBAS SEKARANG</span>
-                <span class="golden-hint">Target 10 Menit</span>
+                <span class="golden-hint">🎯 Target 10 Menit</span>
               </button>
             `}
           </div>
@@ -216,40 +219,40 @@ function renderIdleTimer(container) {
       </div>
 
       <!-- Quick Task Selection List -->
-      <div style="width: 100%; margin-top: 10px;">
+      <div style="width: 100%; margin-top: 14px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 0 4px;">
-          <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+          <span style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
             📋 JADWAL LAINNYA HARI INI (${allTasks.length})
           </span>
-          <button id="btn-goto-tasks" style="background: transparent; border: none; color: var(--accent-gold); font-size: 13px; font-weight: 700; cursor: pointer;">
+          <button id="btn-goto-tasks" style="background: transparent; border: none; color: var(--accent-gold); font-size: 13px; font-weight: 800; cursor: pointer;">
             + Kelola Tugas (Tab 1) →
           </button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
           ${allTasks.length === 0 ? `
-            <div style="padding: 24px; text-align: center; background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-dim); font-size: 14px;">
+            <div style="padding: 28px; text-align: center; background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-dim); font-size: 14px;">
               Belum ada tugas terjadwal. Tambahkan tugas di menu Tasks.
             </div>
           ` : allTasks.map(t => {
             const isCurrent = currentTask && currentTask.id === t.id;
             return `
-              <div class="task-card ${isCurrent ? 'is-current-item' : ''}" style="padding: 16px 20px; grid-template-columns: 1fr auto auto;">
-                <div style="display: flex; flex-direction: column; gap: 4px;">
+              <div class="task-card ${isCurrent ? 'is-current-item' : ''}" style="padding: 16px 20px; grid-template-columns: 1fr auto; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-weight: 800; color: var(--text-main); font-size: 16px;">
                       ${escapeHtml(t.what)}
                     </span>
-                    ${isCurrent ? '<span style="font-size: 10px; font-weight: 800; background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 2px 8px; border-radius: 99px;">NOW</span>' : ''}
+                    ${isCurrent ? '<span style="font-size: 11px; font-weight: 900; background: rgba(16, 185, 129, 0.25); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 99px;">● NOW</span>' : ''}
                   </div>
-                  <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted);">
-                    <span>📍 ${escapeHtml(t.where || 'Meja')}</span>
-                    <span style="font-family: var(--font-mono); color: var(--accent-gold);">⏰ ${minutesToTime(t.startMinute)} – ${minutesToTime(t.endMinute)}</span>
+                  <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap;">
+                    <span class="tag-location" style="padding: 3px 10px;">📍 ${escapeHtml(t.where || 'Meja')}</span>
+                    <span class="tag-time" style="padding: 3px 10px;">⏰ ${minutesToTime(t.startMinute)} – ${minutesToTime(t.endMinute)}</span>
                   </div>
                 </div>
 
-                <button class="btn-launch-focus" data-action="quick-start" data-id="${t.id}" style="padding: 9px 18px;">
-                  ▶ Mulai
+                <button class="btn-launch-focus" data-action="quick-start" data-id="${t.id}">
+                  ▶ Mulai Fokus
                 </button>
               </div>
             `;
@@ -335,17 +338,20 @@ function updateTimerDisplay(container) {
   }
 }
 
-function handleStop(container) {
+function handleStop() {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
   }
 
-  const finished = store.stopTimer();
+  // Stop session silently so state is updated without wiping the view before modal renders
+  const finished = store.stopTimer({ notify: false });
   if (!finished) return;
 
-  // Show Celebration Card
-  const modal = container.querySelector('#session-summary-modal') || document.body;
+  // Use persistent modal overlay in document
+  const modal = document.getElementById('session-summary-modal');
+  if (!modal) return;
+
   const minutes = Math.floor(finished.durationSeconds / 60);
   const seconds = finished.durationSeconds % 60;
 
@@ -355,17 +361,17 @@ function handleStop(container) {
         ${finished.achievedMinimum ? '🎉' : '👏'}
       </div>
       <h3 class="session-card-title">
-        ${finished.achievedMinimum ? 'Luar Biasa, Target Tercapai!' : 'Sesi Berhasil Disimpan!'}
+        ${finished.achievedMinimum ? 'Luar Biasa, Target 10 Menit Tercapai!' : 'Sesi Berhasil Disimpan!'}
       </h3>
       <p class="session-card-desc">
         Kamu telah fokus selama <strong>${minutes} menit ${seconds} detik</strong> pada <strong>"${escapeHtml(finished.what)}"</strong> di <strong>${escapeHtml(finished.where)}</strong>.
         <br/><br/>
         ${finished.achievedMinimum 
-          ? 'Kamu melampaui batas 10 menit! Rasa puas ini adalah bukti kamu bisa fokus kapan saja.' 
-          : 'Bagus! Catatan waktu tersimpan jujur tanpa beban. Bisa lanjut lagi kapan saja saat suasana tenang.'}
+          ? 'Kamu melampaui batas 10 menit! Rasa puas ini adalah bukti kamu bisa fokus dari rasa cukup dan tenang.' 
+          : 'Bagus! Catatan waktu tersimpan jujur tanpa hukuman. Guru datang / interupsi di kelas bukan masalah, bisa lanjut lagi kapan saja!'}
       </p>
       <button class="btn-card-close" id="btn-close-summary" style="margin-top: 20px;">
-        Kembali ke Layar Fokus Utama
+        Kembali ke Layar Fokus Utama →
       </button>
     </div>
   `;
@@ -374,7 +380,9 @@ function handleStop(container) {
   modal.querySelector('#btn-close-summary')?.addEventListener('click', () => {
     sound.playTap();
     modal.classList.remove('active');
-    store.setTab('timer'); // Returns to Primary Timer screen!
+    modal.innerHTML = '';
+    // Now notify subscribers so view updates smoothly to Idle state
+    store.notify({ type: 'session_stopped', session: finished });
   });
 }
 

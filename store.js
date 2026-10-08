@@ -42,7 +42,7 @@ export const COLORS = [
   '#38BDF8'  // Cyan
 ];
 
-class Store {
+export class Store {
   constructor() {
     this.subscribers = [];
     this.tasks = this.loadTasks();
@@ -52,14 +52,15 @@ class Store {
     this.activeSession = null; // { taskId, what, where, startedAt, durationSeconds, isRunning }
   }
 
-  getCurrentAndNextTask() {
-    const now = new Date();
-    const curMin = now.getHours() * 60 + now.getMinutes();
+  getCurrentAndNextTask(overrideMinute = null) {
+    const curMin = overrideMinute !== null 
+      ? overrideMinute 
+      : (new Date().getHours() * 60 + new Date().getMinutes());
 
     // 1. Current active task (happening right now based on schedule)
     const currentTask = this.tasks.find(
       t => !t.completed && t.startMinute <= curMin && curMin < t.endMinute
-    );
+    ) || null;
 
     // 2. Next upcoming task today
     const upcomingTasks = this.tasks
@@ -73,8 +74,10 @@ class Store {
 
   loadTasks() {
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      if (data) return JSON.parse(data);
+      if (typeof localStorage !== 'undefined') {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) return JSON.parse(data);
+      }
     } catch (e) {
       console.warn('Failed to load tasks from localStorage', e);
     }
@@ -83,7 +86,9 @@ class Store {
 
   saveTasks() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tasks));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tasks));
+      }
     } catch (e) {
       console.warn('Failed to save tasks', e);
     }
@@ -91,8 +96,10 @@ class Store {
 
   loadSessions() {
     try {
-      const data = localStorage.getItem(SESSIONS_KEY);
-      if (data) return JSON.parse(data);
+      if (typeof localStorage !== 'undefined') {
+        const data = localStorage.getItem(SESSIONS_KEY);
+        if (data) return JSON.parse(data);
+      }
     } catch (e) {
       console.warn('Failed to load sessions', e);
     }
@@ -101,7 +108,9 @@ class Store {
 
   saveSessions() {
     try {
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(this.sessions));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(SESSIONS_KEY, JSON.stringify(this.sessions));
+      }
     } catch (e) {
       console.warn('Failed to save sessions', e);
     }
@@ -114,9 +123,13 @@ class Store {
     };
   }
 
-  notify() {
+  notify(event = { type: 'change' }) {
     for (const cb of this.subscribers) {
-      cb(this);
+      try {
+        cb(event, this);
+      } catch (err) {
+        console.error('Subscriber error:', err);
+      }
     }
   }
 
@@ -148,12 +161,12 @@ class Store {
     return newTask;
   }
 
-  updateTask(id, patch) {
+  updateTask(id, patch, notify = true) {
     const index = this.tasks.findIndex(t => t.id === id);
     if (index !== -1) {
       this.tasks[index] = { ...this.tasks[index], ...patch };
       this.saveTasks();
-      this.notify();
+      if (notify) this.notify();
     }
   }
 
@@ -189,12 +202,13 @@ class Store {
   tickTimer() {
     if (this.activeSession && this.activeSession.isRunning) {
       this.activeSession.durationSeconds++;
-      this.notify();
+      this.notify({ type: 'tick', durationSeconds: this.activeSession.durationSeconds });
     }
   }
 
-  stopTimer() {
+  stopTimer(options = { notify: true }) {
     if (!this.activeSession) return null;
+    const shouldNotify = options?.notify !== false;
     const finished = {
       id: 'sess-' + Date.now(),
       taskId: this.activeSession.taskId,
@@ -208,7 +222,9 @@ class Store {
     this.sessions.unshift(finished);
     this.saveSessions();
     this.activeSession = null;
-    this.notify();
+    if (shouldNotify) {
+      this.notify({ type: 'session_stopped', session: finished });
+    }
     return finished;
   }
 }

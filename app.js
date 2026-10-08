@@ -109,8 +109,14 @@ export function initApp() {
   tabBtns.clock.addEventListener('click', () => store.setTab('clock'));
   tabBtns.timer.addEventListener('click', () => store.setTab('timer'));
 
-  // Subscribe Store Changes
-  store.subscribe(() => {
+  // Subscribe Store Changes (Structural changes only; tick updates in-place)
+  store.subscribe((event) => {
+    if (event?.type === 'tick') {
+      if (ambient && store.activeSession) {
+        ambient.setTimerState(true, store.activeSession.durationSeconds >= 600);
+      }
+      return;
+    }
     updateViews();
   });
 
