@@ -47,7 +47,7 @@ export class Store {
     this.subscribers = [];
     this.tasks = this.loadTasks();
     this.sessions = this.loadSessions();
-    this.currentTab = 'timer'; // Primary default mode: Focus Timer!
+    this.currentTab = 'tasks'; // Base mode: 3-column Tasks schedule
     this.clockHalf = 'am'; // 'am' (00:00-11:59) | 'pm' (12:00-23:59)
     this.activeSession = null; // { taskId, what, where, startedAt, durationSeconds, isRunning }
   }
@@ -202,7 +202,6 @@ export class Store {
   tickTimer() {
     if (this.activeSession && this.activeSession.isRunning) {
       this.activeSession.durationSeconds++;
-      this.notify({ type: 'tick', durationSeconds: this.activeSession.durationSeconds });
     }
   }
 
@@ -223,7 +222,7 @@ export class Store {
     this.saveSessions();
     this.activeSession = null;
     if (shouldNotify) {
-      this.notify({ type: 'session_stopped', session: finished });
+      this.notify();
     }
     return finished;
   }

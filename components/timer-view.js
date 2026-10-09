@@ -1,37 +1,33 @@
-import { store, formatSeconds, minutesToTime, formatDurationMinutes } from '../store.js';
+import { store, formatSeconds, minutesToTime } from '../store.js';
 import { sound } from '../sound.js';
 
 let timerInterval = null;
 let pipVideoElement = null;
-let chimeTriggeredForCurrentSession = false;
+let pipCanvas = null;
+let pipCanvasCtx = null;
+let chimeTriggered = false;
 
 export function renderTimerView(container) {
   const session = store.activeSession;
 
   if (!session) {
-    chimeTriggeredForCurrentSession = false;
-    renderIdleTimer(container);
+    chimeTriggered = false;
+    renderIdleLauncher(container);
     return;
   }
 
-  // Active Running Session
+  // --- ACTIVE RUNNING TIMER ---
   const totalSeconds = session.durationSeconds;
-  const isGoldenGate = totalSeconds >= 600; // 10 minutes reached!
+  const isGoldenGate = totalSeconds >= 600;
   const progressRatio = Math.min(1, totalSeconds / 600);
   const circumference = 2 * Math.PI * 180;
   const strokeOffset = circumference * (1 - progressRatio);
-
-  // Trigger audio celebration once when passing 600s
-  if (isGoldenGate && !chimeTriggeredForCurrentSession) {
-    chimeTriggeredForCurrentSession = true;
-    sound.playChime();
-  }
 
   const { nextTask } = store.getCurrentAndNextTask();
 
   container.innerHTML = `
     <div class="timer-view-container">
-      <!-- Target Task Pill (Gede & Jelas) -->
+      <!-- Target Task Pill -->
       <div class="timer-target-pill">
         <span class="timer-task-name">🎯 ${escapeHtml(session.what)}</span>
         <span class="timer-task-where">📍 ${escapeHtml(session.where || 'Meja Belajar')}</span>
@@ -47,6 +43,7 @@ export function renderTimerView(container) {
             stroke-width="14" 
           />
           <circle 
+            id="timer-ring-progress-el"
             class="timer-ring-progress ${isGoldenGate ? 'golden-gate' : ''}" 
             cx="210" cy="210" r="180" 
             fill="none" 
@@ -60,7 +57,7 @@ export function renderTimerView(container) {
           <div class="timer-digits" id="timer-digits-text">
             ${formatSeconds(totalSeconds)}
           </div>
-          <div class="timer-milestone-status ${isGoldenGate ? 'achieved' : ''}">
+          <div class="timer-milestone-status ${isGoldenGate ? 'achieved' : ''}" id="timer-milestone-status-el">
             ${isGoldenGate 
               ? '✨ 10 MENIT TERCAPAI! (BONUS FOKUS)' 
               : `🎯 Menuju 10 menit pertama (${Math.floor((totalSeconds / 600) * 100)}%)`}
@@ -68,26 +65,25 @@ export function renderTimerView(container) {
         </div>
       </div>
 
-      <!-- Big Tactile Emergency Stop & Controls -->
+      <!-- Emergency Stop & PiP Controls -->
       <div class="timer-controls">
-        <button class="btn-emergency-stop" id="btn-emergency-stop" title="Stop & Simpan Sesi Kapan Saja (Spacebar)">
+        <button class="btn-emergency-stop" id="btn-emergency-stop" title="Stop & Simpan Sesi (Spacebar)">
           <span>⏹️</span>
           <span>STOP / GURU DATANG</span>
           <span style="font-size: 11px; opacity: 0.8; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 6px; font-family: var(--font-mono);">SPACE</span>
         </button>
 
-        <button class="btn-pip" id="btn-pip-toggle" title="Display over display (Picture-in-Picture floating timer)">
+        <button class="btn-pip" id="btn-pip-toggle" title="Floating PiP over other apps">
           <span>🪟</span>
           <span>Floating PiP</span>
         </button>
 
-        <button class="btn-fullscreen" id="btn-fullscreen-toggle" title="Layar Penuh Tanpa Gangguan">
+        <button class="btn-fullscreen" id="btn-fullscreen-toggle" title="Layar Penuh">
           <span>⛶</span>
           <span>Fullscreen</span>
         </button>
       </div>
 
-      <!-- Context Next Task Pill if available -->
       ${nextTask ? `
         <div style="font-size: 13px; color: var(--text-muted); background: var(--bg-surface); padding: 8px 18px; border-radius: var(--radius-full); border: 1px solid var(--border-subtle); display: inline-flex; align-items: center; gap: 8px;">
           <span>⏳ Jadwal Berikutnya:</span>
@@ -95,29 +91,68 @@ export function renderTimerView(container) {
           <span style="color: var(--accent-gold); font-family: var(--font-mono); font-size: 12px;">(${minutesToTime(nextTask.startMinute)})</span>
         </div>
       ` : `
-        <div style="font-size: 13px; color: var(--text-dim); text-align: center; max-width: 480px; margin-top: -6px;">
-          💡 <em>Fokus dari abundance, bukan scarcity. Stop kapan saja jika ada interupsi, durasi tersimpan jujur tanpa hukuman.</em>
+        <div style="font-size: 13px; color: var(--text-dim); text-align: center; max-width: 480px;">
+          💡 <em>Fokus dari abundance, bukan scarcity. Stop kapan saja jika ada interupsi kelas.</em>
         </div>
       `}
     </div>
   `;
 
-  // Start internal ticker if not running
-  if (!timerInterval) {
-    timerInterval = setInterval(() => {
-      store.tickTimer();
-      updateTimerDisplay(container);
-    }, 1000);
-  }
+  // Start lightweight 1s interval (updates digits & ring directly)
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    store.tickTimer();
+    const curSec = store.activeSession ? store.activeSession.durationSeconds : 0;
+    const reachedGolden = curSec >= 600;
 
-  // Bind Emergency Stop
-  container.querySelector('#btn-emergency-stop').addEventListener('click', () => {
+    if (reachedGolden && !chimeTriggered) {
+      chimeTriggered = true;
+      sound.playChime();
+    }
+
+    const digits = container.querySelector('#timer-digits-text');
+    if (digits) digits.textContent = formatSeconds(curSec);
+
+    const ringEl = container.querySelector('#timer-ring-progress-el');
+    if (ringEl) {
+      if (reachedGolden) {
+        ringEl.classList.add('golden-gate');
+        ringEl.setAttribute('stroke-dashoffset', '0');
+      } else {
+        ringEl.classList.remove('golden-gate');
+        const offset = circumference * (1 - Math.min(1, curSec / 600));
+        ringEl.setAttribute('stroke-dashoffset', offset.toString());
+      }
+    }
+
+    const milestoneEl = container.querySelector('#timer-milestone-status-el');
+    if (milestoneEl) {
+      if (reachedGolden) {
+        milestoneEl.classList.add('achieved');
+        milestoneEl.textContent = '✨ 10 MENIT TERCAPAI! (BONUS FOKUS)';
+      } else {
+        milestoneEl.classList.remove('achieved');
+        milestoneEl.textContent = `🎯 Menuju 10 menit pertama (${Math.floor((curSec / 600) * 100)}%)`;
+      }
+    }
+
+    if (pipCanvasCtx && store.activeSession) {
+      renderPiPCanvas(store.activeSession.what, curSec, reachedGolden);
+    }
+  }, 1000);
+
+  // Attach controls
+  container.querySelector('#btn-emergency-stop')?.addEventListener('click', () => {
     sound.playTap();
-    handleStop();
+    handleStop(container);
   });
 
-  // Bind Fullscreen
-  container.querySelector('#btn-fullscreen-toggle').addEventListener('click', () => {
+  container.querySelector('#btn-pip-toggle')?.addEventListener('click', () => {
+    sound.playTap();
+    togglePictureInPicture(session);
+  });
+
+  container.querySelector('#btn-fullscreen-toggle')?.addEventListener('click', () => {
     sound.playTap();
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -125,15 +160,10 @@ export function renderTimerView(container) {
       document.exitFullscreen().catch(() => {});
     }
   });
-
-  // Bind Picture-in-Picture
-  container.querySelector('#btn-pip-toggle').addEventListener('click', () => {
-    sound.playTap();
-    togglePictureInPicture(session);
-  });
 }
 
-function renderIdleTimer(container) {
+// --- IDLE / ADD-ON LAUNCHER ---
+function renderIdleLauncher(container) {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
@@ -143,14 +173,14 @@ function renderIdleTimer(container) {
   const allTasks = store.tasks.filter(t => !t.completed);
 
   container.innerHTML = `
-    <div class="timer-view-container" style="max-width: 720px; margin: 0 auto; width: 100%;">
+    <div class="timer-view-container" style="max-width: 680px; margin: 0 auto; width: 100%;">
       
-      <!-- HERO UNIFIED CURRENT FOCUS CARD ("Satuin Current") -->
+      <!-- Current Scheduled Focus or Ready Hero Card -->
       <div class="current-focus-hero-card">
         ${currentTask ? `
           <div class="current-badge-row">
             <span class="live-pulse-dot"></span>
-            <span class="current-badge-text">● SEDANG BERLANGSUNG SEKARANG (LIVE SCHEDULE)</span>
+            <span class="current-badge-text">● SEDANG BERLANGSUNG SEKARANG</span>
             <span class="current-time-pill">⏰ ${minutesToTime(currentTask.startMinute)} – ${minutesToTime(currentTask.endMinute)}</span>
           </div>
 
@@ -161,98 +191,102 @@ function renderIdleTimer(container) {
           <div class="current-meta-row">
             <span class="tag-location">📍 ${escapeHtml(currentTask.where || 'Meja Belajar')}</span>
             <span class="tag-duration" style="background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.3);">
-              ⏳ Sisa Waktu Jadwal: <strong>${Math.max(1, currentTask.endMinute - curMin)} Menit</strong>
+              ⏳ Sisa Waktu: <strong>${Math.max(1, currentTask.endMinute - curMin)} Menit</strong>
             </span>
-            ${nextTask ? `
-              <span class="tag-next">Berikutnya: <strong>${escapeHtml(nextTask.what)}</strong> (${minutesToTime(nextTask.startMinute)})</span>
-            ` : ''}
           </div>
 
           <div class="current-action-row">
-            <button class="btn-start-current-focus" data-action="start-current" data-id="${currentTask.id}">
-              <span>▶ MULAI FOKUS TUGAS INI SEKARANG</span>
+            <button class="btn-start-current-focus" id="btn-start-current">
+              <span>▶ MULAI FOKUS SEKARANG</span>
               <span class="golden-hint">🎯 Target 10 Menit</span>
             </button>
           </div>
-        ` : `
-          <!-- No Current Task: Free Time or Upcoming -->
+        ` : nextTask ? `
           <div class="current-badge-row">
             <span class="free-pulse-dot"></span>
-            <span class="current-badge-text">⚡ WAKTU BEBAS (SIAP FOKUS MANDIRI)</span>
-            <span class="current-time-pill">Jam Sekarang: ${minutesToTime(curMin)}</span>
+            <span class="current-badge-text">⚡ JADWAL BERIKUTNYA</span>
+            <span class="current-time-pill">Mulai ${minutesToTime(nextTask.startMinute)} (${Math.max(1, nextTask.startMinute - curMin)}m lagi)</span>
           </div>
 
           <div class="current-hero-title">
-            ${nextTask ? `Siap Untuk "${escapeHtml(nextTask.what)}"?` : 'Fokus Bebas Mandiri'}
+            Siap Untuk "${escapeHtml(nextTask.what)}"?
           </div>
 
           <div class="current-meta-row">
-            ${nextTask ? `
-              <span class="tag-location">📍 ${escapeHtml(nextTask.where || 'Meja Belajar')}</span>
-              <span class="tag-duration" style="background: rgba(240, 201, 135, 0.15); color: var(--accent-gold); border: 1px solid var(--border-accent);">
-                ⏰ Mulai Pukul ${minutesToTime(nextTask.startMinute)} (${Math.max(1, nextTask.startMinute - curMin)} menit lagi)
-              </span>
-            ` : `
-              <span class="tag-duration" style="background: rgba(240, 201, 135, 0.15); color: var(--accent-gold); border: 1px solid var(--border-accent);">
-                🎯 Target minimal hanya 10 menit. Stop kapan saja jika ada interupsi kelas!
-              </span>
-            `}
+            <span class="tag-location">📍 ${escapeHtml(nextTask.where || 'Meja Belajar')}</span>
+            <span class="tag-duration" style="background: rgba(240, 201, 135, 0.15); color: var(--accent-gold); border: 1px solid var(--border-accent);">
+              🎯 Target minimal 10 menit
+            </span>
           </div>
 
           <div class="current-action-row">
-            ${nextTask ? `
-              <button class="btn-start-current-focus" data-action="start-current" data-id="${nextTask.id}">
-                <span>▶ MULAI LEBIH AWAL: ${escapeHtml(nextTask.what)}</span>
-                <span class="golden-hint">🎯 Target 10 Menit</span>
-              </button>
-              <button class="btn-free-focus-subtle" id="btn-free-focus">
-                ⚡ Atau Mulai Fokus Bebas Mandiri
-              </button>
-            ` : `
-              <button class="btn-start-current-focus" id="btn-free-focus">
-                <span>⚡ MULAI FOKUS BEBAS SEKARANG</span>
-                <span class="golden-hint">🎯 Target 10 Menit</span>
-              </button>
-            `}
+            <button class="btn-start-current-focus" id="btn-start-next">
+              <span>▶ MULAI LEBIH AWAL</span>
+              <span class="golden-hint">🎯 Target 10 Menit</span>
+            </button>
+            <button class="btn-free-focus-subtle" id="btn-free-focus">
+              ⚡ Fokus Mandiri Lainnya
+            </button>
+          </div>
+        ` : `
+          <div class="current-badge-row">
+            <span class="free-pulse-dot"></span>
+            <span class="current-badge-text">⚡ WAKTU BEBAS</span>
+            <span class="current-time-pill">Jam ${minutesToTime(curMin)}</span>
+          </div>
+
+          <div class="current-hero-title">
+            Fokus Mandiri Tenang
+          </div>
+
+          <p style="color: var(--text-muted); font-size: 14px; margin: 0; line-height: 1.5;">
+            Cukup mulai <strong>minimal 10 menit</strong>. Stop kapan saja jika ada interupsi kelas dengan tombol Space.
+          </p>
+
+          <div class="current-action-row">
+            <button class="btn-start-current-focus" id="btn-free-focus">
+              <span>⚡ MULAI FOKUS BEBAS</span>
+              <span class="golden-hint">🎯 Target 10 Menit</span>
+            </button>
           </div>
         `}
       </div>
 
-      <!-- Quick Task Selection List -->
+      <!-- Quick List of Other Tasks Today -->
       <div style="width: 100%; margin-top: 14px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 0 4px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px;">
           <span style="font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
-            📋 JADWAL LAINNYA HARI INI (${allTasks.length})
+            📋 JADWAL HARI INI (${allTasks.length})
           </span>
           <button id="btn-goto-tasks" style="background: transparent; border: none; color: var(--accent-gold); font-size: 13px; font-weight: 800; cursor: pointer;">
             + Kelola Tugas (Tab 1) →
           </button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
           ${allTasks.length === 0 ? `
-            <div style="padding: 28px; text-align: center; background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-dim); font-size: 14px;">
+            <div style="padding: 24px; text-align: center; background: var(--bg-surface); border: 2px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-dim); font-size: 14px;">
               Belum ada tugas terjadwal. Tambahkan tugas di menu Tasks.
             </div>
           ` : allTasks.map(t => {
             const isCurrent = currentTask && currentTask.id === t.id;
             return `
-              <div class="task-card ${isCurrent ? 'is-current-item' : ''}" style="padding: 16px 20px; grid-template-columns: 1fr auto; align-items: center;">
-                <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div class="task-card ${isCurrent ? 'is-current-item' : ''}" style="padding: 14px 18px; grid-template-columns: 1fr auto; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
                   <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-weight: 800; color: var(--text-main); font-size: 16px;">
                       ${escapeHtml(t.what)}
                     </span>
-                    ${isCurrent ? '<span style="font-size: 11px; font-weight: 900; background: rgba(16, 185, 129, 0.25); color: #10B981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 99px;">● NOW</span>' : ''}
+                    ${isCurrent ? '<span style="font-size: 11px; font-weight: 800; background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 2px 8px; border-radius: 99px;">● NOW</span>' : ''}
                   </div>
-                  <div style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-muted); flex-wrap: wrap;">
-                    <span class="tag-location" style="padding: 3px 10px;">📍 ${escapeHtml(t.where || 'Meja')}</span>
-                    <span class="tag-time" style="padding: 3px 10px;">⏰ ${minutesToTime(t.startMinute)} – ${minutesToTime(t.endMinute)}</span>
+                  <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted);">
+                    <span class="tag-location" style="padding: 2px 8px;">📍 ${escapeHtml(t.where || 'Meja')}</span>
+                    <span class="tag-time" style="padding: 2px 8px;">⏰ ${minutesToTime(t.startMinute)} – ${minutesToTime(t.endMinute)}</span>
                   </div>
                 </div>
 
                 <button class="btn-launch-focus" data-action="quick-start" data-id="${t.id}">
-                  ▶ Mulai Fokus
+                  ▶ Mulai
                 </button>
               </div>
             `;
@@ -262,12 +296,21 @@ function renderIdleTimer(container) {
     </div>
   `;
 
-  // Bind Events
-  container.querySelectorAll('[data-action="start-current"]').forEach(btn => {
+  // Attach idle events
+  container.querySelector('#btn-start-current')?.addEventListener('click', () => {
+    sound.playTap();
+    if (currentTask) store.startTimer(currentTask);
+  });
+
+  container.querySelector('#btn-start-next')?.addEventListener('click', () => {
+    sound.playTap();
+    if (nextTask) store.startTimer(nextTask);
+  });
+
+  container.querySelectorAll('#btn-free-focus').forEach(btn => {
     btn.addEventListener('click', () => {
       sound.playTap();
-      const task = store.tasks.find(t => t.id === btn.dataset.id);
-      if (task) store.startTimer(task);
+      store.startTimer({ what: 'Fokus Mandiri (LKS / Membaca)', where: 'Meja Belajar' });
     });
   });
 
@@ -279,78 +322,26 @@ function renderIdleTimer(container) {
     });
   });
 
-  container.querySelector('#btn-free-focus')?.addEventListener('click', () => {
-    sound.playTap();
-    store.startTimer({ what: 'Fokus Bebas (LKS / Membaca)', where: 'Meja Belajar' });
-  });
-
   container.querySelector('#btn-goto-tasks')?.addEventListener('click', () => {
     sound.playTap();
     store.setTab('tasks');
   });
 }
 
-function updateTimerDisplay(container) {
-  const session = store.activeSession;
-  if (!session) return;
-
-  const totalSeconds = session.durationSeconds;
-  const isGoldenGate = totalSeconds >= 600;
-  const progressRatio = Math.min(1, totalSeconds / 600);
-  const circumference = 2 * Math.PI * 180;
-  const strokeOffset = circumference * (1 - progressRatio);
-
-  if (isGoldenGate && !chimeTriggeredForCurrentSession) {
-    chimeTriggeredForCurrentSession = true;
-    sound.playChime();
-  }
-
-  const digits = container.querySelector('#timer-digits-text');
-  if (digits) {
-    digits.textContent = formatSeconds(totalSeconds);
-  }
-
-  const progressRing = container.querySelector('.timer-ring-progress');
-  if (progressRing) {
-    if (isGoldenGate) {
-      progressRing.classList.add('golden-gate');
-      progressRing.setAttribute('stroke-dashoffset', '0');
-    } else {
-      progressRing.classList.remove('golden-gate');
-      progressRing.setAttribute('stroke-dashoffset', strokeOffset.toString());
-    }
-  }
-
-  const statusText = container.querySelector('.timer-milestone-status');
-  if (statusText) {
-    if (isGoldenGate) {
-      statusText.classList.add('achieved');
-      statusText.textContent = '✨ 10 MENIT TERCAPAI! (BONUS FOKUS)';
-    } else {
-      statusText.classList.remove('achieved');
-      statusText.textContent = `🎯 Menuju 10 menit pertama (${Math.floor((totalSeconds / 600) * 100)}%)`;
-    }
-  }
-
-  // Update canvas for PiP if active
-  if (pipCanvasCtx) {
-    renderPiPCanvas(session.what, totalSeconds, isGoldenGate);
-  }
-}
-
-function handleStop() {
+function handleStop(container) {
   if (timerInterval) {
     clearInterval(timerInterval);
     timerInterval = null;
   }
 
-  // Stop session silently so state is updated without wiping the view before modal renders
-  const finished = store.stopTimer({ notify: false });
+  const finished = store.stopTimer();
   if (!finished) return;
 
-  // Use persistent modal overlay in document
   const modal = document.getElementById('session-summary-modal');
-  if (!modal) return;
+  if (!modal) {
+    renderTimerView(container);
+    return;
+  }
 
   const minutes = Math.floor(finished.durationSeconds / 60);
   const seconds = finished.durationSeconds % 60;
@@ -368,10 +359,10 @@ function handleStop() {
         <br/><br/>
         ${finished.achievedMinimum 
           ? 'Kamu melampaui batas 10 menit! Rasa puas ini adalah bukti kamu bisa fokus dari rasa cukup dan tenang.' 
-          : 'Bagus! Catatan waktu tersimpan jujur tanpa hukuman. Guru datang / interupsi di kelas bukan masalah, bisa lanjut lagi kapan saja!'}
+          : 'Bagus! Catatan waktu tersimpan jujur tanpa hukuman. Guru datang atau interupsi kelas bukan masalah, bisa lanjut lagi kapan saja!'}
       </p>
       <button class="btn-card-close" id="btn-close-summary" style="margin-top: 20px;">
-        Kembali ke Layar Fokus Utama →
+        Kembali ke Layar Fokus →
       </button>
     </div>
   `;
@@ -381,15 +372,11 @@ function handleStop() {
     sound.playTap();
     modal.classList.remove('active');
     modal.innerHTML = '';
-    // Now notify subscribers so view updates smoothly to Idle state
-    store.notify({ type: 'session_stopped', session: finished });
+    renderTimerView(container);
   });
 }
 
 // Picture-in-Picture floating clock canvas
-let pipCanvas = null;
-let pipCanvasCtx = null;
-
 function togglePictureInPicture(session) {
   if (!document.pictureInPictureEnabled) {
     alert('Browser ini tidak mendukung Picture-in-Picture display-over-display.');

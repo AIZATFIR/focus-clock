@@ -21,8 +21,8 @@ describe('Focus Clock Store TDD Suite', () => {
     store = new Store();
   });
 
-  it('initializes with timer as Primary tab by default', () => {
-    assert.equal(store.currentTab, 'timer');
+  it('initializes with tasks as base tab by default', () => {
+    assert.equal(store.currentTab, 'tasks');
   });
 
   it('correctly converts minutes to time string and vice versa', () => {
@@ -80,32 +80,27 @@ describe('Focus Clock Store TDD Suite', () => {
     assert.equal(res.nextTask?.id, 't2');
   });
 
-  it('separates tick notifications from full structural notifications', () => {
-    let fullNotifyCount = 0;
-    let tickNotifyCount = 0;
+  it('notifies on session start and stop without polling thrash', () => {
+    let notifyCount = 0;
 
-    store.subscribe((event) => {
-      if (event?.type === 'tick') {
-        tickNotifyCount++;
-      } else {
-        fullNotifyCount++;
-      }
+    store.subscribe(() => {
+      notifyCount++;
     });
 
-    // Starting a timer should trigger a full structural event
+    // Starting a timer switches to timer tab and notifies
     store.startTimer({ id: 't1', what: 'Task 1', where: 'Meja' });
-    assert.equal(fullNotifyCount, 1);
-    assert.equal(tickNotifyCount, 0);
+    assert.equal(notifyCount, 1);
+    assert.equal(store.currentTab, 'timer');
 
-    // Ticking the timer should trigger a tick event, NOT a full structural rebuild
+    // In-memory ticker increments duration without global notify thrash
     store.tickTimer();
     store.tickTimer();
-    assert.equal(tickNotifyCount, 2);
-    assert.equal(fullNotifyCount, 1); // Remains 1, so UI does NOT get destroyed!
+    assert.equal(store.activeSession.durationSeconds, 2);
+    assert.equal(notifyCount, 1); // Clean! No re-render thrash
 
-    // Stopping the timer should trigger a full structural event
+    // Stopping the timer notifies subscribers
     store.stopTimer();
-    assert.equal(fullNotifyCount, 2);
+    assert.equal(notifyCount, 2);
   });
 
   it('correctly records 10-minute golden gate milestone on session stop', () => {
@@ -152,14 +147,14 @@ describe('Focus Clock Store TDD Suite', () => {
     store.startTimer({ id: 't1', what: 'Math LKS', where: 'Kelas' });
     store.activeSession.durationSeconds = 650;
 
-    let stoppedEvent = null;
-    store.subscribe((e) => {
-      if (e?.type === 'session_stopped') stoppedEvent = e;
+    let notified = false;
+    store.subscribe(() => {
+      notified = true;
     });
 
     const finished = store.stopTimer({ notify: false });
     assert.equal(finished.what, 'Math LKS');
     assert.equal(store.activeSession, null);
-    assert.equal(stoppedEvent, null, 'Must not notify when notify: false is passed');
+    assert.equal(notified, false, 'Must not notify when notify: false is passed');
   });
 });
