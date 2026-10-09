@@ -1,8 +1,8 @@
 .git
 .dart_tool
-build/app
-build/linux
-build/windows
+build
+release_assets
+release_dist
 android
 ios
 linux
@@ -10,5 +10,11 @@ windows
 macos
 test
 server
+canvaskit
+public
+lib
 *.apk
+*.tar.gz
 *.zip
+*.pdf
+

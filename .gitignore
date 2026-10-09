@@ -62,3 +62,4 @@ secrets/
 .vercel
 release_dist/
 
+.env*
