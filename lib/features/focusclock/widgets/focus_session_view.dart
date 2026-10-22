@@ -7,6 +7,7 @@ import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
+import '../../../services/pip_timer_bridge.dart';
 
 class FocusSessionView extends ConsumerStatefulWidget {
   const FocusSessionView({
@@ -55,7 +56,17 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       _remainingSeconds = _totalSeconds;
     }
 
+    PipTimerBridge.setTimerActive(true);
+    _syncNotification();
     _startCountdown();
+  }
+
+  void _syncNotification() {
+    PipTimerBridge.updateLiveNotification(
+      title: widget.activity.title.isNotEmpty ? widget.activity.title : 'Fokus',
+      timeStr: _formatTimer(_remainingSeconds),
+      details: _isPaused ? 'Dijeda' : 'Tetap tenang & sadar',
+    );
   }
 
   void _startCountdown() {
@@ -65,9 +76,12 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
         setState(() {
           if (_remainingSeconds > 0) {
             _remainingSeconds--;
+            _syncNotification();
           } else {
             _timer?.cancel();
             _isCompleted = true;
+            PipTimerBridge.setTimerActive(false);
+            PipTimerBridge.cancelLiveNotification();
             HapticFeedback.heavyImpact();
           }
         });
@@ -79,6 +93,8 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
   void dispose() {
     _timer?.cancel();
     _pulseCtrl.dispose();
+    PipTimerBridge.setTimerActive(false);
+    PipTimerBridge.cancelLiveNotification();
     super.dispose();
   }
 
@@ -107,6 +123,20 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   widget.onClose();
+                },
+              ),
+            ),
+
+            // Top Picture-in-Picture floating button
+            Positioned(
+              top: 16,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.picture_in_picture_alt_rounded, color: AppPalette.accent, size: 22),
+                tooltip: 'Picture-in-Picture (Melayang)',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  PipTimerBridge.enterPip();
                 },
               ),
             ),

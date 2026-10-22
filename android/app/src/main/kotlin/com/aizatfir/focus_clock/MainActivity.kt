@@ -1,5 +1,11 @@
 package com.aizatfir.focus_clock
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -10,6 +16,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Rational
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -18,9 +25,72 @@ import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "fitrah_launcher/apps"
+    private val PIP_CHANNEL = "com.aizatfir.focus_clock/pip"
+    private var isTimerRunning = false
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (isTimerRunning && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                val params = PictureInPictureParams.Builder()
+                    .setAspectRatio(Rational(1, 1))
+                    .build()
+                enterPictureInPictureMode(params)
+            } catch (_: Exception) {}
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PIP_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setTimerActive" -> {
+                    isTimerRunning = call.argument<Boolean>("active") ?: false
+                    result.success(true)
+                }
+                "enterPip" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        try {
+                            val params = PictureInPictureParams.Builder()
+                                .setAspectRatio(Rational(1, 1))
+                                .build()
+                            result.success(enterPictureInPictureMode(params))
+                        } catch (e: Exception) {
+                            result.error("PIP_ERROR", e.message, null)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
+                "updateLiveNotification" -> {
+                    val title = call.argument<String>("title") ?: "Sesi Fokus"
+                    val timeStr = call.argument<String>("timeStr") ?: "00:00"
+                    val details = call.argument<String>("details") ?: "Tetap sadar & tenang"
+                    try {
+                        updateTimerNotification(title, timeStr, details)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("NOTIF_ERROR", e.message, null)
+                    }
+                }
+                "cancelLiveNotification" -> {
+                    try {
+                        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        nm.cancel(777)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("CANCEL_NOTIF_ERROR", e.message, null)
+                    }
+                }
+                "isPipSupported" -> {
+                    val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                        packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+                    result.success(supported)
+                }
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -327,4 +397,54 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+
+    private fun updateTimerNotification(title: String, timeStr: String, details: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notifId = 777
+        val channelId = "focus_clock_live_timer"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Focus Clock Live Timer",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Live running countdown timer"
+                setShowBadge(true)
+                enableVibration(false)
+                setSound(null, null)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, channelId)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this)
+        }
+
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("⏱️ $timeStr  •  $title")
+            .setContentText(details)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setContentIntent(pendingIntent)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setCategory(Notification.CATEGORY_STATUS)
+
+        notificationManager.notify(notifId, builder.build())
+    }
 }
+
