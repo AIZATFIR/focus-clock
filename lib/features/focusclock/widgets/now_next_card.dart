@@ -32,6 +32,31 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
   final FocusNode _focusNode = FocusNode();
   bool _isExpanded = false;
 
+  Future<void> _editGoal(String currentGoal) async {
+    final goal = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppPalette.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _GoalEditorSheet(initialGoal: currentGoal),
+    );
+    if (goal == null || !mounted) return;
+
+    try {
+      final repo = ref.read(settingsRepoProvider);
+      final settings = await repo.get();
+      settings.focusGoal = goal.trim();
+      await repo.update(settings);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tujuan belum tersimpan. Coba lagi.')),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _intentCtrl.dispose();
@@ -79,6 +104,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
   @override
   Widget build(BuildContext context) {
     final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
+    final focusGoal = ref.watch(settingsProvider.select((s) => s.valueOrNull?.focusGoal ?? ''));
     final half = halfOfNow(widget.now);
     final nowMinOfHalf = minuteOfHalf(widget.now);
     final isToday = dateOnly(widget.date) == dateOnly(widget.now);
@@ -132,6 +158,11 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _GoalCue(goal: focusGoal, onEdit: () => _editGoal(focusGoal)),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: AppPalette.stroke),
+          const SizedBox(height: 10),
+
           // Row 1: Current Focus & Next Item
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -258,24 +289,6 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               ],
             ),
 
-            // Row 4: Quick Intent Chips (Intelligent Suggestions)
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
-                  const SizedBox(width: 6),
-                  _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
-                ],
-              ),
-            ),
           ],
         ],
       ),
@@ -361,20 +374,127 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
     );
   }
 
-  Widget _suggestionChip(String label, String intent) {
-    return InkWell(
-      onTap: () => _submitIntent(intent),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: AppPalette.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppPalette.stroke),
+}
+
+class _GoalCue extends StatelessWidget {
+  const _GoalCue({required this.goal, required this.onEdit});
+
+  final String goal;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasGoal = goal.isNotEmpty;
+    return Semantics(
+      button: true,
+      label: hasGoal ? 'Edit tujuan utama: $goal' : 'Tambah tujuan utama',
+      child: InkWell(
+        onTap: onEdit,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Icon(Icons.flag_outlined, size: 20, color: AppPalette.accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TUJUAN UTAMA',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.7,
+                        color: AppPalette.textDim,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasGoal ? goal : 'Tulis tujuan yang ingin kamu ingat',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: hasGoal ? FontWeight.w600 : FontWeight.w500,
+                        color: hasGoal ? AppPalette.text : AppPalette.textDim,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.edit_outlined, size: 18, color: AppPalette.textDim),
+            ],
+          ),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+}
+
+class _GoalEditorSheet extends StatefulWidget {
+  const _GoalEditorSheet({required this.initialGoal});
+
+  final String initialGoal;
+
+  @override
+  State<_GoalEditorSheet> createState() => _GoalEditorSheetState();
+}
+
+class _GoalEditorSheetState extends State<_GoalEditorSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialGoal);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 16 + keyboardInset),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tujuan utama', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppPalette.text)),
+            const SizedBox(height: 6),
+            const Text('Satu kalimat yang ingin tetap kamu ingat.', style: TextStyle(fontSize: 14, color: AppPalette.textDim)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              maxLength: 100,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => Navigator.pop(context, _controller.text.trim()),
+              decoration: const InputDecoration(
+                labelText: 'Tujuan',
+                hintText: 'Contoh: Fokus LKS',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                const SizedBox(width: 8),
+                FilledButton(onPressed: () => Navigator.pop(context, _controller.text.trim()), child: const Text('Simpan')),
+              ],
+            ),
+          ],
         ),
       ),
     );

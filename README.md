@@ -15,7 +15,7 @@
 
 ---
 
-## 📥 Download
+## 📥 Download  
 
 | Platform | File | How to run |
 |---|---|---|
@@ -36,7 +36,7 @@ Most planners are lists. Focus Clock is a **720-minute analog dial** — your wh
 - Drag on the dial to create an activity (snaps to 5 minutes)
 - Long-press an arc to move it; double-tap to edit
 - Live "now" hand + pulse ring on your current activity
-- AM/PM halves, 12h/24h labels, expandable minute ring
+- AM/PM halves, 12h/24h labels, expandable minute ring  
 
 🤖 **AI Scheduling Assistant**
 - Chat naturally: *"buatkan jadwal belajar sore ini"* or *"move my workout to 7am"*

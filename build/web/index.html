@@ -1,67 +1,49 @@
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Focus Clock — Simplicity First (3-Kolom & Tactile Dial)</title>
-  <meta name="description" content="Visual time-blocking and abundant focus timer with 3-column Google Tasks simplicity, giant analog clock face, and emergency stop.">
-  <link rel="icon" type="image/png" href="favicon.png">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Sadar makes you conscious of how you spend your day, then helps you act on it. Way of Life companion connected seamlessly with Focus Clock.">
 
-  <!-- Google Fonts: Outfit, Plus Jakarta Sans, & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Sadar">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <link rel="stylesheet" href="styles.css">
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <!-- Google Sign In Web Client ID -->
+  <meta name="google-signin-client_id" content="607666586504-2somn7b2p1mrfbflls09st7ovh1hi9r8.apps.googleusercontent.com">
+
+  <title>Sadar — Way of Life &amp; Focus Clock</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <!-- Three.js-inspired 3D Ambient Spatial Canvas -->
-  <canvas id="ambient-canvas"></canvas>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
 
-  <div class="app-container">
-    <!-- Top Header & Minimalist Tab Navigation -->
-    <header class="app-header">
-      <div class="brand">
-        <div class="brand-icon">FC</div>
-        <div class="brand-text-block">
-          <span class="brand-title">Focus Clock</span>
-          <span class="brand-subtitle">Simplicity First • Zen Timeblocking</span>
-        </div>
-      </div>
-
-      <!-- Tab Navigation (Basis: Tasks & Clock Face, Timer as Add-on) -->
-      <nav class="tab-nav">
-        <button id="tab-btn-tasks" class="tab-btn active">
-          <span>📋 Tasks</span>
-          <span class="tab-key-hint">1</span>
-        </button>
-        <button id="tab-btn-clock" class="tab-btn">
-          <span>🕒 Clock Face</span>
-          <span class="tab-key-hint">2</span>
-        </button>
-        <button id="tab-btn-timer" class="tab-btn">
-          <span>⏱️ Timer</span>
-          <span class="tab-key-hint">3</span>
-        </button>
-      </nav>
-    </header>
-
-    <!-- Main Views -->
-    <main style="flex: 1; display: flex; flex-direction: column;">
-      <!-- View 1: 3-Column Tasks (Apa, Dimana, Kapan) - Base View -->
-      <section id="view-tasks" class="view-panel active"></section>
-
-      <!-- View 2: Giant Tactile Clock Face (12-Hour Classic Dial) -->
-      <section id="view-clock" class="view-panel"></section>
-
-      <!-- View 3: Zen Focus Timer (Add-on Feature) -->
-      <section id="view-timer" class="view-panel"></section>
-    </main>
-
-    <!-- Persistent Session Summary & Celebration Modal -->
-    <div id="session-summary-modal" class="session-modal-overlay"></div>
-  </div>
-
-  <script type="module" src="app.js"></script>
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
