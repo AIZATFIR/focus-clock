@@ -2428,3 +2428,91 @@ console.assert(snapPointerToMinutes(100, 200, mockRect) === 30, 'Failed 6 o-cloc
 ```
 → skipped: JS mouse-idle timer listeners and custom gesture states.  
 → add when: Deploying as a dedicated standalone PWA on touch-first hardware.
+
+
+### Cycle #90 Directive (2026-11-03 05:32)
+### 1. Radial Timeblock Snapping
+
+```js
+export function snapPointerToMinutes(cx, cy, x, y, step = 5) {
+  const deg = (Math.atan2(y - cy, x - cx) * (180 / Math.PI) + 450) % 360;
+  const rawMins = (deg / 360) * 60;
+  const snapped = Math.round(rawMins / step) * step;
+  // ponytail: collapses 60 to 0; upgrade to duration span if handling multi-hour arcs
+  return snapped === 60 ? 0 : snapped;
+}
+
+// Runnable check
+console.assert(snapPointerToMinutes(100, 100, 100, 20, 15) === 0, "Top snap failed");
+console.assert(snapPointerToMinutes(100, 100, 180, 100, 15) === 15, "Right snap failed");
+```
+→ skipped: Continuous dragging physics and multi-turn states; add when timeblocks exceed 60 minutes.
+
+---
+
+### 2. DPR-Crisp Canvas Dial (Zen Palette)
+
+```js
+export function renderZenClockface(canvas, ctx, activeArcRatio = 0.4) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+
+  if (canvas.width !== width * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+
+  const cx = width / 2, cy = height / 2, r = Math.min(cx, cy) - 18;
+
+  // Track (Sofiz warm stone)
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#e8e4dc";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Active Focus Block (Deep warm bistre)
+  if (activeArcRatio > 0) {
+    ctx.strokeStyle = "#4a4237";
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + activeArcRatio * Math.PI * 2);
+    ctx.stroke();
+  }
+}
+// ponytail: single-pass re-render; add OffscreenCanvas cache when dial markers/ticks are requested
+```
+→ skipped: Tick marks and secondary hands; add when Pomodoro sub-minute precision is strictly required.
+
+---
+
+### 3. Native Zero-Distraction Shell
+
+```css
+:root {
+  --bg-zen: #fbf9f4;
+  --ink: #38332b;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--bg-zen);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas {
+  touch-action: none;
+  filter: drop-shadow(0 12px 32px rgba(74, 66, 55, 0.05));
+}
+/* ponytail: light mode only; add @media (prefers-color-scheme: dark) warm-slate variant when dark mode is tasked */
+```
+→ skipped: Complex CSS utility frameworks and themes; add when client settings persist custom user themes.
