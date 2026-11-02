@@ -2195,3 +2195,84 @@ function snapPointerToMinutes(e, canvas, stepMinutes = 5) {
 ```
 *   **Skipped:** JavaScript pointer-idle timers and visibility state tracking.
 *   **Add when:** Hardware targets without hover capabilities fail to reveal controls on tap.
+
+
+### Cycle #87 Directive (2026-11-03 05:15)
+### 1. HiDPI Canvas Setup & Warm Tick Rendering
+Fixes blurry clockfaces on Retina displays and applies anti-slop warm-zen palette (`#FAF8F5`, `#D8D2C9`, `#C4623F`).
+
+```ts
+export const renderZenFace = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, size = 360) => {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+
+  const r = size / 2;
+  ctx.clearRect(0, 0, size, size);
+
+  // ponytail: 12-hour face ticks; upgrade to dynamic sub-hour notches when zooming
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI) / 6;
+    const isPrimary = i % 3 === 0;
+    ctx.strokeStyle = isPrimary ? '#2C2825' : '#D8D2C9';
+    ctx.lineWidth = isPrimary ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(r + Math.cos(angle) * (r - 18), r + Math.sin(angle) * (r - 18));
+    ctx.lineTo(r + Math.cos(angle) * (r - 8), r + Math.sin(angle) * (r - 8));
+    ctx.stroke();
+  }
+};
+```
+* Skipped: Offscreen canvas caching, arbitrary size observers.
+* Add when: Canvas re-renders exceed 60fps budget during drag interactions.
+
+---
+
+### 2. Angular 15-Minute Timeblock Snapping
+Converts pointer drag coordinates to 15-minute snapped minute marks (12h cycle) with zero dependencies.
+
+```ts
+export const snapPointerToMinutes = (
+  x: number, y: number, cx: number, cy: number, step = 15
+): number => {
+  // Angle relative to 12 o'clock (0 rad = top, clockwise)
+  const rad = (Math.atan2(y - cy, x - cx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  const rawMinutes = (rad / (2 * Math.PI)) * 720;
+  // ponytail: 12-hour (720m) wrap; upgrade to 24-hour track if dual-ring face is introduced
+  return Math.round(rawMinutes / step) * step % 720;
+};
+
+// Self-check
+console.assert(snapPointerToMinutes(100, 50, 100, 100) === 0, 'Top must be 0 min');
+console.assert(snapPointerToMinutes(150, 100, 100, 100) === 180, 'Right must be 180 min (3h)');
+```
+* Skipped: Magnetic resistance curves, haptic triggers.
+* Add when: Mobile touch interaction requires tactile feedback.
+
+---
+
+### 3. Native Zero-JS Zen Dimming
+Auto-dims peripheral controls and UI chrome to near-invisible when the cursor remains inactive, using native CSS transitions instead of JS timers.
+
+```css
+/* Zero-distraction Zen canvas container */
+.zen-clockface-stage {
+  background-color: #FAF8F5;
+  cursor: crosshair;
+}
+
+.zen-clockface-stage .zen-control {
+  opacity: 0.15;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1) 1.5s;
+}
+
+.zen-clockface-stage:hover .zen-control,
+.zen-clockface-stage:focus-within .zen-control {
+  opacity: 1;
+  transition-delay: 0s;
+}
+```
+* Skipped: Idle detector JS hooks, opacity custom-property spring physics.
+* Add when: Accessibility settings explicitly request `prefers-reduced-motion` overrides.
