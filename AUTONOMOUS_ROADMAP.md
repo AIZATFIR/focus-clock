@@ -2653,3 +2653,96 @@ console.assert(snapRadialMinutes(150, 100, 100, 100).minutes === 15, '3 o’cloc
 
 skipped: dynamic CSS var extraction and full continuous pointer drag listeners.
 add when: multi-theme support or touch/pointer drag events are wired to the dial container.
+
+
+### Cycle #93 Directive (2026-11-03 05:49)
+### 1. Pointer Angle to 15-Minute Block Snapping
+
+```javascript
+// snaps cursor angle (radians) to discreet minute steps on a 60m clockface
+export const snapToBlock = (rad, stepMinutes = 15) => {
+  const step = (stepMinutes / 60) * (2 * Math.PI);
+  const normalized = (rad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / step) * step;
+};
+
+// ponytail: single 60m sweep ceiling; upgrade to 12h/24h tracking via lap count
+console.assert(snapToBlock(Math.PI / 1.9, 15) === Math.PI / 2, 'Must snap to 15m mark');
+```
+→ skipped: non-uniform variable intervals, dynamic magnetic thresholds.  
+add when: user requests custom Pomodoro subdivisions (<5m or >60m).
+
+---
+
+### 2. High-DPI Warm Minimal Dial Stroke
+
+```javascript
+export function renderZenClock(canvas, activeSweepRad = 0) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.clientWidth;
+  if (canvas.width !== size * dpr) {
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const c = size / 2, r = c - 12;
+
+  // Track arc
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ebe5dc';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Active Focus Block
+  if (activeSweepRad > 0) {
+    ctx.beginPath();
+    ctx.arc(c, c, r, -Math.PI / 2, -Math.PI / 2 + activeSweepRad);
+    ctx.strokeStyle = '#d96a3b'; // warm terracotta
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  // 12-hour minimal indices
+  ctx.fillStyle = '#8f857d';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.arc(c + Math.cos(a) * (r - 10), c + Math.sin(a) * (r - 10), i % 3 === 0 ? 2 : 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+```
+→ skipped: continuous requestAnimationFrame loop and animated spring transitions.  
+add when: animating hand movements or running during an active countdown tick.
+
+---
+
+### 3. Zen Surface & Drag Isolation (Anti-Slop CSS)
+
+```css
+:root {
+  --canvas-warmth: #fbf9f5; /* firtofolio/SofizCake stone/cream ground */
+  --ink: #2c2825;
+}
+
+body {
+  background-color: var(--canvas-warmth);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas {
+  touch-action: none; /* Prevents mobile viewport rubber-banding during dial scrub */
+  user-select: none;
+  -webkit-user-select: none;
+}
+```
+→ skipped: theme toggling, dark mode palettes.  
+add when: explicit system `prefers-color-scheme: dark` audit is requested.
