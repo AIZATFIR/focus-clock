@@ -141,3 +141,87 @@ canvas.clockface {
 
 skipped: dynamic hour-ticks and spring-physics drag release; add when user interaction telemetry indicates dial overshoot.
 skipped: dynamic color themes; add when system dark mode hook is explicitly wired up.
+
+
+### Cycle #2 Directive (2026-11-02 21:16)
+### 1. Polar Snapping Math for Timeblocks (5-min quantize)
+
+```javascript
+// ponytail: ceil is 5-min fixed step; upgrade to dynamic interval when user configs multi-step granularity.
+export const snapAngle = (dx, dy, stepMin = 5) => {
+  const stepRad = (stepMin / 60) * (2 * Math.PI);
+  const angle = (Math.atan2(dy, dx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  return (Math.round(angle / stepRad) * stepRad) % (2 * Math.PI);
+};
+
+// Self-check
+console.assert(snapAngle(0, -100, 15) === 0, '12 o’clock must snap to 0 rad');
+console.assert(Math.abs(snapAngle(100, 0, 15) - Math.PI / 2) < 1e-6, '3 o’clock must snap to PI/2');
+```
+→ skipped: arbitrary non-linear magnetic snap physics  
+→ add when: dragging interactive block boundary anchors on mobile touch surfaces
+
+---
+
+### 2. Retina-Crisp Canvas Setup & Zen Face Rendering
+
+```javascript
+export function renderZenClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const r = size / 2;
+
+  // Outer boundary line & 12-hour micro-dots
+  ctx.translate(r, r);
+  ctx.strokeStyle = 'color-mix(in srgb, currentColor 8%, transparent)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, 0, r - 12, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = 'currentColor';
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6;
+    ctx.beginPath();
+    ctx.arc(Math.sin(a) * (r - 24), -Math.cos(a) * (r - 24), i % 3 === 0 ? 1.75 : 0.75, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+```
+→ skipped: offscreen canvas caching and manual animation loops  
+→ add when: animated sweep hands or real-time tick transitions drop below 60fps
+
+---
+
+### 3. Pure-CSS Zen Ambient Dimming (Zero-JS Chrome Fade)
+
+```css
+/* Zero-distraction ambient containment */
+.zen-clock-root {
+  --ink: #2c2825;
+  --paper: #fbf9f5;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.zen-chrome {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 280ms cubic-bezier(0.16, 1, 0.3, 1), transform 280ms ease;
+  pointer-events: none;
+}
+
+/* Reveal only when explicitly interacting or pointer resides in zone */
+.zen-clock-root:is(:hover, :focus-within) .zen-chrome {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+```
+→ skipped: JavaScript idle-timer listeners (`mousemove`/`setTimeout`)  
+→ add when: user requests explicit always-on pinned mode via persistent setting
