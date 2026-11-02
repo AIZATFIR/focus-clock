@@ -372,3 +372,72 @@ add when: Physical trackpad/wheel dragging feels jittery in user testing.
 ```
 skipped: Dark-mode tokens and complex CSS glassmorphism.
 add when: System-level `prefers-color-scheme: dark` requirement is prioritized.
+
+
+### Cycle #9 Directive (2026-11-02 21:56)
+### 1. Zero-dependency 5-minute interval angle snapping
+
+```ts
+// src/clock/snap.ts
+// ponytail: hardcoded to 12h clockface & 5-minute default step. Upgrade when arbitrary divisions are user-configurable.
+export const snapPointerToMinutes = (dx: number, dy: number, step = 5): number => {
+  const rad = Math.atan2(dy, dx);
+  const deg = ((rad * 180 / Math.PI + 90) % 360 + 360) % 360;
+  return (Math.round((deg / 360) * (60 / step)) * step) % 60;
+};
+
+// Self-check
+console.assert(snapPointerToMinutes(0, -100) === 0, 'Top must be 0m');
+console.assert(snapPointerToMinutes(100, 0) === 15, 'Right must be 15m');
+console.assert(snapPointerToMinutes(0, 100) === 30, 'Bottom must be 30m');
+console.assert(snapPointerToMinutes(-100, 0) === 45, 'Left must be 45m');
+```
+*skipped: continuous magnetic drag physics and variable subdivisions; add when multi-hour long-range blocks are introduced.*
+
+---
+
+### 2. High-DPI Canvas initialization & sub-pixel dial alignment
+
+```ts
+// src/clock/canvas.ts
+export function syncCanvasDPI(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+*skipped: `ResizeObserver` listener and auto-rebind logic; add when responsive grid allows dynamic viewport splits.*
+
+---
+
+### 3. SofizCake / firtofolio Zen Palette & Native Interaction
+
+```css
+/* src/styles/clock.css */
+:root {
+  --zen-bg: #f9f8f6;
+  --zen-dial: #f2eee8;
+  --zen-ink: #2b2826;
+  --zen-muted: #8c857b;
+  --zen-terracotta: #c86446;
+}
+
+canvas.clockface {
+  touch-action: none;
+  user-select: none;
+  background: radial-gradient(circle, var(--zen-dial) 0%, var(--zen-bg) 72%);
+  border-radius: 50%;
+  cursor: grab;
+}
+
+canvas.clockface:active {
+  cursor: grabbing;
+}
+```
+*skipped: dark mode media queries and theme provider boilerplate; add when system theme persistence is wired to Sadar/focus-clock settings.*
