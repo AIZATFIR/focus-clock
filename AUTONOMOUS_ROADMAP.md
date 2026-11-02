@@ -1176,3 +1176,61 @@ export function drawZenFace(
 ```
 * Skipped: JS `mousemove` debounce listeners and idle timeout state machines.
 * Add when: Fine-grained controls require individual 3-second dwell timers on touch devices.
+
+
+### Cycle #73 Directive (2026-11-03 03:58)
+### 1. HiDPI Canvas & Zen Warmth Setup
+
+```javascript
+// Init crisp clock canvas with warm zen palette (SofizCake/firtofolio tone)
+export function initZenCanvas(canvas, size = 320) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  // ponytail: static warm palette; add CSS variable reader if dynamic theming needed
+  return { ctx, colors: { bg: '#FAF8F5', rim: '#EFECE6', hand: '#2D2B28', block: '#D97757' } };
+}
+```
+skipped: ResizeObserver and dynamic theme syncing.  
+add when: The clock face lives in a responsive grid or supports arbitrary user themes.
+
+---
+
+### 2. Timeblock Angular Snapping
+
+```javascript
+// Snap pointer angle to time steps (default: 5-min intervals)
+export const snapToInterval = (angleRad, stepMinutes = 5) => {
+  const stepRad = (stepMinutes / 60) * (2 * Math.PI);
+  const normalized = (angleRad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / stepRad) * stepRad;
+};
+
+// runnable self-check
+console.assert(Math.abs(snapToInterval(0.53, 5) - (Math.PI / 6)) < 1e-5, 'Snap failed');
+```
+skipped: Magnetic haptics and fractional drag smoothing.  
+add when: Supporting multi-hour dragging or physical vibration on mobile browsers.
+
+---
+
+### 3. Pure-CSS Zero-Distraction Idle UI
+
+```css
+/* Ambient fade for auxiliary controls without JS idle timers */
+.zen-overlay {
+  opacity: 0;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1) 2.5s;
+}
+
+.zen-stage:hover .zen-overlay,
+.zen-stage:focus-within .zen-overlay {
+  opacity: 1;
+  transition-delay: 0s;
+}
+```
+skipped: Custom pointermove timers and complex fullscreen management in JS.  
+add when: Need custom cursor hiding specifically inside the canvas element.
