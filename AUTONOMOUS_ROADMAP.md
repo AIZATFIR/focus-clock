@@ -2099,3 +2099,99 @@ console.assert(snapAngleToMinutes(0, 50) === 30, '6 o’clock is 30m');
 
 Skipped: Spring animations and multi-revolution state.
 Add when: Drag release threshold triggers an active session transition.
+
+
+### Cycle #86 Directive (2026-11-03 05:10)
+### 1. Canvas High-DPI & Anti-Slop Dial Baseline
+
+```javascript
+function renderClockface(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const cx = rect.width / 2, cy = rect.height / 2, r = cx - 18;
+  ctx.clearRect(0, 0, rect.width, rect.height);
+
+  // Zen 12-hour dial: low-contrast tactile dot ring
+  ctx.fillStyle = 'rgba(44, 40, 37, 0.16)';
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, i % 3 === 0 ? 2 : 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // ponytail: static 12-tick dial; upgrade to dynamic interval markers if sub-hour precision mode is needed.
+}
+```
+*   **Skipped:** Second-hand ticks and numeric labels.
+*   **Add when:** Specific numeric calibration is requested; currently causes visual noise.
+
+---
+
+### 2. Zero-Dependency 5-Minute Timeblock Pointer Snapping
+
+```javascript
+function snapPointerToMinutes(e, canvas, stepMinutes = 5) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - (rect.left + rect.width / 2);
+  const y = e.clientY - (rect.top + rect.height / 2);
+  
+  // Angle [0, 2π) where 12 o'clock is 0
+  const angle = (Math.atan2(y, x) + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const totalMinutes = (angle / (Math.PI * 2)) * 720;
+  
+  return (Math.round(totalMinutes / stepMinutes) * stepMinutes) % 720;
+  // ponytail: 12-hour modulo; upgrade to 24-hour domain if continuous day-spanning blocks are required.
+}
+
+// Self-check
+(() => {
+  const mockCanvas = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 200, height: 200 }) };
+  // Top center (12:00) -> 0 minutes
+  console.assert(snapPointerToMinutes({ clientX: 100, clientY: 10 }, mockCanvas) === 0, '12 o’clock check failed');
+  // Right center (3:00) -> 180 minutes
+  console.assert(snapPointerToMinutes({ clientX: 190, clientY: 100 }, mockCanvas) === 180, '3 o’clock check failed');
+})();
+```
+*   **Skipped:** Gesture inertia and multi-touch rotation math.
+*   **Add when:** Freeform multi-touch gestures are explicitly validated on mobile viewports.
+
+---
+
+### 3. Zen Ambient Auto-Fade Controls (CSS)
+
+```css
+:root {
+  --zen-bg: #FAF8F5;
+  --zen-ink: #2C2825;
+  --zen-accent: #C47A53;
+}
+
+.focus-stage {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.zen-chrome {
+  opacity: 0;
+  transition: opacity 240ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: opacity;
+}
+
+.focus-stage:hover .zen-chrome,
+.focus-stage:focus-within .zen-chrome {
+  opacity: 1;
+}
+/* ponytail: hover/focus-within trigger; add idle pointermove timer if pure touchscreen kiosks hide controls permanently. */
+```
+*   **Skipped:** JavaScript pointer-idle timers and visibility state tracking.
+*   **Add when:** Hardware targets without hover capabilities fail to reveal controls on tap.
