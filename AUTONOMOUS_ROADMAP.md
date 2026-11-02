@@ -2893,3 +2893,92 @@ body:focus-within .zen-ui {
 ```
 skipped: JS mouse idle timer and dynamic cursor hiding.  
 add when: Fullscreen distraction-free timer run-state requires total cursor dormancy.
+
+
+### Cycle #96 Directive (2026-11-03 06:06)
+### 1. HiDPI Canvas Clockface with Warm Sub-Pixel Ticks
+
+```javascript
+function drawClock(ctx, size, blocks = []) {
+  const dpr = window.devicePixelRatio || 1;
+  const canvas = ctx.canvas;
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+    canvas.style.width = canvas.style.height = `${size}px`;
+  }
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = cx - 20;
+
+  // Zen tick ring
+  ctx.strokeStyle = '#e4dfd7';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 60; i++) {
+    const rad = (i * Math.PI) / 30;
+    const len = i % 5 === 0 ? 8 : 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.sin(rad) * (r - len), cy - Math.cos(rad) * (r - len));
+    ctx.lineTo(cx + Math.sin(rad) * r, cy - Math.cos(rad) * r);
+    ctx.stroke();
+  }
+
+  // Soft pill timeblock arcs
+  blocks.forEach(({ fromMin, toMin, color = '#c89f81' }) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 12, (fromMin / 30 - 0.5) * Math.PI, (toMin / 30 - 0.5) * Math.PI);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+```
+skipped: ResizeObserver auto-binding and animation loops.  
+add when: Dynamic container resizing or smooth sweep-second hands are wired up.
+
+---
+
+### 2. Micro Timeblock Radial Snapping
+
+```javascript
+// ponytail: Fixed to 60-min standard dial; upgrade to 12h multi-turn when handling >1hr spans.
+function getSnappedMinutes(e, canvas, step = 5) {
+  const { left, top, width, height } = canvas.getBoundingClientRect();
+  const rad = Math.atan2(e.clientY - (top + height / 2), e.clientX - (left + width / 2)) + Math.PI / 2;
+  const normalized = rad < 0 ? rad + 2 * Math.PI : rad;
+  const rawMin = (normalized / (2 * Math.PI)) * 60;
+  return Math.round(rawMin / step) * step % 60;
+}
+
+// Self-check: 3 o'clock must snap to 15m
+console.assert(getSnappedMinutes({ clientX: 200, clientY: 100 }, { getBoundingClientRect: () => ({ left: 0, top: 0, width: 200, height: 200 }) }) === 15, "Snapping mismatch");
+```
+skipped: Deadzone detection and multi-ring drag hysteresis.  
+add when: Users drag near canvas center or cross dial zero repeatedly.
+
+---
+
+### 3. Tactile Zen Styling (SofizCake / Firtofolio Baseline)
+
+```css
+:root {
+  --bg: #fcfbf9;
+  --panel: #f4efe8;
+  --ink: #322e2b;
+  --accent: #b87d5e;
+}
+
+.clock-canvas {
+  touch-action: none;
+  user-select: none;
+  background: radial-gradient(circle at center, var(--bg) 60%, var(--panel) 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 20px -2px rgba(50, 46, 43, 0.05);
+  font-feature-settings: "tnum" 1;
+}
+```
+skipped: Theming engines, prefers-color-scheme overlays, and CSS Houdini paints.  
+add when: Night-mode/dark slate variant is explicitly introduced.
