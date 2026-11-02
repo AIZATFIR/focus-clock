@@ -3602,3 +3602,68 @@ console.assert(
 skipped: SVG rendering & drag-physics state machines, add when gestures require velocity-based inertia.
 skipped: dynamic theme engines, add when multi-tenant workspace themes are required.
 skipped: 24-hour arc projection, add when celestial prayer times integration is wired.
+
+
+### Cycle #105 Directive (2026-11-03 06:57)
+### 1. High-DPI Crisp Clockface Initialization
+
+```typescript
+export function mountZenClock(canvas: HTMLCanvasElement) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  return { ctx, center: width / 2, radius: (width / 2) * 0.88 };
+}
+```
+skipped: ResizeObserver auto-rescaling. Add when canvas container is dynamically resizable.
+
+---
+
+### 2. Timeblock 5-Minute Angular Snap Logic
+
+```typescript
+// ponytail: Fixed 5-min snap without magnetic drag resistance; upgrade to velocity friction if user reports jitter.
+export const snapRadToMinutes = (rad: number, stepMin = 5): { min: number; snappedRad: number } => {
+  const tau = Math.PI * 2;
+  const norm = ((rad + Math.PI / 2) % tau + tau) % tau;
+  const min = (Math.round((norm / tau) * (60 / stepMin)) * stepMin) % 60;
+  return { min, snappedRad: (min / 60) * tau - Math.PI / 2 };
+};
+
+// Self-check
+console.assert(snapRadToMinutes(0, 15).min === 15, '0 rad (3 o’clock) must snap to 15m');
+console.assert(snapRadToMinutes(-Math.PI / 2, 5).min === 0, '-PI/2 (12 o’clock) must snap to 0m');
+```
+skipped: Variable threshold snapping (1m vs 15m mode toggle). Add when sub-5-minute sprints are supported.
+
+---
+
+### 3. Washi Warmth & Hover-Only Zen Distraction Mask
+
+```css
+:root {
+  --zen-bg: #FDFCF8;    /* Rice paper warm neutral */
+  --zen-ink: #1C1917;   /* Muted charcoal */
+  --zen-amber: #C2410C; /* Terracotta focus arc */
+}
+
+.zen-stage {
+  background: var(--zen-bg);
+  font-feature-settings: "tnum" 1;
+}
+
+.zen-controls {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-stage:is(:hover, :focus-within) .zen-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+skipped: JavaScript-based mouse inactivity timer. Add when full-screen presentation mode is requested.
