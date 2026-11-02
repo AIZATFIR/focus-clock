@@ -441,3 +441,103 @@ canvas.clockface:active {
 }
 ```
 *skipped: dark mode media queries and theme provider boilerplate; add when system theme persistence is wired to Sadar/focus-clock settings.*
+
+
+### Cycle #11 Directive (2026-11-02 22:08)
+### 1. HiDPI Canvas Scaling & Warm Arc Render
+
+Eliminate blurry canvas rendering on Retina screens with zero dependencies; apply warm low-contrast dial tokens.
+
+```javascript
+export function initClockCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, size: rect.width };
+}
+
+export function drawZenFace(ctx, size, elapsedRatio) {
+  const center = size / 2;
+  const radius = center - 16;
+  ctx.clearRect(0, 0, size, size);
+
+  // ponytail: static warm-neutral palette; add dynamic CSS var bridge if theme-switching is requested
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+
+  // Base dial track
+  ctx.strokeStyle = '#eee9e0';
+  ctx.beginPath();
+  ctx.arc(center, center, radius, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Active focus arc
+  ctx.strokeStyle = '#7c6f64';
+  ctx.beginPath();
+  ctx.arc(center, center, radius, -Math.PI / 2, -Math.PI / 2 + elapsedRatio * Math.PI * 2);
+  ctx.stroke();
+}
+```
+skipped: ResizeObserver auto-resizing, multi-theme config.  
+add when: Dynamic window resizing or dark-mode toggle is explicitly requested.
+
+---
+
+### 2. Timeblock Snap Engine (15-Minute Discrete Steps)
+
+Pure native math to snap raw radial pointer input to discrete intervals without state machine bloat.
+
+```javascript
+// ponytail: hardcoded to 15m; upgrade to dynamic step arg if custom intervals are added
+export function snapAngleToBlock(rad, totalBlocks = 96) { // 96 blocks = 15m in 24h (or 48 for 12h)
+  const tau = Math.PI * 2;
+  const normalized = (rad % tau + tau) % tau;
+  const step = tau / totalBlocks;
+  return Math.round(normalized / step) * step;
+}
+
+// Self-check
+console.assert(
+  Math.abs(snapAngleToBlock(0.06, 96) - 0.0654498) < 1e-4,
+  'Failed to snap angle to nearest 15-minute slice'
+);
+```
+skipped: Custom inertia physics, variable snap thresholds.  
+add when: Fluid drag momentum feels sticky during user testing.
+
+---
+
+### 3. Anti-Slop Zen Dial Shell (CSS-Only Layout)
+
+Native CSS container with typography tuning (`font-variant-numeric: tabular-nums`) to prevent text jitter and distraction.
+
+```css
+:root {
+  --zen-bg: #fdfbf7;
+  --zen-ink: #2b2825;
+  --zen-subtle: #8f857d;
+}
+
+.clock-shell {
+  display: grid;
+  place-items: center;
+  background-color: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.clock-canvas {
+  width: 280px;
+  height: 280px;
+  touch-action: none;
+}
+```
+skipped: Glassmorphism filters, styled buttons, complex media queries.  
+add when: UI supports auxiliary toolbars or mobile-specific layouts.
