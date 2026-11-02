@@ -541,3 +541,63 @@ Native CSS container with typography tuning (`font-variant-numeric: tabular-nums
 ```
 skipped: Glassmorphism filters, styled buttons, complex media queries.  
 add when: UI supports auxiliary toolbars or mobile-specific layouts.
+
+
+### Cycle #12 Directive (2026-11-02 22:13)
+### 1. HiDPI Canvas Normalizer (Eliminates Blur on Retina/Apple Displays)
+
+```javascript
+export function fitZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height, cx: width / 2, cy: height / 2 };
+}
+```
+* Skipped: ResizeObserver polling.
+* Add when: The canvas container has fluid, non-preset responsive drag-resizing.
+
+---
+
+### 2. Timeblock Polar Snapping (Clockwise from 12 o'clock, 5-min intervals)
+
+```javascript
+export function snapToMinutes(dx, dy, step = 5) {
+  // Polar angle from 12 o'clock (top) progressing clockwise [0, 2π)
+  const theta = (Math.atan2(dy, dx) + Math.PI * 2.5) % (Math.PI * 2);
+  const rawMin = (theta / (Math.PI * 2)) * 60;
+  // ponytail: modulo 60 limits to 1hr clockface. Upgrade to multi-hour dial when span tracks >60m.
+  const mins = (Math.round(rawMin / step) * step) % 60;
+  return { mins, rad: (mins / 60) * Math.PI * 2 - Math.PI / 2 };
+}
+
+// Verification check
+console.assert(snapToMinutes(0, -50).mins === 0, '12 oclock must be 0m');
+console.assert(snapToMinutes(50, 0).mins === 15, '3 oclock must be 15m');
+console.assert(snapToMinutes(0, 50).mins === 30, '6 oclock must be 30m');
+console.assert(snapToMinutes(-50, 0).mins === 45, '9 oclock must be 45m');
+```
+* Skipped: Dynamic variable intervals (1m/10m/15m UI pickers).
+* Add when: Users require explicit micro-sprints under 5 minutes.
+
+---
+
+### 3. Warm Zen Arc Renderer (Anti-Slop SofizCake Aesthetic)
+
+```javascript
+export function drawZenBlock(ctx, cx, cy, radius, startMin, endMin, color = '#E07A5F') {
+  const toRad = (m) => (m / 60) * Math.PI * 2 - Math.PI / 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, toRad(startMin), toRad(endMin));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+* Skipped: Gradients, drop-shadow blurs, and animated easing libraries.
+* Add when: Profile shows GPU headroom and visual feedback demands edge glowing.
