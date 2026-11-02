@@ -2516,3 +2516,88 @@ canvas {
 /* ponytail: light mode only; add @media (prefers-color-scheme: dark) warm-slate variant when dark mode is tasked */
 ```
 → skipped: Complex CSS utility frameworks and themes; add when client settings persist custom user themes.
+
+
+### Cycle #91 Directive (2026-11-03 05:38)
+### 1. Snapping: 15-Minute Block Angle Quantizer
+
+```javascript
+// ponytail: step-only snapping; upgrade to elastic magnetic pull near boundaries if drag feel needs friction.
+export function snapAngle(x, y, cx, cy, stepMinutes = 15) {
+  const tau = Math.PI * 2;
+  const raw = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+  const angle = (raw % tau + tau) % tau;
+  const step = tau / (60 / stepMinutes);
+  return Math.round(angle / step) * step;
+}
+
+// Self-check
+console.assert(snapAngle(0, -100, 0, 0, 15) === 0, 'Top pointer must snap to 0 radians (12 o’clock)');
+```
+*   Skipped: Pointer inertia and magnet radius damping.
+*   Add when: Touch interaction user testing shows overshooting on small screens.
+
+---
+
+### 2. Canvas: HiDPI Zero-Slop Zen Clockface
+
+```javascript
+export function renderClockface(canvas, progressAngle = 0) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = 280;
+  
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+    canvas.style.width = canvas.style.height = `${size}px`;
+  }
+  
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = 110;
+
+  // Track (SofizCake warm neutral)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'oklch(0.92 0.015 65)';
+  ctx.lineWidth = 12;
+  ctx.stroke();
+
+  // Active Block Wedge
+  if (progressAngle > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, progressAngle - Math.PI / 2);
+    ctx.strokeStyle = 'oklch(0.55 0.06 45)';
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+```
+*   Skipped: Animation frame loops and sub-tick graduation labels.
+*   Add when: Continuous minute hand mode is selected over block focus mode.
+
+---
+
+### 3. UI: Minimal Canvas Enclosure
+
+```css
+.clock-surface {
+  display: grid;
+  place-items: center;
+  inline-size: 100vw;
+  block-size: 100dvh;
+  background-color: oklch(0.98 0.01 70); /* Zen warm paper */
+  user-select: none;
+  touch-action: none;
+}
+
+.clock-surface canvas {
+  cursor: grab;
+  filter: drop-shadow(0 2px 16px oklch(0 0 0 / 0.04));
+}
+```
+*   Skipped: Theme config objects and CSS-in-JS abstractions.
+*   Add when: Dark mode / system-matched theme toggle is requested.
