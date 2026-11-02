@@ -225,3 +225,53 @@ export function renderZenClock(canvas, size = 320) {
 ```
 → skipped: JavaScript idle-timer listeners (`mousemove`/`setTimeout`)  
 → add when: user requests explicit always-on pinned mode via persistent setting
+
+
+### Cycle #4 Directive (2026-11-02 21:27)
+### 1. HiDPI Canvas Pixel Ratio Normalization
+
+```javascript
+export function syncCanvasDpr(canvas, ctx) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+```
+skipped: ResizeObserver integration and debounced resize loops.  
+add when: Dynamic window resizing or split-screen triggers visible canvas stretching.
+
+---
+
+### 2. 15-Minute Polar Snapping
+
+```javascript
+// ponytail: 12h face hardcoded; upgrade to 24h when dial config is requested.
+export function snapAngle(x, y, cx, cy, stepMins = 15) {
+  const step = (stepMins / 720) * (2 * Math.PI);
+  const angle = (Math.atan2(y - cy, x - cx) + 2.5 * Math.PI) % (2 * Math.PI);
+  return Math.round(angle / step) * step;
+}
+
+// Self-check
+console.assert(snapAngle(100, 50, 100, 100, 15) === 0, '12 o’clock must be 0 rad');
+```
+skipped: Custom per-block snap sensitivity and haptic feedback triggers.  
+add when: Multi-duration drag handles or mobile haptics are introduced.
+
+---
+
+### 3. Zen Ambience & Input Isolation (CSS)
+
+```css
+.zen-clockface {
+  background-color: #f7f4ee; /* SofizCake warm linen */
+  color: #2b2725;            /* Soft soot, zero pure-black */
+  touch-action: none;         /* Drops 300ms gesture latency */
+  user-select: none;
+  contain: strict;
+}
+```
+skipped: CSS color-scheme auto-switching and dark-mode themes.  
+add when: Dark mode specification is provided.
