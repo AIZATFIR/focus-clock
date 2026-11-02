@@ -2342,3 +2342,89 @@ add when: dial is placed inside collapsible sidebars or fluid split-panes.
 ```
 skipped: theme toggle engine and CSS-in-JS bindings.  
 add when: dark mode palette tokens are formally introduced to the design tokens.
+
+
+### Cycle #89 Directive (2026-11-03 05:27)
+### 1. HiDPI Canvas Dial with Zen Warmth
+
+```javascript
+export function renderClockFace(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const r = size / 2;
+  ctx.clearRect(0, 0, size, size);
+
+  // Soft ceramic dial
+  ctx.fillStyle = '#faf8f5';
+  ctx.beginPath(); ctx.arc(r, r, r - 2, 0, Math.PI * 2); ctx.fill();
+
+  // 12 minimal pip accents
+  ctx.fillStyle = '#8c827a';
+  for (let i = 0; i < 12; i++) {
+    const rad = (i * Math.PI) / 6;
+    const x = r + (r - 18) * Math.sin(rad);
+    const y = r - (r - 18) * Math.cos(rad);
+    ctx.beginPath();
+    ctx.arc(x, y, i % 3 === 0 ? 2 : 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  return ctx;
+}
+// ponytail: Fixed 12-hour dial; add sub-minute tick subdivisions when millisecond countdown mode is requested.
+```
+→ skipped: Dynamic vector/SVG dial layers and offscreen canvas caching.  
+→ add when: Custom dial themes or >60fps hand sweeps cause measurable composite lag.
+
+---
+
+### 2. Angular Snapping for Timeblocks (5-min increments)
+
+```javascript
+export function snapPointerToMinutes(clientX, clientY, rect, stepMinutes = 5) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  let rad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  if (rad < 0) rad += Math.PI * 2;
+
+  const rawMinutes = (rad / (Math.PI * 2)) * 60;
+  return (Math.round(rawMinutes / stepMinutes) * stepMinutes) % 60;
+}
+// ponytail: Single-hour (60-min) snap circle; upgrade to multi-hour arc math when multi-hour sessions land.
+
+// Self-check
+const mockRect = { left: 0, top: 0, width: 200, height: 200 };
+console.assert(snapPointerToMinutes(200, 100, mockRect) === 15, 'Failed 3 o-clock snap');
+console.assert(snapPointerToMinutes(100, 200, mockRect) === 30, 'Failed 6 o-clock snap');
+```
+→ skipped: Drag velocity snapping and friction physics.  
+→ add when: User testing reports overshooting target time blocks on touch displays.
+
+---
+
+### 3. Native Zero-Distraction Chrome Auto-Fade
+
+```css
+/* Zero-distraction zen frame: chrome recedes completely unless intentional */
+.clock-container {
+  background-color: #faf8f5;
+  --zen-opacity: 0;
+}
+
+.clock-container:hover,
+.clock-container:focus-within {
+  --zen-opacity: 1;
+}
+
+.zen-control {
+  opacity: var(--zen-opacity);
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* ponytail: CSS hover/focus-within trigger; add pointer idle JS timer when explicit touch device focus-drop is required. */
+```
+→ skipped: JS mouse-idle timer listeners and custom gesture states.  
+→ add when: Deploying as a dedicated standalone PWA on touch-first hardware.
