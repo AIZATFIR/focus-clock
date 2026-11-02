@@ -1017,3 +1017,73 @@ canvas:active {
 }
 ```
 *skipped: dark mode CSS variables; add when system color-scheme detection is wired across suite.*
+
+
+### Cycle #19 Directive (2026-11-02 22:53)
+### 1. HiDPI Canvas Crispness & Zen Warm Stroke
+
+```javascript
+export const initZenCanvas = (canvas) => {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // ponytail: static warm-ink; wire matchMedia listener if runtime theme switching needed.
+  ctx.strokeStyle = '#2C2825';
+  return ctx;
+};
+```
+skipped: ResizeObserver auto-rescaling. Add when: the clockface layout becomes fluid or responsive to window resizes.
+
+---
+
+### 2. Micro-Snap Engine (Polar Arc to 15-Min Slots)
+
+```javascript
+// 720 minutes = 12h rotation; 15-min slot = π/24 radians
+export const snapToSlot = (rad, minutes = 15) => {
+  const step = (minutes / 720) * 2 * Math.PI;
+  // ponytail: normalized to single 12h cycle; add multi-cycle unwrapping if blocks span >12h.
+  return Math.round(rad / step) * step;
+};
+
+// Self-check
+console.assert(snapToSlot(0.12, 15) === snapToSlot(0.14, 15), 'Snap failed: angles within slot must align');
+console.assert(snapToSlot(Math.PI / 12, 15) === Math.PI / 12, 'Snap failed: exact slot must preserve angle');
+```
+skipped: Custom easing / spring physics on snap release. Add when: drag-and-drop interaction requires tangible haptic-like bounce.
+
+---
+
+### 3. SofizCake / Zen UI Reset
+
+```css
+:root {
+  --zen-bg: #FAF8F5;
+  --zen-ink: #2C2825;
+  --zen-accent: #E07A5F;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --zen-bg: #141312;
+    --zen-ink: #EDE8E3;
+    --zen-accent: #F28E73;
+  }
+}
+body {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background-color: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+```
+skipped: CSS reset libraries and custom webfonts. Add when: system fonts fail specific branded typographic hierarchy.
