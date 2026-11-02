@@ -1801,3 +1801,77 @@ console.assert(Math.abs(snapRadianToMinutes(0.04, 5) - 0) < 1e-6, 'Snap zero-flo
 ```
 * Skipped: Idle timers and `mousemove` event listeners in JavaScript.
 * Add when: Native cursor auto-hiding is needed strictly after a timed inactivity timeout while the mouse is stationary inside the window.
+
+
+### Cycle #82 Directive (2026-11-03 04:48)
+### 1. Pointer-to-Timeblock Snapper
+
+```js
+// snap-block.js
+export function snapAngleToMinutes(rad, stepMinutes = 5) {
+  // ponytail: 60-min clock-face only. Upgrade to 720-min (12h) if multi-hour dragging is needed.
+  const tau = Math.PI * 2;
+  const normalized = (rad + Math.PI / 2 + tau) % tau;
+  const rawMinutes = (normalized / tau) * 60;
+  const snappedMinutes = (Math.round(rawMinutes / stepMinutes) * stepMinutes) % 60;
+  return (snappedMinutes / 60) * tau - Math.PI / 2;
+}
+
+// self-check
+console.assert(snapAngleToMinutes(-Math.PI / 2, 15) === -Math.PI / 2, 'Top (00m) failed');
+console.assert(Math.abs(snapAngleToMinutes(0, 15) - 0) < 1e-6, 'Right (15m) failed');
+```
+skipped: Non-linear magnetic drag curves.  
+add when: User testing shows overshooting on small screens.
+
+---
+
+### 2. DPR-Crisp Canvas Arc Renderer
+
+```js
+// render-clock.js
+export function drawTimeblock(canvas, startRad, endRad, color = '#E6AF7A') {
+  // ponytail: single-arc rendering. Upgrade to path2D batching when rendering >10 concurrent blocks.
+  const dpr = window.devicePixelRatio || 1;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.clientWidth;
+  
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+  }
+  
+  ctx.save();
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size * 0.38;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startRad, endRad);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+}
+```
+skipped: RequestAnimationFrame loop management.  
+add when: Real-time clock pointer animations or ticking seconds are bound.
+
+---
+
+### 3. Zen Surface Isolation
+
+```css
+/* zen-clock.css */
+.clock-surface {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: radial-gradient(circle, #FAFAF7 0%, #F2EFE9 100%);
+  border-radius: 50%;
+  box-shadow: 0 12px 36px -8px rgba(80, 70, 60, 0.08);
+}
+```
+skipped: Dark-mode color overrides.  
+add when: System `prefers-color-scheme: dark` token map is plugged into theme pipeline.
