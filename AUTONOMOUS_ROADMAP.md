@@ -712,3 +712,73 @@ console.assert(snapRadialMinutes(150, 100, 100, 100) === 180, '3 o’clock must 
 }
 ```
 `→ skipped: [dark-mode token mappings and themes], add when [explicit system media-query preference toggle is requested].`
+
+
+### Cycle #15 Directive (2026-11-02 22:30)
+### 1. Retina-Crisp Canvas Sync (Zero Blurry Arcs)
+
+```js
+// Crisp canvas scaling without layout thrashing
+const syncDPR = (canvas, ctx) => {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+};
+// ponytail: hardcoded to current rect; wrap in ResizeObserver when canvas dimensions become dynamic.
+```
+skipped: ResizeObserver abstraction, multi-canvas managers.  
+add when: The clock face is fluidly resizable by user drag or responsive breakpoints.
+
+---
+
+### 2. Timeblock Snapping (Pure Native Radians)
+
+```js
+// Snap pointer angle to 5-min intervals (2π / 12 = π / 6 rads)
+const snapAngle = (angleRad, step = Math.PI / 6) => {
+  const normalized = (angleRad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / step) * step;
+};
+
+// Self-check
+console.assert(snapAngle(0.28) === 0, "Snaps down to 0");
+console.assert(Math.abs(snapAngle(0.5) - Math.PI / 6) < 1e-9, "Snaps up to 5min mark");
+```
+skipped: Bezier easing, complex drag-state machine.  
+add when: Visual magnetic "snap-in" spring animations are required during pointer release.
+
+---
+
+### 3. Warm Zen Surface & Zero-Distraction Chromelessness
+
+```css
+/* firtofolio/SofizCake warm palette & idle declutter */
+:root {
+  --zen-bg: #fbf9f5;
+  --zen-surface: #f2eee5;
+  --zen-ink: #2b2826;
+  --zen-accent: #d97757; /* soft terracotta */
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.zen-controls {
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body:hover .zen-controls,
+body:focus-within .zen-controls {
+  opacity: 1;
+}
+```
+skipped: JavaScript-driven idle mouse-fade timers.  
+add when: Touch/mobile screens need explicit toggle behavior.
