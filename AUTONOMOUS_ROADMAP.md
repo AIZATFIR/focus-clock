@@ -2276,3 +2276,69 @@ Auto-dims peripheral controls and UI chrome to near-invisible when the cursor re
 ```
 * Skipped: Idle detector JS hooks, opacity custom-property spring physics.
 * Add when: Accessibility settings explicitly request `prefers-reduced-motion` overrides.
+
+
+### Cycle #88 Directive (2026-11-03 05:21)
+### 1. Radial Timeblock Snapping (5-min Quantization)
+
+```javascript
+export function snapAngleToMinutes(rad, stepMinutes = 5) {
+  const tau = Math.PI * 2;
+  const normalized = (rad % tau + tau) % tau;
+  const stepRad = tau / (60 / stepMinutes);
+  // ponytail: 60-min single revolution ceiling; upgrade to 12h/720m dial via param dialMinutes
+  return (Math.round(normalized / stepRad) * stepRad) % tau;
+}
+
+// Self-check
+console.assert(
+  Math.abs(snapAngleToMinutes(0.24, 5) - (Math.PI * 2 / 12)) < 1e-6,
+  'Failed to snap 0.24 rad to nearest 5-min mark'
+);
+```
+skipped: variable dial durations (12h/24h arcs) and non-uniform magnetic snaps.  
+add when: supporting multi-hour macro blocks instead of a 60-minute dial.
+
+---
+
+### 2. Crisp HiDPI Canvas Resizer
+
+```javascript
+export function fitRetinaCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const targetW = Math.round(rect.width * dpr);
+  const targetH = Math.round(rect.height * dpr);
+
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    ctx.resetTransform?.();
+    ctx.scale(dpr, dpr);
+  }
+  // ponytail: manual call ceiling; upgrade to ResizeObserver if clock is dynamically resized
+}
+```
+skipped: automated `ResizeObserver` lifecycle management.  
+add when: dial is placed inside collapsible sidebars or fluid split-panes.
+
+---
+
+### 3. Zen Surface Tokens & Idle Cursor (firtofolio warm minimalist)
+
+```css
+.zen-clockface {
+  contain: strict;
+  user-select: none;
+  touch-action: none;
+  cursor: crosshair;
+  background: radial-gradient(circle at center, #faf8f5 0%, #efeae4 100%);
+}
+
+.zen-clockface[data-state="focused"] {
+  cursor: none;
+}
+```
+skipped: theme toggle engine and CSS-in-JS bindings.  
+add when: dark mode palette tokens are formally introduced to the design tokens.
