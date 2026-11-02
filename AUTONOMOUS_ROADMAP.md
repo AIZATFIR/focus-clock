@@ -3182,3 +3182,99 @@ console.assert(snapAngleToMinutes(Math.PI / 2, 5) === 30, '6 o’clock must be 3
 
 skipped: Drag-handle physics & offscreen canvas caching.
 add when: Touch-drag frame drops fall below 60fps or multi-hour stacking is required.
+
+
+### Cycle #100 Directive (2026-11-03 06:28)
+### 1. Polar-to-Timeblock Snapper
+
+```javascript
+// snap.js - Native 5-minute increment clockface snapping
+export function snapAngleToMinutes(x, y, radius, stepMinutes = 5) {
+  // Angle relative to 12 o'clock (top)
+  const rad = Math.atan2(y, x) + Math.PI / 2;
+  const normalized = (rad + 2 * Math.PI) % (2 * Math.PI);
+  const minutes = (normalized / (2 * Math.PI)) * 60;
+  // ponytail: 60-min single dial ceiling; upgrade path: pass duration bounds for multi-hour
+  return (Math.round(minutes / stepMinutes) * stepMinutes) % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(0, -100, 100) === 0, '12 o’clock must be 0 min');
+console.assert(snapAngleToMinutes(100, 0, 100) === 15, '3 o’clock must be 15 min');
+console.assert(snapAngleToMinutes(0, 100, 100) === 30, '6 o’clock must be 30 min');
+console.assert(snapAngleToMinutes(95, 30, 100) === 15, 'Snap 16-17 min down to 15 min');
+```
+skipped: Custom inertia physics and variable angle deadzones.  
+add when: Touch gestures feel floaty or inaccurate during live user testing.
+
+---
+
+### 2. High-DPI Zen Clockface Canvas Renderer
+
+```javascript
+// clockface.js - Warm palette, Retina-scaled minimal arc
+export function renderZenDial(canvas, ctx, progressRatio = 0.416) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.clientWidth || 320;
+  
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+    ctx.scale(dpr, dpr);
+  }
+
+  const cx = size / 2, cy = size / 2, r = size * 0.4;
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineCap = 'round';
+
+  // Base track
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#EDE8E1'; // Warm sand neutral
+  ctx.lineWidth = 10;
+  ctx.stroke();
+
+  // Active timeblock fill
+  if (progressRatio > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + progressRatio * Math.PI * 2);
+    ctx.strokeStyle = '#3E3A36'; // Soft charcoal
+    ctx.stroke();
+  }
+}
+```
+skipped: Ticks, SVG fallback, and gradient shader sweeps.  
+add when: Readability suffers without numerical tick markers.
+
+---
+
+### 3. Zen Shell Layout (Zero-JS Distraction Suppression)
+
+```css
+/* zen.css - SofizCake/firtofolio tone tokens and anti-layout-shift shell */
+:root {
+  --zen-bg: #F7F5F0;
+  --zen-text: #2B2826;
+  --zen-subtle: #9E9992;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background-color: var(--zen-bg);
+  color: var(--zen-text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+  user-select: none;
+  overflow: hidden;
+}
+
+canvas {
+  width: min(80vw, 360px);
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: crosshair;
+}
+```
+skipped: Dark-mode media query overrides and external fonts.  
+add when: Night-mode manual toggle is prioritized.
