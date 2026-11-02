@@ -1448,3 +1448,88 @@ console.assert(Math.abs(snapAngle(0.24, 5, 60) - (Math.PI / 6)) < 1e-5, 'Snap fa
 }
 ```
 `clock.css` → skipped: runtime theme toggle and complex CSS variables, add when dark mode is explicitly scheduled.
+
+
+### Cycle #77 Directive (2026-11-03 04:20)
+### 1. Magnetic Timeblock Snap (Math stdlib)
+
+```ts
+// Snaps pointer angle relative to center to minute increments (default: 5m)
+export function snapPointerToMinutes(cx: number, cy: number, px: number, py: number, step = 5): number {
+  const rad = Math.atan2(py - cy, px - cx);
+  // ponytail: 12-hour single-turn dial only; upgrade to multi-turn/24h dial when multi-hour spans land
+  const norm = (rad + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const minutes = Math.round(((norm / (Math.PI * 2)) * 60) / step) * step;
+  return minutes === 60 ? 0 : minutes;
+}
+
+// Self-check
+console.assert(snapPointerToMinutes(100, 100, 100, 50, 5) === 0, 'Top must be 0m');
+console.assert(snapPointerToMinutes(100, 100, 150, 100, 5) === 15, 'Right must be 15m');
+console.assert(snapPointerToMinutes(100, 100, 99, 150, 5) === 30, 'Bottom must snap to 30m');
+```
+* Skipped: Dynamic step sizes (1m/15m toggle), gesture velocity smoothing.
+* Add when: Users request arbitrary Pomodoro durations under 5 minutes.
+
+---
+
+### 2. Crisp HiDPI Zen Clockface Canvas Arc
+
+```ts
+export function drawZenDial(canvas: HTMLCanvasElement, activeMinutes: number, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+    canvas.style.width = canvas.style.height = `${size}px`;
+  }
+  const ctx = canvas.getContext('2d')!;
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const c = size / 2;
+  const r = c - 24;
+  const endAngle = -Math.PI / 2 + (activeMinutes / 60) * (Math.PI * 2);
+
+  // ponytail: hardcoded warm zen palette; lift to CSS vars when full dark mode lands
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+
+  // Track
+  ctx.strokeStyle = '#eee9e0';
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Active timeblock
+  if (activeMinutes > 0) {
+    ctx.strokeStyle = '#c46647'; // warm terracotta
+    ctx.beginPath();
+    ctx.arc(c, c, r, -Math.PI / 2, endAngle, false);
+    ctx.stroke();
+  }
+}
+```
+* Skipped: Tick marks, numbers, gradient shaders, requestAnimationFrame loop.
+* Add when: Animation during state transitions is needed instead of direct interaction.
+
+---
+
+### 3. Zen Interaction & Numeric Presentation (CSS)
+
+```css
+.zen-clock {
+  touch-action: none;
+  background-color: #fcfbf9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "tnum" 1;
+  user-select: none;
+  cursor: grab;
+}
+
+.zen-clock:active {
+  cursor: grabbing;
+}
+```
+* Skipped: Theme toggles and CSS-in-JS abstraction layers.
+* Add when: Abstraction is mandated by shared UI design-system package.
