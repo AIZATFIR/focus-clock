@@ -2982,3 +2982,64 @@ add when: Users drag near canvas center or cross dial zero repeatedly.
 ```
 skipped: Theming engines, prefers-color-scheme overlays, and CSS Houdini paints.  
 add when: Night-mode/dark slate variant is explicitly introduced.
+
+
+### Cycle #97 Directive (2026-11-03 06:11)
+### 1. HiDPI Canvas Scaling & Warm Zen Render Loop
+
+```javascript
+// canvas.js
+export function setupZenClock(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: static warm cream/charcoal palette; extract to CSS vars if dark mode lands.
+  return { ctx, cx: width / 2, cy: height / 2, r: Math.min(width, height) / 2 - 16 };
+}
+```
+skipped: ResizeObserver auto-resize and orientation listener.
+add when: Dynamic window resizing causes clock blur on multi-monitor setups.
+
+---
+
+### 2. Radial Timeblock Snapping (15-Minute Quantization)
+
+```javascript
+// snap.js
+export function snapToRadialStep(rad, stepMinutes = 15) {
+  const stepRad = (2 * Math.PI) / ((12 * 60) / stepMinutes);
+  // Normalizes [-PI, PI] to [0, 2PI] then quantizes
+  const normalized = (rad + 2 * Math.PI) % (2 * Math.PI);
+  // ponytail: 12-hour face only; upgrade divisor to 24*60 if 24h mode is requested.
+  return Math.round(normalized / stepRad) * stepRad;
+}
+
+// Self-check
+console.assert(snapToRadialStep(0.12, 15) === 0.1308996938995747, '15-min snap mismatch');
+```
+skipped: Magnetic inertia and haptic touch feedback.
+add when: Mobile touch drag is implemented and feels overly rigid.
+
+---
+
+### 3. Anti-Slop Zen Surface Tokens (firtofolio / SofizCake Warmth)
+
+```css
+/* zen.css */
+:root {
+  --surface: #FAF7F2;
+  --ink-primary: #2D2723;
+  --ink-muted: #8E8279;
+  --accent-baked: #BA5D3F;
+}
+canvas {
+  touch-action: none;
+  background-color: var(--surface);
+  filter: drop-shadow(0 12px 32px rgba(45, 39, 35, 0.04));
+}
+```
+skipped: Runtime CSS-in-JS theme engine.
+add when: Multiple user-definable palette slots are formally required.
