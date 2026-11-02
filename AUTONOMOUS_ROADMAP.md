@@ -1667,3 +1667,60 @@ canvas {
 
 skipped: dynamic spring animations and drag momentum physics; add when touch interaction telemetry shows users overshooting targets.
 skipped: tick-mark subdivision layers; add only if user testing proves time readouts require sub-minute precision.
+
+
+### Cycle #80 Directive (2026-11-03 04:37)
+### 1. HiDPI Canvas Setup with Zen Warmth Palette
+
+```javascript
+export const ZEN = { bg: '#FDFBF7', surface: '#F4EFEA', text: '#2C2523', accent: '#D97757' };
+
+export function initCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+→ skipped: Dynamic resize observers and offscreen buffering; add when supporting fluid responsive viewports or multi-layer animations.
+
+---
+
+### 2. Timeblock Angular Snapping (15-min Intervals)
+
+```javascript
+// ponytail: Fixed to standard 12-hour analog face. Upgrade to 24-hour via fullDay boolean if requested.
+export function snapAngle(rad, stepMinutes = 15) {
+  const stepRad = (2 * Math.PI) / (12 * (60 / stepMinutes));
+  return Math.round(rad / stepRad) * stepRad;
+}
+
+// Check
+console.assert(snapAngle(0.04, 15) === 0, 'Snap failed at origin');
+console.assert(Math.abs(snapAngle(Math.PI / 6 + 0.02, 15) - Math.PI / 6) < 1e-9, 'Snap failed at 1h mark');
+```
+→ skipped: Magnetism thresholds and haptic event firing; add when touch/drag interaction loop is bound to pointer events.
+
+---
+
+### 3. Batched Minimalist Tick Marks
+
+```javascript
+export function drawDial(ctx, cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6;
+    const len = i % 3 === 0 ? 6 : 3;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    ctx.moveTo(cx + cos * r, cy + sin * r);
+    ctx.lineTo(cx + cos * (r - len), cy + sin * (r - len));
+  }
+  ctx.strokeStyle = '#2C252326';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+→ skipped: Per-minute tick loops and numerical labels; add when precision mode toggle is explicitly enabled.
