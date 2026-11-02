@@ -2820,3 +2820,76 @@ body:hover .zen-controls,
 
 skipped: dynamic snap-granularity config and custom Bezier tick animations.
 add when: user explicitly requests customizable intervals or tick haptics.
+
+
+### Cycle #95 Directive (2026-11-03 06:00)
+### 1. HiDPI Canvas Normalizer & Warm Dial Palette
+
+```javascript
+export function initZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  // ponytail: static warm-paper palette; upgrade to CSS variable extraction if dynamic theme toggle is added
+  return { ctx, size: width, center: width / 2, colors: { bg: '#FBF9F5', ink: '#2B2724', mute: '#E5DFD7', accent: '#D96B43' } };
+}
+```
+skipped: ResizeObserver auto-rescaling.  
+add when: Dynamic multi-device split-pane layouts are introduced.
+
+---
+
+### 2. Radial Timeblock Snapper (5-Minute Magnetic Increment)
+
+```javascript
+export function snapAngle(x, y, cx, cy, stepMinutes = 5) {
+  const angle = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+  const tau = Math.PI * 2;
+  const norm = (angle % tau + tau) % tau;
+  const totalMinutes = (norm / tau) * 60;
+  const snapped = (Math.round(totalMinutes / stepMinutes) * stepMinutes) % 60;
+  return (snapped / 60) * tau - Math.PI / 2;
+}
+
+// Self-check
+console.assert(Math.abs(snapAngle(100, 0, 100, 100, 5) - (-Math.PI / 2)) < 1e-6, 'Top snap failed');
+console.assert(Math.abs(snapAngle(200, 100, 100, 100, 15) - 0) < 1e-6, '3 o-clock snap failed');
+```
+skipped: Haptic vibration triggers (`navigator.vibrate`) during threshold crossover.  
+add when: Mobile touch-drag interactions are wired.
+
+---
+
+### 3. Pure-CSS Ambient Focus Mode
+
+```css
+:root {
+  --zen-bg: #FBF9F5;
+  --zen-ink: #2B2724;
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  margin: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.zen-ui {
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body:hover .zen-ui,
+body:focus-within .zen-ui {
+  opacity: 1;
+  transition-delay: 0s;
+}
+```
+skipped: JS mouse idle timer and dynamic cursor hiding.  
+add when: Fullscreen distraction-free timer run-state requires total cursor dormancy.
