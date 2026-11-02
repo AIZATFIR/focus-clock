@@ -3278,3 +3278,77 @@ canvas {
 ```
 skipped: Dark-mode media query overrides and external fonts.  
 add when: Night-mode manual toggle is prioritized.
+
+
+### Cycle #101 Directive (2026-11-03 06:34)
+### 1. HiDPI Canvas & Zen Dial
+
+```javascript
+export function mountZenClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const r = size / 2;
+
+  // ponytail: static tick count; upgrade to dynamic density if variable-scale dials are requested
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(74, 68, 62, 0.14)'; // Zen warm gray
+  ctx.beginPath();
+  ctx.arc(r, r, r - 8, 0, Math.PI * 2);
+  ctx.stroke();
+
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI) / 6;
+    const len = i % 3 === 0 ? 8 : 4;
+    ctx.beginPath();
+    ctx.moveTo(r + (r - 14) * Math.cos(angle), r + (r - 14) * Math.sin(angle));
+    ctx.lineTo(r + (r - 14 - len) * Math.cos(angle), r + (r - 14 - len) * Math.sin(angle));
+    ctx.stroke();
+  }
+}
+```
+
+### 2. Pure Math Timeblock Snapping
+
+```javascript
+export function snapAngleToMinutes(angleRad, intervalMinutes = 5) {
+  const tau = Math.PI * 2;
+  // ponytail: 60-minute single dial mode; upgrade to 12h/24h mapping if multi-hour arcs are enabled
+  const normalized = ((angleRad + Math.PI / 2) % tau + tau) % tau;
+  const rawMinutes = (normalized / tau) * 60;
+  const snappedMinutes = (Math.round(rawMinutes / intervalMinutes) * intervalMinutes) % 60;
+  return (snappedMinutes / 60) * tau - Math.PI / 2;
+}
+
+// Self-check
+console.assert(Math.abs(snapAngleToMinutes(0, 15) - 0) < 1e-6, 'Snapping failed: 15-min right-horizontal must stay 0 rad');
+console.assert(Math.abs(snapAngleToMinutes(Math.PI / 2, 15) - Math.PI / 2) < 1e-6, 'Snapping failed: 30-min bottom-vertical must stay PI/2 rad');
+```
+
+### 3. Ambient Idle UI (Zero JS)
+
+```css
+.zen-stage {
+  background: #faf8f5; /* SofizCake warm parchment */
+  color: #2c2825;
+  cursor: none;
+}
+.zen-stage:hover {
+  cursor: default;
+}
+.zen-hud {
+  opacity: 0;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.zen-stage:hover .zen-hud,
+.zen-stage:focus-within .zen-hud {
+  opacity: 1;
+}
+```
+
+skipped: idle timer JS event listeners; add when touch devices need explicit tap-to-reveal chrome.
+skipped: path2D multi-layer arc caching; add when rendering >100 dynamic micro-blocks per frame.
