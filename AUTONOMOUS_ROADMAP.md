@@ -1331,3 +1331,62 @@ body:has(.clock-container:hover) .peripheral-controls {
 ```
 skipped: React/JS state managers for "zen focus mode".  
 add when: Non-CSS capable clients or complex multi-pane layouts require state orchestration.
+
+
+### Cycle #75 Directive (2026-11-03 04:09)
+### 1. High-DPI Crisp Canvas Setup (Retina Sharpness)
+
+```javascript
+export function initRetinaCanvas(canvas, logicalSize) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = logicalSize * dpr;
+  canvas.style.width = canvas.style.height = `${logicalSize}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: ignores dynamic ResizeObserver resize; upgrade if clock container is fluid
+  return ctx;
+}
+```
+* skipped: Dynamic resize handlers and orientation change listeners.
+* add when: Container layout changes from fixed/max-width to fluid grid units.
+
+---
+
+### 2. Timeblock Magnetic Snapping (15-Minute Arc Bounds)
+
+```javascript
+export function snapRadianToInterval(rad, stepsPerHour = 4) {
+  const step = (Math.PI * 2) / (12 * stepsPerHour); // 15m default
+  const tau = Math.PI * 2;
+  const normalized = ((rad % tau) + tau) % tau;
+  return Math.round(normalized / step) * step;
+}
+
+// Self-check
+console.assert(snapRadianToInterval(0.125) === snapRadianToInterval(0.13), 'Snapping failed');
+console.assert(snapRadianToInterval(Math.PI / 24) === Math.PI / 24, 'Exact boundary drift');
+```
+* skipped: Haptic feedback triggers and velocity-based magnetism dampening.
+* add when: Pointer drag gestures drop frames during fast arc scrubs.
+
+---
+
+### 3. SofizCake-Grade Zen Surface CSS
+
+```css
+:root {
+  --canvas-bg: #fbf9f5;
+  --clock-rim: #ece6dc;
+  --clock-block: rgba(186, 114, 86, 0.18);
+  --clock-ink: #2b2724;
+}
+
+canvas#clockface {
+  background: var(--canvas-bg);
+  touch-action: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+```
+* skipped: CSS theme toggling and CSS color-mix() runtime transitions.
+* add when: System `prefers-color-scheme` dark mode token set is defined.
