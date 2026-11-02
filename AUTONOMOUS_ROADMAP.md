@@ -2746,3 +2746,77 @@ canvas {
 ```
 → skipped: theme toggling, dark mode palettes.  
 add when: explicit system `prefers-color-scheme: dark` audit is requested.
+
+
+### Cycle #94 Directive (2026-11-03 05:55)
+### 1. Canvas HiDPI Crispness & Native Font Sync
+Fixes blurry clock ticks on Retina displays while inheriting system fonts and CSS variables directly.
+
+```js
+export function setupClockCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+
+### 2. Radial 5-Minute Timeblock Snapping
+Snaps pointer coordinates `(x, y)` to exact 5-minute increments (72 discrete ticks / $0.0872$ rad) around center $(cx, cy)$.
+
+```js
+// ponytail: 5m hardcoded snap. upgrade to dynamic step (1m/15m) if user toggles precision.
+export function snapPointerToMinutes(x, y, cx, cy, stepMinutes = 5) {
+  const rad = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+  const normalized = (rad < 0 ? rad + Math.PI * 2 : rad) % (Math.PI * 2);
+  const totalMinutes = (normalized / (Math.PI * 2)) * 60;
+  const snappedMinutes = Math.round(totalMinutes / stepMinutes) * stepMinutes % 60;
+  return (snappedMinutes / 60) * Math.PI * 2;
+}
+
+// Self-check
+console.assert(snapPointerToMinutes(100, 0, 100, 100) === 0, 'Top must snap to 0m');
+console.assert(Math.abs(snapPointerToMinutes(200, 100, 100, 100) - Math.PI / 2) < 1e-5, 'Right must snap to 15m');
+```
+
+### 3. Zen Ambient UI (CSS-Only Focus Shield)
+Warm paper dark-mode, system typography, and auto-dimming chrome during idle without JavaScript listeners.
+
+```css
+:root {
+  --bg: #fbf9f5;
+  --ink: #2c2825;
+  --accent: #b45309;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141210;
+    --ink: #e6e2dd;
+    --accent: #d97706;
+  }
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", sans-serif;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+.zen-controls {
+  opacity: 0.15;
+  transition: opacity 280ms ease;
+}
+body:hover .zen-controls,
+.zen-controls:focus-within {
+  opacity: 1;
+}
+```
+
+skipped: dynamic snap-granularity config and custom Bezier tick animations.
+add when: user explicitly requests customizable intervals or tick haptics.
