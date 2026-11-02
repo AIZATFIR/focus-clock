@@ -1724,3 +1724,80 @@ export function drawDial(ctx, cx, cy, r) {
 }
 ```
 → skipped: Per-minute tick loops and numerical labels; add when precision mode toggle is explicitly enabled.
+
+
+### Cycle #81 Directive (2026-11-03 04:42)
+### 1. High-DPI Canvas Setup with Warm Zen Palette
+
+```javascript
+export const initZenCanvas = (canvas, size = 360) => {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: hardcoded palette; extract if dynamic light/dark theming is explicitly requested
+  return {
+    ctx,
+    center: size / 2,
+    colors: { bg: '#FBF9F5', ink: '#2B2927', block: 'rgba(217, 119, 87, 0.18)', stroke: '#D97757' }
+  };
+};
+```
+* Skipped: ResizeObserver & responsive re-layout listeners.
+* Add when: Fluid fullscreen resizing or window-snap grid is required.
+
+---
+
+### 2. Micro-Snap Radian Math (5/15-Min Granularity)
+
+```javascript
+// Radian snap for a 12-hour face (720 min = 2π rad)
+export const snapRadianToMinutes = (rad, stepMinutes = 5) => {
+  const tau = Math.PI * 2;
+  const norm = (rad % tau + tau) % tau;
+  const totalMins = (norm / tau) * 720;
+  const snappedMins = Math.round(totalMins / stepMinutes) * stepMinutes;
+  // ponytail: fixed to 12h rotation; expand to 24h if multi-phase day schedules are added
+  return ((snappedMins % 720) / 720) * tau;
+};
+
+// Self-check
+console.assert(Math.abs(snapRadianToMinutes(Math.PI / 2, 15) - Math.PI / 2) < 1e-6, 'Snap 3:00 failed');
+console.assert(Math.abs(snapRadianToMinutes(0.04, 5) - 0) < 1e-6, 'Snap zero-floor failed');
+```
+* Skipped: Variable magnetic snap zones and drag hysteresis.
+* Add when: User feedback proves raw interval snapping misses during quick cursor flicks.
+
+---
+
+### 3. Pure CSS Auto-Dimming Zen Chrome
+
+```css
+.clock-viewport {
+  background-color: #FBF9F5;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  cursor: none;
+}
+
+.clock-viewport:hover,
+.clock-viewport:focus-within {
+  cursor: default;
+}
+
+.zen-chrome {
+  opacity: 0;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.clock-viewport:hover .zen-chrome,
+.clock-viewport:focus-within .zen-chrome {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+* Skipped: Idle timers and `mousemove` event listeners in JavaScript.
+* Add when: Native cursor auto-hiding is needed strictly after a timed inactivity timeout while the mouse is stationary inside the window.
