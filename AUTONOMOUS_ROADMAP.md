@@ -3396,3 +3396,107 @@ console.assert(Math.abs(snapAngle(Math.PI / 2 + 0.05, 15) - Math.PI / 2) < 1e-6,
 skipped: ResizeObserver auto-rescaling, add when window/container is dynamically resizable.
 skipped: Continuous dial sweep animations, add when state transitions feel abruptly stepped.
 skipped: Multi-block overlap collision resolution, add when users can stack concurrent focus blocks.
+
+
+### Cycle #103 Directive (2026-11-03 06:45)
+### 1. HiDPI Canvas & Zen Clockface (`clockface.js`)
+```javascript
+export function renderClock(canvas, date = new Date()) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.clientWidth;
+  if (canvas.width !== size * dpr) canvas.width = canvas.height = size * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const r = size / 2;
+  ctx.translate(r, r);
+
+  // Zen tick ring (firtofolio/SofizCake warm stone palette)
+  ctx.strokeStyle = '#e7e5e4';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 12; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, -r + 12);
+    ctx.lineTo(0, -r + 20);
+    ctx.stroke();
+    ctx.rotate(Math.PI / 6);
+  }
+
+  // Hands: hour and minute only
+  const m = date.getMinutes() + date.getSeconds() / 60;
+  const h = (date.getHours() % 12) + m / 60;
+  drawHand(ctx, (h * Math.PI) / 6, r * 0.48, 3, '#292524');
+  drawHand(ctx, (m * Math.PI) / 30, r * 0.72, 1.5, '#78716c');
+}
+
+function drawHand(ctx, angle, len, width, color) {
+  ctx.save();
+  ctx.rotate(angle);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, -len);
+  ctx.stroke();
+  ctx.restore();
+}
+```
+
+### 2. Timeblock Snapping (`snapping.js`)
+```javascript
+export function getSnappedMinutes(event, canvas, stepMinutes = 15) {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - (rect.left + rect.width / 2);
+  const y = event.clientY - (rect.top + rect.height / 2);
+
+  // Clockwise radians from 12 o'clock [0, 2π)
+  let theta = Math.atan2(y, x) + Math.PI / 2;
+  if (theta < 0) theta += 2 * Math.PI;
+
+  const rawMinutes = (theta / (2 * Math.PI)) * 60;
+  // ponytail: 60m dial assumption; upgrade to 12h multi-turn tracking if blocks cross hours
+  return (Math.round(rawMinutes / stepMinutes) * stepMinutes) % 60;
+}
+
+// Self-check: 3 o'clock must snap to 15 minutes
+console.assert(
+  getSnappedMinutes({ clientX: 200, clientY: 100 }, { getBoundingClientRect: () => ({ left: 0, top: 0, width: 200, height: 200 }) }) === 15,
+  'Snap calculation mismatch'
+);
+```
+
+### 3. Zen Warmth & Zero-Distraction Shell (`zen.css`)
+```css
+:root {
+  --zen-bg: #fafaf9; /* Stone-50 warm cream */
+  --zen-ink: #1c1917; /* Warm black */
+  --zen-accent: #c2410c; /* Terracotta */
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  margin: 0;
+}
+
+/* Controls fade out automatically; appear only on hover/focus */
+.zen-controls {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.focus-shell:hover .zen-controls,
+.focus-shell:focus-within .zen-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+
+skipped: requestAnimationFrame driver, multi-hour span rendering, gesture libraries.
+add when: persistent active timers require frame loops or timeblocks exceed single 60m revolutions.
