@@ -654,3 +654,61 @@ export const setupZenCanvas = (canvas) => {
 }
 ```
 * Skipped: JS inactivity timeout; add when touch devices require tap-to-reveal controls.
+
+
+### Cycle #14 Directive (2026-11-02 22:25)
+### 1. High-DPI Zen Dial Canvas Setup
+
+```javascript
+function initZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  return ctx;
+}
+```
+`→ skipped: [ResizeObserver dynamic reflow], add when [dial needs fluid responsive resizing beyond fixed container queries].`
+
+---
+
+### 2. Radial Timeblock Snapping (15-min Intervals)
+
+```javascript
+function snapRadialMinutes(px, py, cx, cy, step = 15) {
+  // Polar angle normalized clockwise from 12 o'clock (0 to 2π)
+  const angle = (Math.atan2(py - cy, px - cx) + Math.PI * 2.5) % (Math.PI * 2);
+  const rawMinutes = (angle / (Math.PI * 2)) * 720;
+  // ponytail: 12h dial fixed ceiling; upgrade to 24h by parameterized maxMinutes.
+  return Math.round(rawMinutes / step) * step % 720;
+}
+
+// Self-check
+console.assert(snapRadialMinutes(100, 50, 100, 100) === 0, '12 o’clock must snap to 0m');
+console.assert(snapRadialMinutes(150, 100, 100, 100) === 180, '3 o’clock must snap to 180m');
+```
+`→ skipped: [magnetic hysteresis thresholds], add when [freehand drag feels jittery on touch screens].`
+
+---
+
+### 3. Tactile Zen Warmth Shell (CSS-Only)
+
+```css
+:root {
+  --zen-paper: #FBF9F5;
+  --zen-ink: #292524;
+  --zen-clay: #C85A32;
+  --zen-subtle: #E7E5E4;
+}
+
+#clockface {
+  touch-action: none;
+  user-select: none;
+  background: var(--zen-paper);
+  filter: drop-shadow(0 12px 32px rgba(41, 37, 36, 0.05));
+  cursor: crosshair;
+}
+```
+`→ skipped: [dark-mode token mappings and themes], add when [explicit system media-query preference toggle is requested].`
