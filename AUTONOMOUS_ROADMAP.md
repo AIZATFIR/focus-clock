@@ -275,3 +275,100 @@ add when: Multi-duration drag handles or mobile haptics are introduced.
 ```
 skipped: CSS color-scheme auto-switching and dark-mode themes.  
 add when: Dark mode specification is provided.
+
+
+### Cycle #5 Directive (2026-11-02 21:33)
+### 1. HiDPI Canvas & Zen Clockface Renderer
+```javascript
+export function renderZenClock(canvas, activeMinutes = 25) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (canvas.width !== width * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+
+  const cx = width / 2, cy = height / 2, r = Math.min(cx, cy) - 16;
+
+  // Active timeblock wedge
+  const sweep = (activeMinutes / 60) * Math.PI * 2;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + sweep);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(194, 89, 63, 0.12)'; // warm terracotta wash
+  ctx.fill();
+
+  // Subtle 5-minute ticks
+  // ponytail: static tick style; add dynamic tick hover highlights when interactive scrubber is bound
+  for (let i = 0; i < 60; i += 5) {
+    const rad = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    const len = i % 15 === 0 ? 8 : 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(rad) * (r - len), cy + Math.sin(rad) * (r - len));
+    ctx.lineTo(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r);
+    ctx.strokeStyle = i % 15 === 0 ? '#2E2B29' : 'rgba(46, 43, 41, 0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+```
+skipped: Bezier drag handles and non-linear dial scaling.
+add when: User explicitly requests freeform, non-discrete arc sizing.
+
+---
+
+### 2. Timeblock Polar Snapping Engine
+```javascript
+export function snapPointerToAngle(clientX, clientY, rect, stepMins = 5) {
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  const px = clientX - rect.left - cx;
+  const py = clientY - rect.top - cy;
+
+  // Calculate angle from 12 o'clock in degrees [0, 360)
+  const deg = (Math.atan2(py, px) * (180 / Math.PI) + 450) % 360;
+  const stepDeg = stepMins * 6; // 6 deg per minute
+
+  // ponytail: wraps at 60 mins; add multi-revolution accumulator when tracking >1hr blocks
+  return (Math.round(deg / stepDeg) * stepDeg) % 360;
+}
+
+// Runnable assertion check
+console.assert(
+  snapPointerToAngle(100, 50, { left: 0, top: 0, width: 100, height: 100 }, 5) === 90,
+  "At 3 o'clock position (100, 50 in 100x100), output must snap to 90 degrees."
+);
+```
+skipped: Inertia-based momentum physics and gesture dampening.
+add when: Physical trackpad/wheel dragging feels jittery in user testing.
+
+---
+
+### 3. Zen Warmth Clock Surface (CSS)
+```css
+:root {
+  --zen-bg: #FDFBF7;
+  --zen-ink: #2E2B29;
+  --zen-surface: #F5EFEB;
+  --zen-accent: #C2593F;
+}
+
+.focus-stage {
+  aspect-ratio: 1;
+  width: min(72vw, 360px);
+  margin: auto;
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--zen-bg) 70%, var(--zen-surface) 100%);
+  box-shadow: 0 16px 40px -12px rgba(46, 43, 41, 0.06);
+  touch-action: none;
+  user-select: none;
+}
+```
+skipped: Dark-mode tokens and complex CSS glassmorphism.
+add when: System-level `prefers-color-scheme: dark` requirement is prioritized.
