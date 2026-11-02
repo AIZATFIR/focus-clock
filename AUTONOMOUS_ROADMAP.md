@@ -930,3 +930,90 @@ console.assert(snapAngleToMinutes(0.12) === 0, 'Sub-step must snap to 0m');
 ```
 * skipped: JS idle timer and mousemove throttling.
 * add when: canvas needs interaction tracking on pure touch devices without hover.
+
+
+### Cycle #18 Directive (2026-11-02 22:47)
+### 1. Snapping Logic: Pointer Angle to Zen Timeblocks
+
+```javascript
+// snap.js
+// ponytail: assumes 60-min single dial ceiling; upgrade to multi-hour sweep when scheduling >60m blocks.
+export function snapAngleToMinutes(angleRad, stepMinutes = 5) {
+  const norm = (angleRad + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const rawMinutes = (norm / (Math.PI * 2)) * 60;
+  const snapped = Math.round(rawMinutes / stepMinutes) * stepMinutes;
+  return snapped % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(-Math.PI / 2, 5) === 0, '12 o’clock must be 0 min');
+console.assert(snapAngleToMinutes(0, 5) === 15, '3 o’clock must be 15 min');
+console.assert(snapAngleToMinutes(Math.PI / 2, 10) === 30, '6 o’clock must be 30 min');
+console.assert(snapAngleToMinutes(-Math.PI * 0.48, 5) === 0, 'Near 12 snaps to 0');
+```
+*skipped: multi-hour rotational accumulation; add when tracking multi-hour deep work blocks.*
+
+---
+
+### 2. High-DPI Canvas Setup & Zen Dial Pip Renderer
+
+```javascript
+// dial.js
+export function renderZenClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size * 0.42;
+
+  // Warm Apple/Zen palette: muted slate-charcoal and soft sandstone
+  ctx.fillStyle = '#2c2825';
+  for (let i = 0; i < 12; i++) {
+    const rad = (i * Math.PI) / 6 - Math.PI / 2;
+    const isCardinal = i % 3 === 0;
+    const pipRadius = isCardinal ? 2.5 : 1.2;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r, pipRadius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+```
+*skipped: RAF hand-animation loop and smooth transitions; add when wireframe pointer interaction is hooked.*
+
+---
+
+### 3. Zero-Distraction Canvas Container Shell
+
+```css
+/* zen-clock.css */
+:root {
+  --zen-sand: #fbf9f5;
+  --zen-cream: #f2eee6;
+  --zen-ink: #2c2825;
+  --zen-terracotta: #c8684d;
+}
+
+.zen-stage {
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: radial-gradient(circle at center, var(--zen-sand) 0%, var(--zen-cream) 100%);
+  font-feature-settings: "tnum" 1;
+}
+
+canvas {
+  image-rendering: -webkit-optimize-contrast;
+  cursor: grab;
+}
+
+canvas:active {
+  cursor: grabbing;
+}
+```
+*skipped: dark mode CSS variables; add when system color-scheme detection is wired across suite.*
