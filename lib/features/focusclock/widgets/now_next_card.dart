@@ -110,159 +110,187 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
       }
     }
 
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 620),
+    return AppleGlassSurface(
+      borderRadius: 22,
+      borderWidth: 0.5,
+      borderColor: AppPalette.appleGlassBorder,
+      backgroundColor: AppPalette.appleGlassSurface,
+      shadows: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.35),
+          blurRadius: 28,
+          offset: const Offset(0, 10),
+        ),
+      ],
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppPalette.card.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppPalette.stroke.withValues(alpha: 0.7)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: Current Focus & Next Item
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Left: Current State
-              Expanded(
-                child: currentActivity != null
-                    ? _buildCurrentFocusPill(currentActivity, nowMinOfHalf)
-                    : _buildFreeTimePill(nextActivity),
-              ),
+      child: Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 620),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row 1: Current Focus & Next Item
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Left: Current State
+                Expanded(
+                  child: currentActivity != null
+                      ? _buildCurrentFocusPill(currentActivity, nowMinOfHalf)
+                      : _buildFreeTimePill(nextActivity),
+                ),
 
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              // Action: Focus Button (if current active) or Natural Mic
-              if (currentActivity != null)
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Color(currentActivity.colorValue).withValues(alpha: 0.2),
-                    foregroundColor: Color(currentActivity.colorValue),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Color(currentActivity.colorValue).withValues(alpha: 0.5)),
+                // Action: Focus Button (if current active) or Natural Mic
+                if (currentActivity != null)
+                  ApplePressable(
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => FocusSessionView(
+                            activity: currentActivity!,
+                            onClose: () => Navigator.of(context).pop(),
+                          ),
+                          transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Color(currentActivity.colorValue).withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Color(currentActivity.colorValue).withValues(alpha: 0.5), width: 0.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(currentActivity.colorValue).withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.play_circle_fill_rounded, size: 18, color: Color(currentActivity.colorValue)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Mulai Fokus',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: Color(currentActivity.colorValue),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ApplePressable(
+                    onTap: () {
+                      HapticFeedback.mediumImpact();
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => const VoiceAssistantSheet(),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppPalette.accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4), width: 0.5),
+                      ),
+                      child: const Icon(Icons.mic_rounded, color: AppPalette.accent, size: 20),
                     ),
                   ),
-                  icon: const Icon(Icons.play_circle_fill_rounded, size: 18),
-                  label: const Text('Mulai Fokus', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    Navigator.of(context).push(
-                      PageRouteBuilder(
-                        pageBuilder: (_, __, ___) => FocusSessionView(
-                          activity: currentActivity!,
-                          onClose: () => Navigator.of(context).pop(),
-                        ),
-                        transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
-                      ),
-                    );
-                  },
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.mic_rounded, color: AppPalette.accent, size: 22),
-                  tooltip: 'Ucapkan Niat',
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => const VoiceAssistantSheet(),
-                    );
-                  },
-                ),
-            ],
-          ),
+              ],
+            ),
 
-          // Row 2: What's Next (Subtle indicator)
-          if (nextActivity != null && currentActivity != null) ...[
-            const SizedBox(height: 10),
+            // Row 2: What's Next (Subtle indicator)
+            if (nextActivity != null && currentActivity != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(Icons.arrow_forward_rounded, size: 12, color: AppPalette.textDim),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Berikutnya: ${nextActivity.iconKey ?? ''} ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
+                    style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500, letterSpacing: -0.1),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+            const SizedBox(height: 12),
+
+            // Row 3: Frictionless Natural Intent Bar
             Row(
               children: [
-                const Icon(Icons.arrow_forward_rounded, size: 12, color: AppPalette.textDim),
-                const SizedBox(width: 6),
-                Text(
-                  'Berikutnya: ${nextActivity.iconKey ?? ''} ${nextActivity.title} (${formatMinuteOfHalf(nextActivity.startMinute, nextActivity.ampmHalf, is24h: is24h)})',
-                  style: const TextStyle(fontSize: 11, color: AppPalette.textDim, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ],
-
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppPalette.stroke),
-          const SizedBox(height: 12),
-
-          // Row 3: Frictionless Natural Intent Bar
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _intentCtrl,
-                  focusNode: _focusNode,
-                  style: const TextStyle(fontSize: 13, color: AppPalette.text),
-                  onSubmitted: _submitIntent,
-                  decoration: InputDecoration(
-                    hintText: 'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
-                    hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    filled: true,
-                    fillColor: AppPalette.bg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.stroke),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.stroke),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppPalette.accent),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppPalette.accent),
-                      onPressed: () => _submitIntent(_intentCtrl.text),
+                Expanded(
+                  child: TextField(
+                    controller: _intentCtrl,
+                    focusNode: _focusNode,
+                    style: const TextStyle(fontSize: 13, color: AppPalette.text, letterSpacing: -0.1),
+                    onSubmitted: _submitIntent,
+                    decoration: InputDecoration(
+                      hintText: 'Tulis niat (misal: "Belajar coding 1 jam jam 8 malam")',
+                      hintStyle: const TextStyle(fontSize: 12, color: AppPalette.textDim, letterSpacing: -0.1),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: const Color(0x55101018),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppPalette.accent, width: 1.2),
+                      ),
+                      suffixIcon: ApplePressable(
+                        onTap: () => _submitIntent(_intentCtrl.text),
+                        child: const Icon(Icons.arrow_forward_rounded, size: 16, color: AppPalette.accent),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-
-          // Row 4: Quick Intent Chips (Intelligent Suggestions)
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
-                const SizedBox(width: 6),
-                _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
-                const SizedBox(width: 6),
-                _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
-                const SizedBox(width: 6),
-                _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
-                const SizedBox(width: 6),
-                _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
               ],
             ),
-          ),
-        ],
+
+            // Row 4: Quick Intent Chips (Intelligent Suggestions)
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _suggestionChip('💻 Deep Work 45m', 'Deep Work 45m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('📖 Belajar 30m', 'Belajar 30m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('🧘 Istirahat 15m', 'Istirahat 15m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('🏃 Olahraga 30m', 'Olahraga 30m'),
+                  const SizedBox(width: 6),
+                  _suggestionChip('✍️ Menulis 30m', 'Menulis 30m'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -347,19 +375,26 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
   }
 
   Widget _suggestionChip(String label, String intent) {
-    return InkWell(
-      onTap: () => _submitIntent(intent),
-      borderRadius: BorderRadius.circular(8),
+    return ApplePressable(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _submitIntent(intent);
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppPalette.bg,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppPalette.stroke),
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 10, color: AppPalette.textDim, fontWeight: FontWeight.w500),
+          style: const TextStyle(
+            fontSize: 11,
+            color: AppPalette.textDim,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+          ),
         ),
       ),
     );

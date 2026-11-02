@@ -104,6 +104,9 @@ class _TodayViewState extends ConsumerState<TodayView> {
       status: newStatus,
       valueCompleted: newStatus == HabitStatus.yes ? habit.target : 0,
     );
+    ref.invalidate(dailyFulfillmentProvider);
+    ref.invalidate(whatIRepeatProvider);
+    ref.invalidate(awarenessStatsProvider);
   }
 
   @override

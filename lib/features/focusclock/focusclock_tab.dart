@@ -17,15 +17,18 @@ import '../../widgets/hotkeys_modal.dart';
 import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
 import 'widgets/now_next_card.dart';
+import 'widgets/onboarding_guidance_sheet.dart';
+import 'widgets/preset_kanban_board.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
 /// Returns false (via pop with no result) if user dismissed.
 Future<Object?> _showPresetPicker(BuildContext context) async {
   return showModalBottomSheet<Object>(
     context: context,
-    backgroundColor: AppPalette.card,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder: (_) => const _PresetPickerSheet(),
   );
@@ -69,22 +72,36 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: (e) => _handleKey(e, presets),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: AppleGlassSurface(
+        borderRadius: 24,
+        borderWidth: 0.5,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Apple style grabber handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             const Text(
               'Add Activity',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.4),
             ),
             const SizedBox(height: 4),
             const Text(
               'Pick a preset or create custom',
-              style: TextStyle(fontSize: 13, color: AppPalette.textDim),
+              style: TextStyle(fontSize: 13, color: AppPalette.textDim, letterSpacing: -0.1),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             if (presets.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -101,16 +118,26 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                   final color = Color(p.colorValue);
                   final hasIcon =
                       p.iconKey != null && p.iconKey!.isNotEmpty;
-                  return GestureDetector(
-                    onTap: () => Navigator.pop(context, p),
+                  return ApplePressable(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.pop(context, p);
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(12),
+                        color: color.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: color.withValues(alpha: 0.5), width: 1.5),
+                            color: color.withValues(alpha: 0.45), width: 0.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.15),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -150,26 +177,47 @@ class _PresetPickerSheetState extends ConsumerState<_PresetPickerSheet> {
                           Text(p.name,
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 14)),
+                                  fontSize: 14,
+                                  letterSpacing: -0.2)),
                         ],
                       ),
                     ),
                   );
                 }).toList(),
               ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppPalette.accent.withValues(alpha: 0.15),
-                    foregroundColor: AppPalette.accent,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                ApplePressable(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(context, 'custom');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppPalette.accent.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppPalette.accent.withValues(alpha: 0.5), width: 0.5),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.arrow_forward_rounded, size: 18, color: AppPalette.accent),
+                        SizedBox(width: 8),
+                        Text(
+                          'Custom Activity',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppPalette.accent,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 24),
-                  label: const Text('Custom Activity', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                  onPressed: () => Navigator.pop(context, 'custom'),
                 ),
               ],
             ),
@@ -229,6 +277,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     _dragConflictNotifier = ValueNotifier<bool>(false);
 
     _startupCtrl.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowOnboarding());
+  }
+
+  /// Tunjukkan Guidance Awal saat pertama kali buka Focus Clock (belum ada preset
+  /// dan onboarding belum diselesaikan). Hanya sekali per instalasi.
+  void _maybeShowOnboarding() {
+    if (!mounted) return;
+    final settings = ref.read(settingsProvider).valueOrNull;
+    if (settings?.hasCompletedOnboarding ?? false) return;
+    OnboardingGuidanceSheet.show(context);
   }
 
   @override
@@ -626,6 +685,9 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                       HapticFeedback.mediumImpact();
                       if (val == 'routines') {
                         ref.read(tabIndexProvider.notifier).state = 0;
+                      } else if (val == 'setup') {
+                        HapticFeedback.mediumImpact();
+                        OnboardingGuidanceSheet.show(context);
                       } else if (val == 'reflect') {
                         showModalBottomSheet(
                           context: context,
@@ -655,6 +717,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             Icon(Icons.auto_stories_rounded, size: 16, color: AppPalette.accent),
                             SizedBox(width: 10),
                             Text('Routine Templates', style: TextStyle(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'setup',
+                        child: Row(
+                          children: [
+                            Icon(Icons.tips_and_updates_rounded, size: 16, color: AppPalette.accent),
+                            SizedBox(width: 10),
+                            Text('Setup Rutinitas', style: TextStyle(fontSize: 13)),
                           ],
                         ),
                       ),
@@ -699,13 +771,12 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                         ),
                       ),
                     ],
-                    child: Container(
+                    child: AppleGlassSurface(
+                      borderRadius: 14,
+                      borderWidth: 0.5,
+                      borderColor: AppPalette.appleGlassBorder,
+                      backgroundColor: AppPalette.appleGlassSurface,
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppPalette.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppPalette.stroke),
-                      ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -714,7 +785,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
+                              letterSpacing: 1.5,
                               color: AppPalette.text,
                             ),
                           ),
@@ -723,7 +794,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
+                              letterSpacing: 1.5,
                               color: AppPalette.accent,
                             ),
                           ),
@@ -740,18 +811,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      GestureDetector(
+                      ApplePressable(
                         onTap: () {
                           HapticFeedback.mediumImpact();
                           _showLargeCalendarBatchPicker(context, date);
                         },
-                        child: Container(
+                        child: AppleGlassSurface(
+                          borderRadius: 12,
+                          borderWidth: 0.5,
+                          borderColor: AppPalette.accent.withValues(alpha: 0.4),
+                          backgroundColor: AppPalette.appleGlassSurface,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppPalette.card,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
-                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -763,6 +833,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: AppPalette.text,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
                             ],
@@ -784,7 +855,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppPalette.accent,
-                          letterSpacing: 0.5,
+                          letterSpacing: -0.4,
                         ),
                       ),
                     ],
@@ -793,11 +864,19 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
               ),
             ),
 
+            // Kanban Preset Board — bawah analog clockface. Tap kartu = snap preset ke jam.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: const PresetKanbanBoard(),
+            ),
+
             // Bottom Contextual Card (Now, Next & Natural Intent Engine)
             Positioned(
               left: 0,
               right: 0,
-              bottom: 8,
+              bottom: 128,
               child: Center(
                 child: NowNextCard(
                   activities: activities,
@@ -974,17 +1053,17 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           final isToday = dateOnly(selectedDates.first) == dateOnly(DateTime.now());
 
           return Dialog(
-            backgroundColor: AppPalette.card,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: const BorderSide(color: AppPalette.stroke),
-            ),
-            child: Container(
-              width: 480,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: AppleGlassSurface(
+              borderRadius: 24,
+              borderWidth: 0.5,
+              padding: const EdgeInsets.all(22),
+              child: SizedBox(
+                width: 480,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   Row(
                     children: [
                       const Icon(Icons.calendar_month_rounded, color: AppPalette.accent, size: 20),
@@ -1145,7 +1224,8 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
                 ],
               ),
             ),
-          );
+          ),
+        );
         },
       ),
     );
@@ -1497,13 +1577,10 @@ class _AmPmMini extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppleGlassSurface(
+      borderRadius: 12,
+      borderWidth: 0.5,
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppPalette.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppPalette.accent.withValues(alpha: 0.4)),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1517,21 +1594,36 @@ class _AmPmMini extends StatelessWidget {
 
   Widget _seg(AmPmHalf value) {
     final active = half == value;
-    return GestureDetector(
-      onTap: active ? null : () => onChanged(value),
+    return ApplePressable(
+      onTap: active
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onChanged(value);
+            },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: active ? AppPalette.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppPalette.accent.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
         ),
         child: Text(
           value.label,
           style: TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.2,
             color: active ? Colors.black : AppPalette.textDim,
           ),
         ),

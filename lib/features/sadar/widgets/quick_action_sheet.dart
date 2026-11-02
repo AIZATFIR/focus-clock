@@ -60,6 +60,9 @@ class _QuickActionSheetState extends ConsumerState<QuickActionSheet> {
       valueCompleted: status == HabitStatus.yes ? widget.habit.target : 0,
       note: widget.existingEntry?.note,
     );
+    ref.invalidate(dailyFulfillmentProvider);
+    ref.invalidate(whatIRepeatProvider);
+    ref.invalidate(awarenessStatsProvider);
     widget.onClose();
   }
 

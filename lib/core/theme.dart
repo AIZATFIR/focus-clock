@@ -1,15 +1,16 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// AppPalette — Obsidian Warm Bookpaper Aesthetic Design System
+/// AppPalette — Obsidian Warm Bookpaper & Apple Design System
 class AppPalette {
   // Dark Obsidian & Warm Bookpaper Tones
   static const bg = Color(0xFF18181F);
-  static const card = Color(0xFF23222B);
+  static const card = Color(0xFF202028);
   static const accent = Color(0xFFF0C987); // Warm Bookpaper Amber Gold
   static const text = Color(0xFFF5EBE6); // Warm Cream Text
   static const textDim = Color(0xFFA69F95); // Muted Warm Slate
-  static const stroke = Color(0xFF363340); // Soft Obsidian Border
+  static const stroke = Color(0xFF32303C); // Soft Obsidian Border
   static const danger = Color(0xFFE5484D); // Conflict / Destructive
 
   // Bookpaper Journaling Environment Tokens
@@ -17,11 +18,19 @@ class AppPalette {
   static const bookpaperBorder = Color(0xFF403C4B);
   static const bookpaperText = Color(0xFFF4E8D1);
 
-  // Glassmorphism & Gemini design tokens
-  static const glassSurface = Color(0xF21C1B24); // Frosted Warm Slate
-  static const geminiGlassBg = Color(0xE6201F29); // Frosted Obsidian Container
-  static const geminiGlassBorder = Color(0x33F0C987); // Soft Gold Frosted Stroke
-  static const geminiGlow = Color(0x40F0C987); // Ambient warm gold glow
+  // Apple Frosted Glass Tokens
+  static const appleGlassSurface = Color(0xD91C1C24); // Frosted Dark Glass Surface
+  static const appleGlassBg = Color(0xB3181820); // Translucent Dark Container
+  static const appleGlassBorder = Color(0x1FFFFFFF); // 0.5px Delicate Light Stroke
+  static const appleGlassBorderSubtle = Color(0x0FFFFFFF); // 0.5px Extra Subtle Stroke
+  static const double appleGlassBlur = 20.0;
+  static const double appleSquircleRadius = 22.0;
+
+  // Glassmorphism & Gemini design tokens (backward compatibility)
+  static const glassSurface = Color(0xD91C1C24); // Frosted Slate
+  static const geminiGlassBg = Color(0xB3181820); // Frosted Obsidian Container
+  static const geminiGlassBorder = Color(0x1FFFFFFF); // Soft Frosted Stroke
+  static const geminiGlow = Color(0x33F0C987); // Ambient warm gold glow
 
   // Responsive Breakpoints
   static const double mobileBreakpoint = 600.0;
@@ -29,7 +38,7 @@ class AppPalette {
 
   // True black (AMOLED)
   static const blackBg = Color(0xFF0C0C0F);
-  static const blackCard = Color(0xFF16151A);
+  static const blackCard = Color(0xFF141418);
 
   // Light equivalents
   static const lightBg = Color(0xFFF7F3EB); // Soft Sepia Cream Paper
@@ -41,12 +50,146 @@ class AppPalette {
 }
 
 class GeminiMotion {
-  static const Duration fast = Duration(milliseconds: 180);
-  static const Duration medium = Duration(milliseconds: 300);
-  static const Duration slow = Duration(milliseconds: 450);
+  static const Duration fast = Duration(milliseconds: 140);
+  static const Duration medium = Duration(milliseconds: 260);
+  static const Duration slow = Duration(milliseconds: 400);
 
   static const Curve springCurve = Curves.easeOutCubic;
   static const Curve bouncyCurve = Curves.elasticOut;
+}
+
+/// Apple-grade frosted glass container with BackdropFilter and ultra-delicate 0.5px border
+class AppleGlassSurface extends StatelessWidget {
+  final Widget child;
+  final double borderRadius;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final double borderWidth;
+  final double blur;
+  final List<BoxShadow>? shadows;
+  final VoidCallback? onTap;
+
+  const AppleGlassSurface({
+    super.key,
+    required this.child,
+    this.borderRadius = AppPalette.appleSquircleRadius,
+    this.padding,
+    this.margin,
+    this.backgroundColor,
+    this.borderColor,
+    this.borderWidth = 0.5,
+    this.blur = AppPalette.appleGlassBlur,
+    this.shadows,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: backgroundColor ?? AppPalette.appleGlassSurface,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: borderColor ?? AppPalette.appleGlassBorder,
+              width: borderWidth,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+
+    if (shadows != null && shadows!.isNotEmpty) {
+      content = Container(
+        margin: margin,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: shadows,
+        ),
+        child: content,
+      );
+    } else if (margin != null) {
+      content = Padding(padding: margin!, child: content);
+    }
+
+    if (onTap != null) {
+      return ApplePressable(
+        onTap: onTap,
+        child: content,
+      );
+    }
+    return content;
+  }
+}
+
+/// Instant touch feedback with tactile haptics & fluid spring physics
+class ApplePressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final double pressedScale;
+  final Duration duration;
+  final HitTestBehavior behavior;
+
+  const ApplePressable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+    this.pressedScale = 0.97,
+    this.duration = const Duration(milliseconds: 140),
+    this.behavior = HitTestBehavior.opaque,
+  });
+
+  @override
+  State<ApplePressable> createState() => _ApplePressableState();
+}
+
+class _ApplePressableState extends State<ApplePressable> {
+  bool _isPressed = false;
+
+  void _handleTapDown(TapDownDetails _) {
+    if (widget.onTap == null && widget.onLongPress == null) return;
+    setState(() => _isPressed = true);
+    HapticFeedback.selectionClick();
+  }
+
+  void _handleTapUp(TapUpDetails _) {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  void _handleTapCancel() {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: widget.behavior,
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      child: AnimatedScale(
+        scale: _isPressed ? widget.pressedScale : 1.0,
+        duration: widget.duration,
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
 }
 
 ThemeData buildDarkTheme([String palette = 'executive']) {
@@ -93,28 +236,65 @@ ThemeData buildDarkTheme([String palette = 'executive']) {
     ),
     cardColor: card,
     dividerColor: stroke,
-    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
+      displayLarge: const TextStyle(letterSpacing: -1.0, fontWeight: FontWeight.w700),
+      displayMedium: const TextStyle(letterSpacing: -0.8, fontWeight: FontWeight.w700),
+      displaySmall: const TextStyle(letterSpacing: -0.6, fontWeight: FontWeight.w600),
+      headlineLarge: const TextStyle(letterSpacing: -0.6, fontWeight: FontWeight.w600),
+      headlineMedium: const TextStyle(letterSpacing: -0.5, fontWeight: FontWeight.w600),
+      headlineSmall: const TextStyle(letterSpacing: -0.4, fontWeight: FontWeight.w600),
+      titleLarge: const TextStyle(letterSpacing: -0.3, fontWeight: FontWeight.w600),
+      titleMedium: const TextStyle(letterSpacing: -0.2, fontWeight: FontWeight.w600),
+      titleSmall: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w500),
+      bodyLarge: const TextStyle(letterSpacing: -0.15, fontWeight: FontWeight.w400),
+      bodyMedium: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w400),
+      bodySmall: const TextStyle(letterSpacing: 0.0, fontWeight: FontWeight.w400),
+      labelLarge: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w600),
+    ).apply(
       bodyColor: AppPalette.text,
       displayColor: AppPalette.text,
+    ),
+    cardTheme: CardTheme(
+      color: card,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
+      ),
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: card,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: AppPalette.bookpaperFieldBg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.bookpaperBorder),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.appleGlassBorder, width: 0.5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.accent, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.accent, width: 1.2),
       ),
-      hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 14),
-      labelStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13),
+      hintStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13, letterSpacing: -0.1),
+      labelStyle: const TextStyle(color: AppPalette.textDim, fontSize: 13, letterSpacing: -0.1),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: card,
@@ -188,9 +368,46 @@ ThemeData buildLightTheme() {
     ),
     cardColor: AppPalette.lightCard,
     dividerColor: AppPalette.lightStroke,
-    textTheme: GoogleFonts.outfitTextTheme(base.textTheme).apply(
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
+      displayLarge: const TextStyle(letterSpacing: -1.0, fontWeight: FontWeight.w700),
+      displayMedium: const TextStyle(letterSpacing: -0.8, fontWeight: FontWeight.w700),
+      displaySmall: const TextStyle(letterSpacing: -0.6, fontWeight: FontWeight.w600),
+      headlineLarge: const TextStyle(letterSpacing: -0.6, fontWeight: FontWeight.w600),
+      headlineMedium: const TextStyle(letterSpacing: -0.5, fontWeight: FontWeight.w600),
+      headlineSmall: const TextStyle(letterSpacing: -0.4, fontWeight: FontWeight.w600),
+      titleLarge: const TextStyle(letterSpacing: -0.3, fontWeight: FontWeight.w600),
+      titleMedium: const TextStyle(letterSpacing: -0.2, fontWeight: FontWeight.w600),
+      titleSmall: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w500),
+      bodyLarge: const TextStyle(letterSpacing: -0.15, fontWeight: FontWeight.w400),
+      bodyMedium: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w400),
+      bodySmall: const TextStyle(letterSpacing: 0.0, fontWeight: FontWeight.w400),
+      labelLarge: const TextStyle(letterSpacing: -0.1, fontWeight: FontWeight.w600),
+    ).apply(
       bodyColor: AppPalette.lightText,
       displayColor: AppPalette.lightText,
+    ),
+    cardTheme: CardTheme(
+      color: AppPalette.lightCard,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppPalette.lightStroke, width: 0.5),
+      ),
+    ),
+    dialogTheme: DialogTheme(
+      backgroundColor: AppPalette.lightCard,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: const BorderSide(color: AppPalette.lightStroke, width: 0.5),
+      ),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: AppPalette.lightCard,
@@ -202,18 +419,27 @@ ThemeData buildLightTheme() {
       backgroundColor: AppPalette.lightCard,
       contentTextStyle: const TextStyle(color: AppPalette.lightText),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: AppPalette.lightStroke),
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppPalette.lightStroke, width: 0.5),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppPalette.lightStroke),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.lightStroke, width: 0.5),
       ),
-      labelStyle: const TextStyle(color: AppPalette.lightTextDim),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.lightStroke, width: 0.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppPalette.lightAccent, width: 1.2),
+      ),
+      hintStyle: const TextStyle(color: AppPalette.lightTextDim, fontSize: 13, letterSpacing: -0.1),
+      labelStyle: const TextStyle(color: AppPalette.lightTextDim, fontSize: 13, letterSpacing: -0.1),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppPalette.lightCard,

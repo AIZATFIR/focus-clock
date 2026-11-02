@@ -101,13 +101,17 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
             Positioned(
               top: 16,
               left: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppPalette.textDim, size: 24),
-                tooltip: 'Tutup Fokus',
-                onPressed: () {
+              child: ApplePressable(
+                onTap: () {
                   HapticFeedback.selectionClick();
                   widget.onClose();
                 },
+                child: AppleGlassSurface(
+                  borderRadius: 20,
+                  borderWidth: 0.5,
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.close_rounded, color: AppPalette.textDim, size: 20),
+                ),
               ),
             ),
 
@@ -130,13 +134,12 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       mainAxisSize: MainAxisSize.min,
       children: [
         // Intention Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withValues(alpha: 0.4)),
-          ),
+        AppleGlassSurface(
+          borderRadius: 20,
+          borderWidth: 0.5,
+          borderColor: color.withValues(alpha: 0.4),
+          backgroundColor: color.withValues(alpha: 0.14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -148,16 +151,16 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
               Text(
                 widget.activity.title,
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                   color: color,
-                  letterSpacing: 0.5,
+                  letterSpacing: -0.3,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 36),
+        const SizedBox(height: 38),
 
         // Hero Breathing Timer Circle
         AnimatedBuilder(
@@ -177,7 +180,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
                       child: CircularProgressIndicator(
                         value: 1.0,
                         strokeWidth: 5,
-                        valueColor: AlwaysStoppedAnimation(AppPalette.stroke.withValues(alpha: 0.3)),
+                        valueColor: AlwaysStoppedAnimation(Colors.white.withValues(alpha: 0.06)),
                       ),
                     ),
                     // Progress arc
@@ -196,20 +199,31 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
                         Text(
                           _formatTimer(_remainingSeconds),
                           style: const TextStyle(
-                            fontSize: 52,
-                            fontWeight: FontWeight.w300,
-                            letterSpacing: -1.0,
+                            fontSize: 54,
+                            fontWeight: FontWeight.w200,
+                            letterSpacing: -1.5,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _isPaused ? 'JEDA' : 'FOKUS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 3.0,
-                            color: _isPaused ? AppPalette.textDim : color,
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: (_isPaused ? AppPalette.textDim : color).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: (_isPaused ? AppPalette.textDim : color).withValues(alpha: 0.35),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            _isPaused ? 'JEDA' : 'FOKUS',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.0,
+                              color: _isPaused ? AppPalette.textDim : color,
+                            ),
                           ),
                         ),
                       ],
@@ -228,37 +242,58 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Pause / Resume
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                side: const BorderSide(color: AppPalette.stroke),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 20, color: AppPalette.text),
-              label: Text(_isPaused ? 'Lanjutkan' : 'Jeda', style: const TextStyle(color: AppPalette.text)),
-              onPressed: () {
+            ApplePressable(
+              onTap: () {
                 HapticFeedback.selectionClick();
                 setState(() => _isPaused = !_isPaused);
               },
+              child: AppleGlassSurface(
+                borderRadius: 18,
+                borderWidth: 0.5,
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 20, color: AppPalette.text),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isPaused ? 'Lanjutkan' : 'Jeda',
+                      style: const TextStyle(color: AppPalette.text, fontWeight: FontWeight.w600, letterSpacing: -0.2),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(width: 16),
             // Finish Early
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: color.withValues(alpha: 0.2),
-                foregroundColor: color,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: color.withValues(alpha: 0.5)),
-                ),
-              ),
-              icon: const Icon(Icons.check_rounded, size: 20),
-              label: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: () {
+            ApplePressable(
+              onTap: () {
                 HapticFeedback.mediumImpact();
                 setState(() => _isCompleted = true);
               },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_rounded, size: 20),
+                    SizedBox(width: 8),
+                    Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.2)),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -267,35 +302,40 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
   }
 
   Widget _buildReflectionCard(Color color) {
-    return Container(
+    return AppleGlassSurface(
+      borderRadius: 24,
+      borderWidth: 0.5,
       padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: AppPalette.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppPalette.stroke),
-      ),
+      shadows: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.35),
+          blurRadius: 32,
+          offset: const Offset(0, 8),
+        ),
+      ],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.2),
+              color: color.withValues(alpha: 0.18),
               shape: BoxShape.circle,
+              border: Border.all(color: color.withValues(alpha: 0.4), width: 0.5),
             ),
             child: Icon(Icons.spa_rounded, color: color, size: 26),
           ),
           const SizedBox(height: 18),
           const Text(
             'Sesi Selesai',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.6),
           ),
           const SizedBox(height: 6),
           Text(
             '${widget.activity.title} telah selesai. Bagaimana sesinya terasa?',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppPalette.textDim, height: 1.4),
+            style: const TextStyle(fontSize: 13, color: AppPalette.textDim, height: 1.4, letterSpacing: -0.1),
           ),
           const SizedBox(height: 24),
 
@@ -310,12 +350,18 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           ),
 
           const SizedBox(height: 28),
-          TextButton(
-            onPressed: () {
+          ApplePressable(
+            onTap: () {
               ref.read(activityRepoProvider).markComplete(widget.activity, true);
               widget.onClose();
             },
-            child: const Text('Tutup', style: TextStyle(color: AppPalette.textDim)),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Tutup',
+                style: TextStyle(color: AppPalette.textDim, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+              ),
+            ),
           ),
         ],
       ),
@@ -324,23 +370,23 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
 
   Widget _reflectionOption(String label, String value) {
     final selected = _selectedReflection == value;
-    return InkWell(
+    return ApplePressable(
       onTap: () {
         HapticFeedback.lightImpact();
         setState(() => _selectedReflection = value);
         ref.read(activityRepoProvider).markComplete(widget.activity, true);
         Future.delayed(const Duration(milliseconds: 300), widget.onClose);
       },
-      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppPalette.accent.withValues(alpha: 0.2) : AppPalette.bg,
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? AppPalette.accent.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppPalette.accent : AppPalette.stroke,
-            width: selected ? 1.5 : 1.0,
+            color: selected ? AppPalette.accent : Colors.white.withValues(alpha: 0.08),
+            width: selected ? 1.2 : 0.5,
           ),
         ),
         child: Text(
@@ -348,6 +394,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           style: TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+            letterSpacing: -0.1,
             color: selected ? AppPalette.accent : AppPalette.text,
           ),
         ),

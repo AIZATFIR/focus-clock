@@ -224,18 +224,16 @@ class _ClockPainter extends CustomPainter {
         break;
     }
 
-    // 1. Dual-layer soft shadow (only when explicitly in neon glow mode)
-    if (enableGlows) {
-      canvas.drawCircle(
-        center,
-        outerRadius + 14,
-        Paint()
-          ..color = themeAccentColor.withValues(alpha: 0.05)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
-      );
-    }
+    // 1. Apple Watch ambient chassis drop shadow
+    canvas.drawCircle(
+      center,
+      outerRadius + 6,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.38)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
+    );
 
-    // 2. Bezel (Embossed or clean bookbinding border)
+    // 2. Apple Watch precision bezel with light-catching micro-chamfer
     if (theme == 7) {
       canvas.drawCircle(
         center,
@@ -245,63 +243,51 @@ class _ClockPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
-    } else if (enableGlows) {
+    } else {
       final bezelPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
         ..shader = ui.Gradient.linear(
           Offset(center.dx - outerRadius, center.dy - outerRadius),
           Offset(center.dx + outerRadius, center.dy + outerRadius),
           [
-            Colors.white.withValues(alpha: 0.15),
-            Colors.white.withValues(alpha: 0.02),
-            Colors.black.withValues(alpha: 0.40),
+            Colors.white.withValues(alpha: 0.18),
+            Colors.white.withValues(alpha: 0.04),
+            Colors.black.withValues(alpha: 0.50),
           ],
-          [0.0, 0.5, 1.0],
+          [0.0, 0.45, 1.0],
         );
-      canvas.drawCircle(center, outerRadius + 1.5, bezelPaint);
-    } else {
-      final double borderWidth = theme == 6 ? 2.0 : 1.5;
-      final Color borderColor = theme == 6 ? AppPalette.stroke : AppPalette.stroke.withValues(alpha: 0.5);
-      canvas.drawCircle(
-        center,
-        outerRadius + (borderWidth / 2),
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth,
-      );
+      canvas.drawCircle(center, outerRadius + 0.75, bezelPaint);
     }
 
-    // 3. Face with radial gradient or Flat Paper color
+    // 3. Face with luxury obsidian radial depth
     final Paint facePaint;
     if (theme == 7) {
       facePaint = Paint()..color = const Color(0xFF221F1B); // Eye-friendly warm journal charcoal
-    } else if (enableGlows) {
+    } else if (theme == 6) {
+      facePaint = Paint()..color = const Color(0xFF1E1E24);
+    } else {
       facePaint = Paint()
         ..shader = ui.Gradient.radial(
           center,
           outerRadius,
           [
-            const Color(0xFF23252F), // Lighter center
-            const Color(0xFF14151B), // Darker edge
+            const Color(0xFF22242E), // Lighter luxury center
+            const Color(0xFF111216), // Darker obsidian edge
           ],
           [0.0, 1.0],
         );
-    } else {
-      facePaint = Paint()..color = theme == 6 ? const Color(0xFF222222) : const Color(0xFF16171C);
     }
     canvas.drawCircle(center, outerRadius, facePaint);
 
-    // 4. Inner bezel shadow (sunken / inset clock look)
-    if (enableGlows) {
-      canvas.drawCircle(
-        center,
-        outerRadius - 1,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0
-          ..color = Colors.black.withValues(alpha: 0.45),
-      );
-    }
+    // 4. Precision hairline chapter rings (Apple Watch Chronograph detail)
+    final chapterRingPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5
+      ..color = Colors.white.withValues(alpha: 0.08);
+    canvas.drawCircle(center, outerRadius - 0.5, chapterRingPaint);
+    canvas.drawCircle(center, arcOuter, chapterRingPaint);
+    canvas.drawCircle(center, taskInner, chapterRingPaint);
 
     // 10-min grid lines in arc band (72 or 144 grid lines)
     _drawGridLines(canvas, center, taskInner, arcOuter);
@@ -387,7 +373,7 @@ class _ClockPainter extends CustomPainter {
       }
     }
 
-    // Tick marks — every 5 minutes (for 12h) or 10 minutes (for 24h)
+    // Tick marks — Apple Watch precision dial layout
     final limit = is24hDial ? 1440 : 720;
     final step = is24hDial ? 10 : 5;
     for (int m = 0; m < limit; m += step) {
@@ -400,13 +386,13 @@ class _ClockPainter extends CustomPainter {
       final double sw;
       final double opacity;
       if (is24hDial) {
-        tickLen = isHour ? 15.0 : is30 ? 10.0 : 6.0;
-        sw = isHour ? 3.0 : is30 ? 1.8 : 1.0;
-        opacity = isHour ? 0.90 : is30 ? 0.65 : 0.35;
+        tickLen = isHour ? 13.0 : is30 ? 8.5 : 5.0;
+        sw = isHour ? 2.2 : is30 ? 1.4 : 0.8;
+        opacity = isHour ? 0.95 : is30 ? 0.60 : 0.28;
       } else {
-        tickLen = isHour ? 14.0 : is30 ? 10.0 : is15 ? 7.0 : 4.0;
-        sw = isHour ? 2.5 : is30 ? 1.8 : is15 ? 1.2 : 0.8;
-        opacity = isHour ? 0.90 : is30 ? 0.60 : is15 ? 0.40 : 0.25;
+        tickLen = isHour ? 12.0 : is30 ? 8.5 : is15 ? 6.5 : 4.0;
+        sw = isHour ? 2.2 : is30 ? 1.5 : is15 ? 1.0 : 0.7;
+        opacity = isHour ? 0.95 : is30 ? 0.60 : is15 ? 0.40 : 0.22;
       }
       
       final s = Offset(
@@ -422,7 +408,7 @@ class _ClockPainter extends CustomPainter {
         s,
         e,
         Paint()
-          ..color = AppPalette.text.withValues(alpha: opacity)
+          ..color = Colors.white.withValues(alpha: opacity)
           ..strokeWidth = sw
           ..strokeCap = StrokeCap.round,
       );
@@ -454,13 +440,14 @@ class _ClockPainter extends CustomPainter {
           label,
           9.0,
           FontWeight.w600,
-          (theme >= 5) ? themeAccentColor.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.12),
+          (theme >= 5) ? themeAccentColor.withValues(alpha: 0.85) : Colors.white.withValues(alpha: 0.18),
+          letterSpacing: -0.2,
         );
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     }
 
-    // Draw 1 precise minute label inside a premium glassmorphic capsule chip
+    // Draw 1 precise minute label inside a premium frosted glass capsule
     if (showHoverEffects) {
       final m = hoverMinute! % 60;
       final h = hoverMinute! ~/ 60;
@@ -480,35 +467,31 @@ class _ClockPainter extends CustomPainter {
         center.dy + math.sin(angle) * textRadius,
       );
       
-      // Spotlight glow behind the precision time
-      if (enableGlows) {
-        canvas.drawCircle(
-          txtCenter,
-          24,
-          Paint()
-            ..color = themeAccentColor.withValues(alpha: 0.27)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-        );
-      }
+      final tp = _getPainter(txt, 11, FontWeight.w700, theme >= 5 ? Colors.black : Colors.white, letterSpacing: -0.3);
+      final chipRect = Rect.fromCenter(center: txtCenter, width: tp.width + 16, height: tp.height + 8);
+      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(10));
       
-      final tp = _getPainter(txt, 11, FontWeight.w800, theme >= 5 ? Colors.black : Colors.white);
-      final chipRect = Rect.fromCenter(center: txtCenter, width: tp.width + 14, height: tp.height + 8);
-      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
-      
-      // Paint capsule background
+      // Ambient shadow
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = theme >= 5 ? themeAccentColor : Colors.black.withValues(alpha: 0.80),
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.40)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
       );
-      if (theme < 5) {
-        canvas.drawRRect(
-          chipRRect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0
-            ..color = themeAccentColor.withValues(alpha: 0.35),
-        );
-      }
+
+      // Frosted capsule background
+      canvas.drawRRect(
+        chipRRect,
+        Paint()..color = theme >= 5 ? themeAccentColor : const Color(0xD9161720),
+      );
+      // 0.5px subtle light border
+      canvas.drawRRect(
+        chipRRect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.5
+          ..color = theme >= 5 ? Colors.white.withValues(alpha: 0.4) : const Color(0x33FFFFFF),
+      );
       
       tp.paint(canvas, Offset(txtCenter.dx - tp.width / 2, txtCenter.dy - tp.height / 2));
     }
@@ -518,11 +501,11 @@ class _ClockPainter extends CustomPainter {
       for (int h = 0; h < 24; h++) {
         final angle = (h / 24) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
-          center.dx + math.cos(angle) * (outerRadius - 38),
-          center.dy + math.sin(angle) * (outerRadius - 38),
+          center.dx + math.cos(angle) * (outerRadius - 34),
+          center.dy + math.sin(angle) * (outerRadius - 34),
         );
         final label = '$h';
-        final tp = _getPainter(label, 11, FontWeight.w600, AppPalette.text, letterSpacing: -0.5);
+        final tp = _getPainter(label, 12, FontWeight.w600, AppPalette.text, letterSpacing: -0.6);
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     } else {
@@ -530,11 +513,11 @@ class _ClockPainter extends CustomPainter {
       for (int h = 1; h <= 12; h++) {
         final angle = (h / 12) * 2 * math.pi - math.pi / 2;
         final pos = Offset(
-          center.dx + math.cos(angle) * (outerRadius - 38),
-          center.dy + math.sin(angle) * (outerRadius - 38),
+          center.dx + math.cos(angle) * (outerRadius - 34),
+          center.dy + math.sin(angle) * (outerRadius - 34),
         );
         final label = useZeroToEleven ? (h == 12 ? '0' : '$h') : '$h';
-        final tp = _getPainter(label, 14, FontWeight.w600, AppPalette.text, letterSpacing: -0.5);
+        final tp = _getPainter(label, 15, FontWeight.w700, AppPalette.text, letterSpacing: -0.7);
         tp.paint(canvas, pos - Offset(tp.width / 2, tp.height / 2));
       }
     }
@@ -544,23 +527,19 @@ class _ClockPainter extends CustomPainter {
       _drawHands(canvas, center, r, outerRadius, themeAccentColor, enableGlows);
     }
 
-    // Elegant center pin
-    if (theme == 6) {
-      canvas.drawCircle(center, 6.5, Paint()..color = themeAccentColor);
-      canvas.drawCircle(center, 4.5, Paint()..color = Colors.white);
-    } else {
-      canvas.drawCircle(center, 6.5, Paint()..color = AppPalette.text);
-      canvas.drawCircle(center, 2.5, Paint()..color = themeAccentColor);
-    }
+    // Luxury 3-tier Apple Watch center pin
+    _drawLuxuryCenterPin(canvas, center, themeAccentColor);
   }
 
-  /// Soft breathing glow just outside the current activity's arc.
+  /// Apple Watch Activity breathing glow aura
   void _drawPulseRing(
       Canvas canvas, Offset center, double arcOuter, int startMin, int endMin, Color color) {
     final wave = 0.5 - 0.5 * math.cos(pulse * 2 * math.pi);
     final scale = is24hDial ? 1440 : 720;
     final startAngle = (startMin / scale) * 2 * math.pi - math.pi / 2;
     final sweep = ((endMin - startMin) / scale) * 2 * math.pi;
+
+    // 1. Soft breathing Gaussian aura
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: arcOuter + 4),
       startAngle,
@@ -568,9 +547,23 @@ class _ClockPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5 + 1.5 * wave
+        ..strokeWidth = 4.0 + 3.0 * wave
         ..strokeCap = StrokeCap.round
-        ..color = color.withValues(alpha: 0.30 + 0.45 * wave),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
+        ..color = color.withValues(alpha: 0.35 + 0.30 * wave),
+    );
+
+    // 2. Crisp inner breathing core
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: arcOuter + 3.5),
+      startAngle,
+      sweep,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0 + 1.0 * wave
+        ..strokeCap = StrokeCap.round
+        ..color = color.withValues(alpha: 0.70 + 0.30 * wave),
     );
   }
 
@@ -678,7 +671,7 @@ class _ClockPainter extends CustomPainter {
             text: TextSpan(
                 text: label,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600, letterSpacing: -0.2)),
             textDirection: TextDirection.ltr,
             maxLines: 1,
             ellipsis: '…',
@@ -690,7 +683,7 @@ class _ClockPainter extends CustomPainter {
           text: TextSpan(
               text: label,
               style: const TextStyle(
-                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: -0.2)),
           textDirection: TextDirection.ltr,
           maxLines: 1,
           ellipsis: '…',
@@ -706,47 +699,178 @@ class _ClockPainter extends CustomPainter {
         ? (now.hour * 60 + now.minute + now.second / 60.0)
         : ((now.hour % 12) * 60 + now.minute + now.second / 60.0);
     final pAngle = (totalMins / scale) * 2 * math.pi - math.pi / 2;
-
-    final double precisionWidth = clockFaceTheme == 6 ? 2.0 : 3.5;
-    final double hourWidth = clockFaceTheme == 6 ? 4.0 : 7.5;
-    final double minuteWidth = clockFaceTheme == 6 ? 2.5 : 4.5;
     final bool showTooltip = clockFaceTheme != 6 && showCurrentTime;
 
     switch (clockHandsMode) {
       case 1:
-        // Single precision hand only
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        // Single precision chronograph needle
+        _drawPrecisionHand(canvas, center, pAngle, outerRadius, accentColor);
         if (showTooltip) {
           _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
         }
         break;
       case 2:
-        // Hour + Minute hands, plus yellow/accent precision hand
+        // Hour + Minute hands, plus precision hand
         final hAngle = pAngle;
         final mAngle = ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
-        _hand(canvas, center, hAngle, r * 0.50, hourWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, mAngle, r * 0.75, minuteWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        _drawAppleBatonHand(canvas, center, hAngle, r * 0.52, 5.5, AppPalette.text);
+        _drawAppleBatonHand(canvas, center, mAngle, r * 0.78, 3.8, AppPalette.text);
+        _drawPrecisionHand(canvas, center, pAngle, outerRadius, accentColor);
         if (showTooltip) {
           _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
         }
         break;
       default: // 3
-        // Hour + Minute + Second hands, plus yellow/accent precision hand
+        // Hour + Minute + Second hands, plus precision hand
         final hAngle = pAngle;
         final mAngle = ((now.minute + now.second / 60.0) / 60) * 2 * math.pi - math.pi / 2;
         final sAngle = (now.second / 60.0) * 2 * math.pi - math.pi / 2;
-        _hand(canvas, center, hAngle, r * 0.50, hourWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, mAngle, r * 0.75, minuteWidth, AppPalette.text, enableGlows);
-        _hand(canvas, center, sAngle, r * 0.82, 1.2, AppPalette.text.withValues(alpha: 0.5), enableGlows);
-        
-        // Draw the yellow/accent precision hand with the tooltip
-        _hand(canvas, center, pAngle, outerRadius, precisionWidth, accentColor, enableGlows);
+        _drawAppleBatonHand(canvas, center, hAngle, r * 0.52, 5.5, AppPalette.text);
+        _drawAppleBatonHand(canvas, center, mAngle, r * 0.78, 3.8, AppPalette.text);
+        _drawSecondHand(canvas, center, sAngle, r * 0.84, const Color(0xFFFF453A));
+        _drawPrecisionHand(canvas, center, pAngle, outerRadius, accentColor);
         if (showTooltip) {
           _drawTimeTip(canvas, center, pAngle, outerRadius, accentColor, enableGlows);
         }
         break;
     }
+  }
+
+  void _drawAppleBatonHand(Canvas canvas, Offset center, double angle, double len, double width, Color color) {
+    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
+    
+    // Ambient drop shadow under the hand
+    canvas.drawLine(
+      center,
+      Offset(end.dx + 1.2, end.dy + 2.5),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
+        ..strokeWidth = width
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3.5),
+    );
+
+    // Luminous baton hand body
+    canvas.drawLine(
+      center,
+      end,
+      Paint()
+        ..color = color
+        ..strokeWidth = width
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Subtle tactile chamfer center groove
+    if (width > 4.0) {
+      final innerEnd = Offset(center.dx + math.cos(angle) * (len - 6), center.dy + math.sin(angle) * (len - 6));
+      final innerStart = Offset(center.dx + math.cos(angle) * 10, center.dy + math.sin(angle) * 10);
+      canvas.drawLine(
+        innerStart,
+        innerEnd,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.20)
+          ..strokeWidth = 1.2
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+  }
+
+  void _drawPrecisionHand(Canvas canvas, Offset center, double angle, double len, Color accentColor) {
+    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
+    final tail = Offset(center.dx - math.cos(angle) * 16, center.dy - math.sin(angle) * 16);
+
+    // Drop shadow
+    canvas.drawLine(
+      tail,
+      Offset(end.dx + 1.0, end.dy + 2.0),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.30)
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+
+    // Precision needle
+    canvas.drawLine(
+      tail,
+      end,
+      Paint()
+        ..color = accentColor
+        ..strokeWidth = 2.0
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Counterweight circular ring
+    canvas.drawCircle(
+      tail,
+      3.0,
+      Paint()..color = accentColor,
+    );
+    canvas.drawCircle(
+      tail,
+      1.5,
+      Paint()..color = const Color(0xFF16171C),
+    );
+  }
+
+  void _drawSecondHand(Canvas canvas, Offset center, double angle, double len, Color color) {
+    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
+    final tail = Offset(center.dx - math.cos(angle) * 14, center.dy - math.sin(angle) * 14);
+
+    // Needle drop shadow
+    canvas.drawLine(
+      tail,
+      Offset(end.dx + 1.0, end.dy + 1.5),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.25)
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+
+    // Second needle
+    canvas.drawLine(
+      tail,
+      end,
+      Paint()
+        ..color = color
+        ..strokeWidth = 1.0
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Micro tail circle
+    canvas.drawCircle(tail, 2.0, Paint()..color = color);
+  }
+
+  void _drawLuxuryCenterPin(Canvas canvas, Offset center, Color accentColor) {
+    // Tier 1: Outer gunmetal bezel ring
+    canvas.drawCircle(
+      center,
+      7.5,
+      Paint()..color = const Color(0xFF282832),
+    );
+    canvas.drawCircle(
+      center,
+      7.5,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..color = Colors.white.withValues(alpha: 0.25),
+    );
+
+    // Tier 2: Brushed metal ring
+    canvas.drawCircle(
+      center,
+      4.2,
+      Paint()..color = const Color(0xFF454552),
+    );
+
+    // Tier 3: Glowing jewel pivot
+    canvas.drawCircle(
+      center,
+      2.2,
+      Paint()..color = accentColor,
+    );
   }
 
   void _drawTimeTip(Canvas canvas, Offset center, double angle, double handLen, Color accentColor, bool enableGlows) {
@@ -755,18 +879,6 @@ class _ClockPainter extends CustomPainter {
       center.dy + math.sin(angle) * (handLen + 28),
     );
     final String txt = formatCurrentTime(now, is24h: is24hTime, format: currentTimeFormat);
-    
-    // Spotlight glow behind the current time (further outside the dial)
-    if (enableGlows && glowStyle != 'subtle') {
-      canvas.drawCircle(
-        tipOffset,
-        24,
-        Paint()
-          ..color = accentColor.withValues(alpha: 0.27)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
-      );
-    }
-    
     final bool isFloating = floatTimeText || glowStyle == 'floating';
     final Color textColor;
     if (isFloating) {
@@ -774,68 +886,38 @@ class _ClockPainter extends CustomPainter {
     } else {
       textColor = clockFaceTheme >= 5 ? Colors.black : Colors.white;
     }
-    
-    final tp = _getPainter(txt, 11, FontWeight.w800, textColor);
-    
+
+    final tp = _getPainter(txt, 11, FontWeight.w700, textColor, letterSpacing: -0.3);
+
     if (!isFloating) {
       final chipRect = Rect.fromCenter(center: tipOffset, width: tp.width + 16, height: tp.height + 8);
-      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(8));
-      
-      // Paint capsule background
+      final chipRRect = RRect.fromRectAndRadius(chipRect, const Radius.circular(10));
+
+      // Ambient drop shadow
       canvas.drawRRect(
         chipRRect,
-        Paint()..color = clockFaceTheme >= 5 ? accentColor : Colors.black.withValues(alpha: 0.80),
-      );
-      if (clockFaceTheme < 5) {
-        canvas.drawRRect(
-          chipRRect,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.0
-            ..color = accentColor.withValues(alpha: 0.35),
-        );
-      }
-    }
-    
-    tp.paint(canvas, Offset(tipOffset.dx - tp.width / 2, tipOffset.dy - tp.height / 2));
-  }
-
-  void _hand(Canvas canvas, Offset center, double angle, double len,
-      double width, Color color, bool enableGlows) {
-    final end = Offset(center.dx + math.cos(angle) * len, center.dy + math.sin(angle) * len);
-    
-    // Hand drop shadow
-    if (enableGlows) {
-      canvas.drawLine(
-        center,
-        Offset(end.dx + 1.5, end.dy + 3),
         Paint()
-          ..color = Colors.black.withValues(alpha: 0.3)
-          ..strokeWidth = width
-          ..strokeCap = StrokeCap.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+          ..color = Colors.black.withValues(alpha: 0.35)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      );
+
+      // Frosted capsule background
+      canvas.drawRRect(
+        chipRRect,
+        Paint()..color = clockFaceTheme >= 5 ? accentColor : const Color(0xD9161720),
+      );
+
+      // 0.5px light border
+      canvas.drawRRect(
+        chipRRect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.5
+          ..color = clockFaceTheme >= 5 ? Colors.white.withValues(alpha: 0.4) : const Color(0x33FFFFFF),
       );
     }
 
-    // Elegant hand paint
-    final Paint paint;
-    if (enableGlows) {
-      paint = Paint()
-        ..strokeWidth = width
-        ..strokeCap = StrokeCap.round
-        ..shader = ui.Gradient.linear(
-          center,
-          end,
-          [color.withValues(alpha: 0.5), color],
-          [0.0, 1.0],
-        );
-    } else {
-      paint = Paint()
-        ..color = color
-        ..strokeWidth = width
-        ..strokeCap = StrokeCap.round;
-    }
-    canvas.drawLine(center, end, paint);
+    tp.paint(canvas, Offset(tipOffset.dx - tp.width / 2, tipOffset.dy - tp.height / 2));
   }
 
   @override

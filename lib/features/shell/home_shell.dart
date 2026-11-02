@@ -376,13 +376,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
                 ),
               ),
 
-            // Gemini Ambient Floating Bar
-            if (enableAi && !_showAi)
-              const Positioned(
-                bottom: 20,
-                right: 20,
-                child: FloatingQuickAiBar(),
-              ),
+            // Floating Quick Action / Tools Bar
+            // FloatingQuickAiBar removed per request to eliminate useless floating chat bar
             
             if (_showAi)
               ClipRRect(
