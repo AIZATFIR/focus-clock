@@ -2025,3 +2025,77 @@ console.assert(snapAngleToMinutes(0.08, 5).minutes === 10, 'Snaps ~9.16m to 10m'
 skipped: UI controls & drag-state machines; add when touch/pointer interaction handlers are wired.
 skipped: 24h dial toggle; add when user setting dictates non-12h layout.
 skipped: animation physics for snapping; add when raw instant-snap feels too rigid in hand-testing.
+
+
+### Cycle #85 Directive (2026-11-03 05:04)
+```typescript
+// 1. Retina-crisp Canvas render with warm Zen palette (SofizCake/firtofolio warmth)
+export function renderZenClock(
+  canvas: HTMLCanvasElement,
+  size: number,
+  startMin: number,
+  endMin: number
+) {
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== size * dpr) {
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+  }
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const c = size / 2;
+  const r = c - 18;
+  const toRad = (m: number) => (m * Math.PI) / 30 - Math.PI / 2;
+
+  // Track: warm stone
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#eee8df';
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Focus Block: warm terracotta
+  ctx.strokeStyle = '#d96b43';
+  ctx.beginPath();
+  ctx.arc(c, c, r, toRad(startMin), toRad(endMin));
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 2. Pure 5-minute angular drag snapper
+export function snapAngleToMinutes(dx: number, dy: number, step = 5): number {
+  const rad = Math.atan2(dy, dx) + Math.PI / 2;
+  const tau = Math.PI * 2;
+  const norm = (rad < 0 ? rad + tau : rad) / tau;
+  const steps = 60 / step;
+  return (Math.round(norm * steps) * step) % 60;
+}
+
+// ponytail: 60-min single-turn dial; upgrade path: track multi-hour rotations using total radians.
+console.assert(snapAngleToMinutes(0, -50) === 0, '12 o’clock is 0m');
+console.assert(snapAngleToMinutes(50, 0) === 15, '3 o’clock is 15m');
+console.assert(snapAngleToMinutes(0, 50) === 30, '6 o’clock is 30m');
+```
+
+```css
+/* 3. Zero-distraction zen viewport */
+.zen-shell {
+  touch-action: none;
+  user-select: none;
+  background: radial-gradient(circle at center, #faf7f2 0%, #f4ede4 100%);
+  font-feature-settings: "tnum";
+  display: grid;
+  place-content: center;
+  min-height: 100dvh;
+}
+```
+
+Skipped: Spring animations and multi-revolution state.
+Add when: Drag release threshold triggers an active session transition.
