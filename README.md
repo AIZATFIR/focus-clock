@@ -60,6 +60,12 @@ Most planners are lists. Focus Clock is a **720-minute analog dial** — your wh
 
 ---
 
+## 🧭 Manifesto & Philosophy
+
+Prinsip dasar dan kompas filosofis proyek ini dirangkum dalam [MANIFESTO.md](MANIFESTO.md) — *Kepada Yang Membangun: "Did I live today in a way I can be proud of?"*
+
+---
+
 ## 🧠 The science behind it
 
 Focus Clock schedules around how the brain actually works:
