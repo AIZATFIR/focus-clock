@@ -1087,3 +1087,92 @@ body {
 }
 ```
 skipped: CSS reset libraries and custom webfonts. Add when: system fonts fail specific branded typographic hierarchy.
+
+
+### Cycle #20 Directive (2026-11-02 22:59)
+### 1. Snapping Math for Canvas Timeblocks (5/15-min intervals)
+
+```typescript
+// timeblock-snap.ts
+export function snapPointerToMinutes(x: number, y: number, cx: number, cy: number, step = 5): { min: number; rad: number } {
+  const rawAngle = Math.atan2(y - cy, x - cx); // -PI to PI
+  const norm = (rawAngle + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI); // 0 at 12 o'clock
+  const min = (Math.round(((norm / (2 * Math.PI)) * 60) / step) * step) % 60;
+  const rad = (min / 60) * 2 * Math.PI - Math.PI / 2;
+  return { min, rad };
+}
+
+// ponytail: single 60m dial ceiling; add multi-hour winding when continuous multi-hour spans are supported.
+console.assert(snapPointerToMinutes(100, 50, 100, 100).min === 0, '12 o’clock check failed');
+console.assert(snapPointerToMinutes(150, 100, 100, 100).min === 15, '3 o’clock check failed');
+console.assert(snapPointerToMinutes(100, 150, 100, 100).min === 30, '6 o’clock check failed');
+```
+* Skipped: Polar drag physics, custom inertial spring wrappers.
+* Add when: Direct pointer dragging creates perceptible jitter on low-polling trackpads.
+
+---
+
+### 2. DPR-Scaled Warm Dial & Active Arc (Zen Palette)
+
+```typescript
+// clockface.ts
+export function drawZenFace(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  startRad: number,
+  endRad: number
+): void {
+  const r = size / 2;
+  ctx.save();
+  ctx.clearRect(0, 0, size, size);
+  ctx.translate(r, r);
+
+  // Soft background track (SofizCake warm neutral)
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'color-mix(in srgb, currentColor 8%, transparent)';
+  ctx.beginPath();
+  ctx.arc(0, 0, r - 16, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  // Active timeblock slice (Apple focus orange / terracotta)
+  if (startRad !== endRad) {
+    ctx.strokeStyle = '#d97757';
+    ctx.beginPath();
+    ctx.arc(0, 0, r - 16, startRad, endRad);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+// ponytail: hardcoded palette token; extract to CSS vars via getComputedStyle when dynamic theming is required.
+```
+* Skipped: Offscreen canvas buffers and tick loop iterations.
+* Add when: Custom dial subdivisions (1m, 5m tick marks) drop frame rates below 60fps on mobile.
+
+---
+
+### 3. Pure CSS Inactivity Fade (Zero-Distraction Chrome)
+
+```css
+/* zen-chrome.css */
+.focus-container {
+  --zen-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: #faf8f5;
+  color: #242120;
+}
+
+.focus-chrome {
+  opacity: 0;
+  transition: opacity 400ms var(--zen-ease);
+  pointer-events: none;
+}
+
+/* Reveal only on mouse movement/hover or keyboard focus */
+.focus-container:hover .focus-chrome,
+.focus-container:focus-within .focus-chrome {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+* Skipped: JS `mousemove` debounce listeners and idle timeout state machines.
+* Add when: Fine-grained controls require individual 3-second dwell timers on touch devices.
