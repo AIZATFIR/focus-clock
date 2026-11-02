@@ -1949,3 +1949,79 @@ function drawDial(ctx, radius = 160) {
 ```
 skipped: CSS `color-mix()` / theme variable parsing inside canvas.
 add when: dynamic system dark mode switching is wired to CSS tokens.
+
+
+### Cycle #84 Directive (2026-11-03 04:59)
+### 1. HiDPI Canvas Setup & Zen Warmth Palette
+
+```typescript
+// zenCanvas.ts
+export const ZEN = {
+  bg: '#FAF8F5',
+  tick: '#E4DDD3',
+  ink: '#2D2B2A',
+  muted: '#8C827A',
+  blockFill: 'rgba(196, 112, 79, 0.14)',
+  blockStroke: '#C4704F',
+} as const;
+
+export function initCanvas(canvas: HTMLCanvasElement, size = 320): CanvasRenderingContext2D {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+
+### 2. Angular Snapping (Pure Stdlib Math)
+
+```typescript
+// snap.ts
+export function snapAngleToMinutes(rad: number, stepMinutes = 5): { minutes: number; snapRad: number } {
+  const TAU = Math.PI * 2;
+  const normalized = ((rad % TAU) + TAU) % TAU;
+  const rawMinutes = (normalized / TAU) * 720; // 12-hour face
+  const minutes = (Math.round(rawMinutes / stepMinutes) * stepMinutes) % 720;
+  const snapRad = (minutes / 720) * TAU;
+  return { minutes, snapRad };
+}
+// ponytail: hardcoded to 12h clock; pass clockHours = 12 | 24 if 24h mode is needed.
+
+// Self-check
+console.assert(snapAngleToMinutes(Math.PI / 2, 15).minutes === 180, '3 o clock snaps to 180m');
+console.assert(snapAngleToMinutes(0.08, 5).minutes === 10, 'Snaps ~9.16m to 10m');
+```
+
+### 3. Native Zero-Distraction Zen Surface
+
+```css
+/* zen-clock.css */
+:root {
+  --bg-zen: #FAF8F5;
+  --ink: #2D2B2A;
+}
+
+.clock-surface {
+  display: grid;
+  place-items: center;
+  background: var(--bg-zen);
+  color: var(--ink);
+  user-select: none;
+  touch-action: none;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-variant-numeric: tabular-nums;
+  cursor: crosshair;
+}
+
+.clock-surface:active {
+  cursor: grabbing;
+}
+```
+
+skipped: UI controls & drag-state machines; add when touch/pointer interaction handlers are wired.
+skipped: 24h dial toggle; add when user setting dictates non-12h layout.
+skipped: animation physics for snapping; add when raw instant-snap feels too rigid in hand-testing.
