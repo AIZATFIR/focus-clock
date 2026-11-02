@@ -2601,3 +2601,55 @@ export function renderClockface(canvas, progressAngle = 0) {
 ```
 *   Skipped: Theme config objects and CSS-in-JS abstractions.
 *   Add when: Dark mode / system-matched theme toggle is requested.
+
+
+### Cycle #92 Directive (2026-11-03 05:44)
+```javascript
+// 1. Magnetic radial snap for focus blocks (5-min default)
+export function snapRadialMinutes(x, y, cx, cy, step = 5) {
+  const angle = Math.atan2(y - cy, x - cx);
+  const norm = (angle + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const minutes = (norm / (Math.PI * 2)) * 60;
+  const snapped = (Math.round(minutes / step) * step) % 60;
+  // ponytail: 60m dial ceiling; add multi-hour winding if blocks exceed 60m.
+  return { minutes: snapped, rad: (snapped / 60) * (Math.PI * 2) - Math.PI / 2 };
+}
+
+// 2. HiDPI Canvas setup & warm minimal arc rendering
+export function renderZenDial(canvas, activeEndRad, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+    canvas.style.width = canvas.style.height = `${size}px`;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = size * 0.38;
+  const startRad = -Math.PI / 2;
+
+  // Track (Bone)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#F0ECE1';
+  ctx.lineWidth = 12;
+  ctx.stroke();
+
+  // Active Block (Terracotta)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startRad, activeEndRad);
+  ctx.strokeStyle = '#D97757';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // ponytail: static warm palette; bind to CSS custom properties when dark mode arrives.
+}
+
+// Self-check
+console.assert(snapRadialMinutes(100, 50, 100, 100).minutes === 0, '12 o’clock snap failed');
+console.assert(snapRadialMinutes(150, 100, 100, 100).minutes === 15, '3 o’clock snap failed');
+```
+
+skipped: dynamic CSS var extraction and full continuous pointer drag listeners.
+add when: multi-theme support or touch/pointer drag events are wired to the dial container.
