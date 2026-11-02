@@ -782,3 +782,68 @@ body:focus-within .zen-controls {
 ```
 skipped: JavaScript-driven idle mouse-fade timers.  
 add when: Touch/mobile screens need explicit toggle behavior.
+
+
+### Cycle #16 Directive (2026-11-02 22:36)
+### 1. HiDPI Canvas Normalization (Crisp Zen Dial)
+
+```javascript
+function getZenContext(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  return ctx;
+}
+```
+skipped: ResizeObserver auto-rescaling.  
+add when: The clock container supports dynamic fluid resizing instead of fixed dial dimensions.
+
+---
+
+### 2. Magnetic 5-Minute Block Snapping
+
+```javascript
+function snapTimeblockAngle(rad, stepMin = 5, toleranceRad = 0.09) {
+  const stepRad = (stepMin / 60) * (2 * Math.PI);
+  const normalized = (rad % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI);
+  const nearest = Math.round(normalized / stepRad) * stepRad;
+  // ponytail: static threshold ceiling; add velocity weighting if drag momentum feels sticky.
+  return Math.abs(normalized - nearest) <= toleranceRad ? nearest : normalized;
+}
+
+// Runnable self-check
+console.assert(snapTimeblockAngle(0.05, 5, 0.09) === 0, 'Snap failed within threshold');
+console.assert(snapTimeblockAngle(0.3, 5, 0.09) === 0.3, 'Snap fired outside threshold');
+```
+skipped: Haptic engine integration (`navigator.vibrate`) and momentum physics.  
+add when: Mobile drag-to-schedule gesture interaction is wired up to DOM events.
+
+---
+
+### 3. Anti-Slop Zen Dial Tokens & Surface CSS
+
+```css
+:root {
+  --zen-paper: #FAF8F5;
+  --zen-dial-rim: #ECE7DE;
+  --zen-ink: #2C2824;
+  --zen-warm-amber: #C96E4B;
+  --zen-subtle: #8F887E;
+}
+
+.zen-clockface {
+  background: var(--zen-paper);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--zen-dial-rim);
+  touch-action: none;
+  user-select: none;
+}
+```
+skipped: Dynamic dark-mode theme transitions and CSS ambient blur filters.  
+add when: System `prefers-color-scheme` toggle is explicitly introduced to the host app.
