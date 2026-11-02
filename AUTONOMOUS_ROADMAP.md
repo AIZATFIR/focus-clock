@@ -1533,3 +1533,74 @@ export function drawZenDial(canvas: HTMLCanvasElement, activeMinutes: number, si
 ```
 * Skipped: Theme toggles and CSS-in-JS abstraction layers.
 * Add when: Abstraction is mandated by shared UI design-system package.
+
+
+### Cycle #78 Directive (2026-11-03 04:26)
+### 1. HiDPI Canvas Normalizer
+
+```javascript
+export function resizeCanvas(canvas, ctx, size) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  ctx.resetTransform?.() || ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+```
+skipped: ResizeObserver auto-binding.  
+add when: The clock container needs fluid percentage widths rather than a fixed aspect ratio.
+
+---
+
+### 2. Zero-Dependency Polar Timeblock Snapper
+
+```javascript
+// ponytail: hardcoded to 5-min intervals; parameterize step if user preferences are introduced.
+export function snapPointerToMinutes(dx, dy, step = 5) {
+  const rad = Math.atan2(dy, dx) + Math.PI / 2;
+  const normalized = (rad + 2 * Math.PI) % (2 * Math.PI);
+  const minutes = (normalized / (2 * Math.PI)) * 60;
+  return (Math.round(minutes / step) * step) % 60;
+}
+
+// Self-check
+console.assert(snapPointerToMinutes(0, -100) === 0, "12 o'clock failed");
+console.assert(snapPointerToMinutes(100, 0) === 15, "3 o'clock failed");
+console.assert(snapPointerToMinutes(2, 98) === 30, "Snap to bottom failed");
+```
+skipped: Bezier drag smoothing and multi-hour arc overflows.  
+add when: Focus sessions support spans strictly exceeding 60 minutes.
+
+---
+
+### 3. Zen Warmth Canvas Tokens & Viewport Base
+
+```css
+:root {
+  --bg-zen: #fbf9f5;
+  --ink-zen: #23201e;
+  --accent-zen: #c86d51;
+  --track-zen: rgba(35, 32, 30, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-zen: #161514;
+    --ink-zen: #ede9e3;
+    --accent-zen: #d97d62;
+    --track-zen: rgba(237, 233, 227, 0.08);
+  }
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-zen);
+  color: var(--ink-zen);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  touch-action: none;
+  user-select: none;
+}
+```
+skipped: Theme toggle button and localStorage persistence.  
+add when: Manual theme override is explicitly requested over OS preference.
