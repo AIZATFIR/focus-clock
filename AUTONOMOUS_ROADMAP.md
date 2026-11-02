@@ -847,3 +847,86 @@ add when: Mobile drag-to-schedule gesture interaction is wired up to DOM events.
 ```
 skipped: Dynamic dark-mode theme transitions and CSS ambient blur filters.  
 add when: System `prefers-color-scheme` toggle is explicitly introduced to the host app.
+
+
+### Cycle #17 Directive (2026-11-02 22:42)
+### 1. HiDPI Canvas & Zen Clockface
+
+```javascript
+export function setupZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+export function drawClockface(ctx, r = 160) {
+  ctx.clearRect(0, 0, r * 2, r * 2);
+  
+  // Warm SofizCake/firtofolio backdrop
+  ctx.fillStyle = '#faf8f5';
+  ctx.beginPath();
+  ctx.arc(r, r, r - 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 12 low-contrast ticks, zero numbers (zen focus)
+  ctx.strokeStyle = 'rgba(44, 42, 41, 0.14)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6;
+    ctx.beginPath();
+    ctx.moveTo(r + Math.sin(a) * (r - 18), r - Math.cos(a) * (r - 18));
+    ctx.lineTo(r + Math.sin(a) * (r - 10), r - Math.cos(a) * (r - 10));
+    ctx.stroke();
+  }
+}
+```
+* skipped: dynamic resize listeners and custom themes.
+* add when: viewport-adaptive canvas or dark mode is explicitly scheduled.
+
+---
+
+### 2. Timeblock Angle Snapper
+
+```javascript
+// ponytail: locked to 12-hour dial; upgrade to 24-hour via dial-type parameter.
+export function snapAngleToMinutes(rad, stepMinutes = 15) {
+  const full = Math.PI * 2;
+  const step = (stepMinutes / 720) * full;
+  const norm = (rad % full + full) % full;
+  return Math.round((Math.round(norm / step) * step) / full * 720) % 720;
+}
+
+console.assert(snapAngleToMinutes(Math.PI / 2) === 180, 'PI/2 must snap to 180m');
+console.assert(snapAngleToMinutes(0.12) === 0, 'Sub-step must snap to 0m');
+```
+* skipped: variable minute steps (e.g., 5m vs 15m context menus) and magnetic drag smoothing.
+* add when: user preferences expose granularity settings.
+
+---
+
+### 3. Zero-JS Zen Chrome Fade
+
+```css
+/* Zero-JS auto-hiding chrome */
+.zen-shell {
+  position: relative;
+  background: #faf8f5;
+}
+
+.zen-chrome {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-shell:hover .zen-chrome,
+.zen-shell:focus-within .zen-chrome {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+* skipped: JS idle timer and mousemove throttling.
+* add when: canvas needs interaction tracking on pure touch devices without hover.
