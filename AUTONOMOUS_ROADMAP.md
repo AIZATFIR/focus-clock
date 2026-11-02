@@ -1234,3 +1234,100 @@ add when: Supporting multi-hour dragging or physical vibration on mobile browser
 ```
 skipped: Custom pointermove timers and complex fullscreen management in JS.  
 add when: Need custom cursor hiding specifically inside the canvas element.
+
+
+### Cycle #74 Directive (2026-11-03 04:03)
+### 1. HiDPI Zen Clockface Canvas (DPR Crispness + Warm Palette)
+
+```javascript
+// clockface.js
+export function setupZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+export function drawZenFace(ctx, size = 320) {
+  const r = size / 2;
+  ctx.clearRect(0, 0, size, size);
+  ctx.save();
+  ctx.translate(r, r);
+  for (let i = 0; i < 60; i++) {
+    const isHour = i % 5 === 0;
+    ctx.fillStyle = isHour ? '#44403C' : '#E7E5E4'; // Warm stone-700 / stone-200
+    ctx.fillRect(isHour ? -1 : -0.5, -r + 10, isHour ? 2 : 1, isHour ? 8 : 4);
+    ctx.rotate((Math.PI * 2) / 60);
+  }
+  ctx.restore();
+}
+```
+skipped: Bezier curves, dynamic numbers, and offscreen buffers.  
+add when: Profile shows tick rendering drops below 60fps during live drags.
+
+---
+
+### 2. Native Timeblock Angular Snapping (15-Min Grid)
+
+```javascript
+// snapping.js
+export function snapPointerToMinutes(clientX, clientY, rect, stepMin = 15) {
+  const x = clientX - (rect.left + rect.width / 2);
+  const y = clientY - (rect.top + rect.height / 2);
+  const rad = Math.atan2(y, x) + Math.PI / 2;
+  const norm = (rad < 0 ? rad + Math.PI * 2 : rad);
+  const totalMin = (norm / (Math.PI * 2)) * 720; // 12h dial: 720m
+  const snappedMinutes = Math.round(totalMin / stepMin) * stepMin % 720;
+  // ponytail: 12-hour dial only; upgrade to 24-hour via dial-type parameter.
+  return { snappedMinutes, snappedRad: (snappedMinutes / 720) * Math.PI * 2 - Math.PI / 2 };
+}
+
+// Self-check
+console.assert(snapPointerToMinutes(100, 0, { left: 0, top: 0, width: 200, height: 200 }).snappedMinutes === 180, '3 o’clock snap failed');
+console.assert(snapPointerToMinutes(0, -100, { left: 0, top: 0, width: 200, height: 200 }).snappedMinutes === 0, '12 o’clock snap failed');
+```
+skipped: Gesture tracking libraries and inertia physics.  
+add when: Touch swipe gestures require velocity-based fling snapping.
+
+---
+
+### 3. Anti-Slop Warm Zen UI Shell (Zero-JS Ambient Dimming)
+
+```css
+/* zen-clock.css */
+:root {
+  --bg-zen: #FAF8F5; /* Warm cream inspired by SofizCake */
+  --text-zen: #292524;
+  --accent-zen: #CA8A04; /* Muted amber */
+}
+
+body {
+  background: var(--bg-zen);
+  color: var(--text-zen);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.clock-container {
+  position: relative;
+  transition: opacity 0.4s ease;
+}
+
+/* Zen focus: fade peripheral controls when hovering or dragging the clock */
+body:has(.clock-container:hover) .peripheral-controls {
+  opacity: 0.15;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+
+.peripheral-controls {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+```
+skipped: React/JS state managers for "zen focus mode".  
+add when: Non-CSS capable clients or complex multi-pane layouts require state orchestration.
