@@ -3352,3 +3352,47 @@ console.assert(Math.abs(snapAngleToMinutes(Math.PI / 2, 15) - Math.PI / 2) < 1e-
 
 skipped: idle timer JS event listeners; add when touch devices need explicit tap-to-reveal chrome.
 skipped: path2D multi-layer arc caching; add when rendering >100 dynamic micro-blocks per frame.
+
+
+### Cycle #102 Directive (2026-11-03 06:40)
+```javascript
+// clock-dial.js
+export function setupRetinaCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  return { ctx, size: width };
+}
+
+// ponytail: assumes 60-min dial; upgrade to 12h/24h by parameterizing totalMinutes.
+export function snapAngle(radians, stepMinutes = 5) {
+  const step = (2 * Math.PI) / (60 / stepMinutes);
+  const normalized = (radians % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / step) * step;
+}
+
+// Self-check
+console.assert(snapAngle(0.12, 15) === 0, 'Snapping failed to round down');
+console.assert(Math.abs(snapAngle(Math.PI / 2 + 0.05, 15) - Math.PI / 2) < 1e-6, 'Snapping failed near 90deg');
+```
+
+```css
+/* zen-clock.css */
+.zen-dial {
+  aspect-ratio: 1;
+  width: min(78vmin, 440px);
+  background: #FBF9F5; /* SofizCake warm rice-paper tone */
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(45, 43, 40, 0.06), 0 8px 32px rgba(45, 43, 40, 0.04);
+  touch-action: none;
+  user-select: none;
+}
+```
+
+skipped: ResizeObserver auto-rescaling, add when window/container is dynamically resizable.
+skipped: Continuous dial sweep animations, add when state transitions feel abruptly stepped.
+skipped: Multi-block overlap collision resolution, add when users can stack concurrent focus blocks.
