@@ -1390,3 +1390,61 @@ canvas#clockface {
 ```
 * skipped: CSS theme toggling and CSS color-mix() runtime transitions.
 * add when: System `prefers-color-scheme` dark mode token set is defined.
+
+
+### Cycle #76 Directive (2026-11-03 04:15)
+### 1. HiDPI Canvas Scaling with Zen Warmth Render
+
+```javascript
+export function initClockCanvas(canvas, size = 320) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // ponytail: fixed size scaling; upgrade to ResizeObserver if dynamic fluid sizing is needed
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+`canvas.js` → skipped: dynamic window resize observer and multi-layer caching, add when clock becomes fluid-responsive.
+
+---
+
+### 2. Timeblock Polar Snapping Logic
+
+```javascript
+export function snapAngle(rad, stepMinutes = 5, totalMinutes = 60) {
+  const tau = Math.PI * 2;
+  const norm = ((rad % tau) + tau) % tau;
+  const step = (tau / totalMinutes) * stepMinutes;
+  // ponytail: hard grid snapping; upgrade to deadband/magnetic snapping if drag feedback feels jerky
+  return (Math.round(norm / step) * step) % tau;
+}
+
+// Self-check: 0.24 rad (~13.75°) snaps to 5-minute marker (π/6 ≈ 0.5235)
+console.assert(Math.abs(snapAngle(0.24, 5, 60) - (Math.PI / 6)) < 1e-5, 'Snap failed');
+```
+`snap.js` → skipped: velocity-sensitive drag thresholds, add when users report timeblock placement friction.
+
+---
+
+### 3. Zen Surface Baseline (SofizCake & firtofolio Palette)
+
+```css
+:root {
+  --bg-zen: #f9f6f0;
+  --surface-zen: #ede7dc;
+  --ink-zen: #2d2926;
+  --accent-zen: #b85d3b;
+}
+
+.zen-stage {
+  display: grid;
+  place-items: center;
+  background-color: var(--bg-zen);
+  touch-action: none;
+  user-select: none;
+  /* ponytail: single tone theme; upgrade to prefers-color-scheme media query if dark zen variant is requested */
+}
+```
+`clock.css` → skipped: runtime theme toggle and complex CSS variables, add when dark mode is explicitly scheduled.
