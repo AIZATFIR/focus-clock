@@ -3500,3 +3500,105 @@ body {
 
 skipped: requestAnimationFrame driver, multi-hour span rendering, gesture libraries.
 add when: persistent active timers require frame loops or timeblocks exceed single 60m revolutions.
+
+
+### Cycle #104 Directive (2026-11-03 06:51)
+### 1. Zero-JS Zen Chrome (CSS Native Auto-Dim)
+```css
+/* Drops non-clock chrome to zero opacity on idle; warm zen background */
+:root {
+  --bg-zen: #fbf9f5;
+  --ink-primary: #2e2b27;
+  --ink-muted: #8c827a;
+  --warm-accent: #c46849;
+}
+
+.clock-stage {
+  background: var(--bg-zen);
+  cursor: crosshair;
+}
+
+.clock-stage:not(:hover):not(:focus-within) .zen-chrome {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zen-chrome {
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+```
+
+### 2. Crisp Canvas Setup & Zen Dial Render
+```javascript
+export function initClockCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, radius: size / 2, center: size / 2 };
+}
+
+export function drawDial(ctx, center, radius, activeBlocks = []) {
+  ctx.clearRect(0, 0, center * 2, center * 2);
+
+  // Timeblock wedges
+  for (const b of activeBlocks) {
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius - 8, b.startAngle, b.endAngle);
+    ctx.fillStyle = 'rgba(196, 104, 73, 0.12)';
+    ctx.fill();
+  }
+
+  // Ticks (60-min subtle, 5-min distinct)
+  for (let m = 0; m < 60; m++) {
+    const rad = (m / 60) * Math.PI * 2 - Math.PI / 2;
+    const isMajor = m % 5 === 0;
+    const len = isMajor ? 6 : 3;
+    const rOuter = radius - 10;
+    const rInner = rOuter - len;
+
+    ctx.beginPath();
+    ctx.moveTo(center + Math.cos(rad) * rInner, center + Math.sin(rad) * rInner);
+    ctx.lineTo(center + Math.cos(rad) * rOuter, center + Math.sin(rad) * rOuter);
+    ctx.strokeStyle = isMajor ? '#8c827a' : '#ded8cf';
+    ctx.lineWidth = isMajor ? 1.5 : 1;
+    ctx.stroke();
+  }
+}
+```
+
+### 3. Pointer Snapping Math (15-min / 5-min quantization)
+```javascript
+// ponytail: hardcoded to 12-hour circular dial; upgrade to 24h dial if abrahamic-lore needs celestial cycles
+export function snapPointerToMinutes(clientX, clientY, rect, stepMin = 5) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const rawAngle = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  const normAngle = (rawAngle + Math.PI * 2) % (Math.PI * 2);
+
+  const totalMin = (normAngle / (Math.PI * 2)) * 60;
+  const snappedMin = (Math.round(totalMin / stepMin) * stepMin) % 60;
+  const snappedRad = (snappedMin / 60) * Math.PI * 2 - Math.PI / 2;
+
+  return { minute: snappedMin, angleRad: snappedRad };
+}
+
+// Self-check
+console.assert(
+  snapPointerToMinutes(100, 50, { left: 0, top: 0, width: 200, height: 200 }, 15).minute === 0,
+  '12 o clock snap failed'
+);
+console.assert(
+  snapPointerToMinutes(200, 100, { left: 0, top: 0, width: 200, height: 200 }, 15).minute === 15,
+  '3 o clock snap failed'
+);
+```
+
+skipped: SVG rendering & drag-physics state machines, add when gestures require velocity-based inertia.
+skipped: dynamic theme engines, add when multi-tenant workspace themes are required.
+skipped: 24-hour arc projection, add when celestial prayer times integration is wired.
