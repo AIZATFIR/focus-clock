@@ -3043,3 +3043,64 @@ canvas {
 ```
 skipped: Runtime CSS-in-JS theme engine.
 add when: Multiple user-definable palette slots are formally required.
+
+
+### Cycle #98 Directive (2026-11-03 06:17)
+### 1. HiDPI Canvas Setup & Warm Ticks
+
+```javascript
+export function initZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  // ponytail: static warm-neutral palette; upgrade to dynamic CSS vars if theme switching is added
+  ctx.strokeStyle = '#e8ded4'; 
+  return ctx;
+}
+```
+→ skipped: ResizeObserver and multi-theme abstractions; add when dynamic viewport resizing or theme switcher is required.
+
+---
+
+### 2. Native 15-Minute Magnetic Angle Snapping
+
+```javascript
+export function snapToBlock(radians, stepMinutes = 15) {
+  const stepRad = (stepMinutes / 60) * (Math.PI / 6); // 15m = PI / 24
+  // ponytail: snaps only clockwise from 12; add offset logic if arbitrary start times needed
+  return Math.round(radians / stepRad) * stepRad;
+}
+
+// Self-check
+console.assert(snapToBlock(0.12) === 0.1308996938995747, 'Snap failed 15m quantization');
+```
+→ skipped: Drag gesture state machines and bezier dampening; add when adding interactive multi-touch gestures.
+
+---
+
+### 3. Zen Controls Auto-Fade (Pure CSS)
+
+```css
+.clock-container {
+  position: relative;
+  --zen-sand: #fbf9f5;
+  background: var(--zen-sand);
+}
+
+.zen-controls {
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.clock-container:hover .zen-controls,
+.clock-container:focus-within .zen-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+→ skipped: JS mouse-idle timers; add when full-screen presentation mode requires fading during mouse inactivity.
