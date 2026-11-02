@@ -1875,3 +1875,77 @@ add when: Real-time clock pointer animations or ticking seconds are bound.
 ```
 skipped: Dark-mode color overrides.  
 add when: System `prefers-color-scheme: dark` token map is plugged into theme pipeline.
+
+
+### Cycle #83 Directive (2026-11-03 04:53)
+### 1. HiDPI Canvas Dial Normalizer
+
+Eliminates retina blur and sub-pixel jitter without layout shift.
+
+```javascript
+function initClockCanvas(canvas, logicalSize = 320) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = logicalSize * dpr;
+  canvas.style.width = canvas.style.height = `${logicalSize}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+skipped: ResizeObserver dynamic scaling.
+add when: dial is placed in an arbitrary fluid split-pane instead of fixed container.
+
+---
+
+### 2. Tactile 5-Minute Polar Snapping
+
+Calculates angle from dial center, maps to clock time, and locks to 5-minute increments.
+
+```javascript
+function snapAngle(dx, dy, stepMins = 5) {
+  // Rotate reference: 12 o'clock is 0 rad
+  const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 450) % 360;
+  const mins = Math.round((deg / 6) / stepMins) * stepMins % 60;
+  return (mins * 6 * Math.PI) / 180; // ponytail: 60-min dial only; upgrade to 12h angle scale if rendering whole day spans
+}
+
+// Self-check
+console.assert(snapAngle(0, -50) === 0, '12 o’clock must snap to 0 rad');
+console.assert(Math.round(snapAngle(50, 0) * 180 / Math.PI) === 90, '3 o’clock must snap to 90 deg');
+```
+skipped: variable magnetic snap radius (free-drag outside snap zone).
+add when: user feedback shows freeform sub-minute precision is required.
+
+---
+
+### 3. Warm Zen Dial Frame (firtofolio / SofizCake Palette)
+
+Pure native paths, single stroke batching, warm low-contrast tick styling (`#2C2825` on `#FBF9F5`).
+
+```javascript
+function drawDial(ctx, radius = 160) {
+  const center = radius;
+  ctx.clearRect(0, 0, radius * 2, radius * 2);
+  
+  // Warm background ring
+  ctx.beginPath();
+  ctx.arc(center, center, radius - 16, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(44, 40, 37, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 12 tactile hour ticks
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI) / 6;
+    const inner = radius - (i % 3 === 0 ? 28 : 22);
+    ctx.moveTo(center + Math.sin(angle) * inner, center - Math.cos(angle) * inner);
+    ctx.lineTo(center + Math.sin(angle) * (radius - 16), center - Math.cos(angle) * (radius - 16));
+  }
+  ctx.strokeStyle = 'rgba(44, 40, 37, 0.28)';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+skipped: CSS `color-mix()` / theme variable parsing inside canvas.
+add when: dynamic system dark mode switching is wired to CSS tokens.
