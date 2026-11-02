@@ -1604,3 +1604,66 @@ body {
 ```
 skipped: Theme toggle button and localStorage persistence.  
 add when: Manual theme override is explicitly requested over OS preference.
+
+
+### Cycle #79 Directive (2026-11-03 04:31)
+```javascript
+// clockface.js
+export function initRetina(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, size: width };
+}
+
+export function snapAngle(rad, stepMinutes = 5) {
+  const step = (2 * Math.PI) / (60 / stepMinutes);
+  const norm = ((rad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  // ponytail: hard grid snapping; add elastic magnetic detent when dragging feels too rigid
+  return (Math.round(norm / step) * step) % (2 * Math.PI);
+}
+
+export function renderZenClock(ctx, size, startRad, endRad) {
+  const c = size / 2;
+  ctx.clearRect(0, 0, size, size);
+
+  // Soft warm radial block (SofizCake palette: terracotta wash)
+  ctx.beginPath();
+  ctx.moveTo(c, c);
+  ctx.arc(c, c, c - 6, startRad - Math.PI / 2, endRad - Math.PI / 2);
+  ctx.fillStyle = 'rgba(217, 119, 87, 0.14)';
+  ctx.fill();
+
+  // Thin outer track & minimal center pin
+  ctx.beginPath();
+  ctx.arc(c, c, c - 6, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(45, 43, 40, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(c, c, 2, 0, 2 * Math.PI);
+  ctx.fillStyle = '#2d2b28';
+  ctx.fill();
+}
+
+// Self-check
+console.assert(Math.abs(snapAngle(Math.PI / 7, 5) - Math.PI / 6) < 1e-6, 'Snap failed');
+```
+
+```css
+/* zen-canvas.css: crisp anti-aliased container */
+canvas {
+  width: 280px;
+  height: 280px;
+  background: #fbf9f5;
+  border-radius: 50%;
+  touch-action: none;
+}
+```
+
+skipped: dynamic spring animations and drag momentum physics; add when touch interaction telemetry shows users overshooting targets.
+skipped: tick-mark subdivision layers; add only if user testing proves time readouts require sub-minute precision.
