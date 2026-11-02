@@ -601,3 +601,56 @@ export function drawZenBlock(ctx, cx, cy, radius, startMin, endMin, color = '#E0
 ```
 * Skipped: Gradients, drop-shadow blurs, and animated easing libraries.
 * Add when: Profile shows GPU headroom and visual feedback demands edge glowing.
+
+
+### Cycle #13 Directive (2026-11-02 22:19)
+### 1. Radial Timeblock Snapping (Pure Stdlib Math)
+
+```js
+// snaps canvas angle (radians) to 15-minute dial steps (pi / 24 rad)
+export const snapAngleTo15Min = (rad) => {
+  const step = Math.PI / 24; // ponytail: hardcoded to 12h clockface; pass dialHours if 24h face needed
+  return Math.round(rad / step) * step;
+};
+
+// runnable self-check
+console.assert(snapAngleTo15Min(0.13) === Math.PI / 24, 'Failed 15-min step snap');
+console.assert(snapAngleTo15Min(0) === 0, 'Failed zero snap');
+```
+* Skipped: custom angular clamp/modulo logic; add when timeblocks span midnight/wrap 2π.
+
+---
+
+### 2. Crisp HiDPI Canvas Scaling (Zero-Blur Retina Setup)
+
+```js
+export const setupZenCanvas = (canvas) => {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height };
+};
+```
+* Skipped: `ResizeObserver` listener; add when clockface lives in a resizable split-pane.
+
+---
+
+### 3. Ambient UI Auto-Fade (Native CSS over JS Event Listeners)
+
+```css
+/* Zero-distraction zen container; eliminates JS mousemove/idle timers */
+.clock-scaffold .ambient-hud {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.clock-scaffold:is(:hover, :focus-within) .ambient-hud {
+  opacity: 0.9;
+  pointer-events: auto;
+}
+```
+* Skipped: JS inactivity timeout; add when touch devices require tap-to-reveal controls.
