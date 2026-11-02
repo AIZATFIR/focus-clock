@@ -3104,3 +3104,81 @@ console.assert(snapToBlock(0.12) === 0.1308996938995747, 'Snap failed 15m quanti
 }
 ```
 → skipped: JS mouse-idle timers; add when full-screen presentation mode requires fading during mouse inactivity.
+
+
+### Cycle #99 Directive (2026-11-03 06:23)
+### 1. HiDPI Canvas & Zen Clockface Arc
+
+```js
+// canvas-face.js
+export function setupZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+export function drawArcBlock(ctx, cx, cy, radius, startMin, endMin, color = '#c87a54') {
+  const toRad = (m) => ((m - 15) * 2 * Math.PI) / 60;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, toRad(startMin), toRad(endMin));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
+}
+```
+
+### 2. Native Angle-to-Time Snap
+
+```js
+// snap.js
+export function snapAngleToMinutes(rad, step = 5) {
+  // 0 rad = 3 o'clock; offset by +π/2 so 0m aligns to 12 o'clock
+  const norm = (rad + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  const rawMin = (norm / (2 * Math.PI)) * 60;
+  // ponytail: ceil snap wraps 60 to 0; upgrade if tracking multi-hour wraps
+  return (Math.round(rawMin / step) * step) % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(-Math.PI / 2, 5) === 0, '12 o’clock must be 0m');
+console.assert(snapAngleToMinutes(0, 15) === 15, '3 o’clock must be 15m');
+console.assert(snapAngleToMinutes(Math.PI / 2, 5) === 30, '6 o’clock must be 30m');
+```
+
+### 3. Zen Warmth & Auto-Hiding Controls (Pure CSS)
+
+```css
+:root {
+  --zen-bg: #faf7f2;
+  --zen-ink: #2b2725;
+  --zen-track: rgba(43, 39, 37, 0.06);
+}
+
+.zen-stage {
+  background: var(--zen-bg);
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.zen-hud {
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms ease;
+}
+
+.zen-stage:hover .zen-hud,
+.zen-stage:focus-within .zen-hud {
+  opacity: 1;
+  transform: translateY(0);
+}
+```
+
+skipped: Drag-handle physics & offscreen canvas caching.
+add when: Touch-drag frame drops fall below 60fps or multi-hour stacking is required.
