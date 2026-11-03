@@ -5345,3 +5345,70 @@ body:hover .clock-hud,
 ```
 
 skipped: dynamic theme switcher and custom bezier curves, add when persistent multi-theme preference is required.
+
+
+### Cycle #132 Directive (2026-11-03 09:31)
+### 1. HiDPI Canvas Surface (Retina Sharpness & Auto-DPI)
+
+```javascript
+export function initZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height };
+}
+```
+skipped: ResizeObserver dynamic tracking.  
+add when: Dynamic viewport/split-screen resizing is introduced.
+
+---
+
+### 2. Timeblock Dial Snapping (15-Min Discrete Segments)
+
+```javascript
+// ponytail: Fixed to 12-hour / 60-minute single dial. Upgrade to multi-revolution for multi-hour sessions.
+export function snapAngle(rad, stepMinutes = 15) {
+  const TAU = Math.PI * 2;
+  const norm = ((rad % TAU) + TAU) % TAU;
+  const mins = (norm / TAU) * 60;
+  const snapped = (Math.round(mins / stepMinutes) * stepMinutes) % 60;
+  return (snapped / 60) * TAU;
+}
+
+// Self-check: 14.4 mins (~0.48π) snaps to 15 mins (0.5π)
+console.assert(Math.abs(snapAngle(Math.PI * 0.48) - Math.PI * 0.5) < 1e-6, "Snap check failed");
+```
+skipped: Dynamic variable-step thresholds (e.g., 5m vs 15m drag resistance).  
+add when: User explicitly requests magnetic threshold physics or velocity-based snapping.
+
+---
+
+### 3. Sofiz/Firto Zen Arc Renderer (Warm Minimal Palette)
+
+```javascript
+const ZEN = { bg: '#FBF9F5', track: '#EFECE6', active: '#C86446', text: '#2D2B28' };
+
+export function drawDial(ctx, cx, cy, radius, startRad, endRad) {
+  ctx.clearRect(0, 0, cx * 2, cy * 2);
+  
+  // Track
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = ZEN.track;
+  ctx.lineWidth = 12;
+  ctx.stroke();
+
+  // Active Timeblock Arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startRad - Math.PI / 2, endRad - Math.PI / 2);
+  ctx.strokeStyle = ZEN.active;
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+skipped: Complex radial tick marks, drop shadows, and numeric labels.  
+add when: User testing shows orientation disorientation without hour numerals.
