@@ -3667,3 +3667,82 @@ skipped: Variable threshold snapping (1m vs 15m mode toggle). Add when sub-5-min
 }
 ```
 skipped: JavaScript-based mouse inactivity timer. Add when full-screen presentation mode is requested.
+
+
+### Cycle #106 Directive (2026-11-03 07:02)
+### 1. High-DPI Sharp Canvas & Warm Dial Pass
+
+```javascript
+export function initClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+export function drawDial(ctx, r = 160) {
+  ctx.clearRect(0, 0, r * 2, r * 2);
+  ctx.strokeStyle = '#e3ded8'; // Warm stone mark
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6;
+    ctx.beginPath();
+    ctx.moveTo(r + (r - 14) * Math.cos(a), r + (r - 14) * Math.sin(a));
+    ctx.lineTo(r + (r - 8) * Math.cos(a), r + (r - 8) * Math.sin(a));
+    ctx.stroke();
+  }
+}
+```
+skipped: Minute/second sub-ticks and complex dynamic styling.  
+add when: Users explicitly request a high-density chronograph view.
+
+---
+
+### 2. Scalar Radial Timeblock Snapping (5-Minute Units)
+
+```javascript
+export function snapAngle(rad, stepMins = 5) {
+  const stepRad = (2 * Math.PI) / (60 / stepMins);
+  // ponytail: standard 2PI wrap; upgrade with multi-turn delta if multi-hour dragging is introduced
+  const normalized = (rad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / stepRad) * stepRad;
+}
+
+export function angleToMinutes(rad) {
+  return Math.round(((rad % (2 * Math.PI)) / (2 * Math.PI)) * 60) % 60;
+}
+
+// Runnable self-check
+console.assert(angleToMinutes(snapAngle(0.51, 5)) === 5, 'Must snap ~30° to 5 mins');
+```
+skipped: Bezier smoothing or elastic drag resistances.  
+add when: Direct drag feel needs damping under pointer-device stress tests.
+
+---
+
+### 3. Zen Surface Foundations (CSS Native Tokens)
+
+```css
+:root {
+  --zen-bg: #f9f8f6;
+  --zen-ink: #2b2825;
+  --zen-border: rgba(43, 40, 37, 0.07);
+  --zen-arc: rgba(194, 150, 114, 0.22); /* Sandalwood wash */
+}
+
+.clock-surface {
+  touch-action: none;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 
+    0 8px 32px -4px rgba(43, 40, 37, 0.03),
+    0 0 0 1px var(--zen-border);
+  user-select: none;
+}
+```
+skipped: JS theme provider and dynamic CSS-in-JS runtimes.  
+add when: Manual user-configurable ambient themes are required.
