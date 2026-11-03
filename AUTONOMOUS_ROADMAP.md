@@ -4321,3 +4321,76 @@ skipped: Bezier drag damping; add when tactile haptic dragging feedback is reque
 }
 ```
 skipped: Dark mode auto-switch; add when user theme preference state is wired.
+
+
+### Cycle #115 Directive (2026-11-03 07:53)
+### 1. HiDPI Canvas Normalizer (Subpixel Retina Crispness)
+
+```javascript
+export function setupZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: fixed snapshot size; add ResizeObserver if clock scales fluidly.
+  return ctx;
+}
+```
+skipped: ResizeObserver and orientation listeners.  
+add when: layout becomes fluid or responsive split-views are introduced.
+
+---
+
+### 2. Radial Timeblock Snapping (5-Minute Magnetic Intervals)
+
+```javascript
+export function snapAngleToMinutes(rad, step = 5) {
+  const tau = Math.PI * 2;
+  const norm = ((rad % tau) + tau) % tau;
+  const mins = (norm / tau) * 60;
+  // ponytail: standard 60-min single dial; upgrade to 12h/24h if timeline spans full day.
+  return Math.round(mins / step) * step % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(Math.PI / 2) === 15, 'PI/2 must snap to 15m');
+console.assert(snapAngleToMinutes(0.04, 5) === 0, 'Near-zero must snap to 0m');
+```
+skipped: arbitrary dynamic interval steps and magnetic haptics.  
+add when: dragging timeblock handles via Web Pointer Events.
+
+---
+
+### 3. Zen Warmth Clock Surface (Anti-Slop Color & Type)
+
+```css
+:root {
+  --zen-bg: #fdfbf7;
+  --zen-ink: #1c1a17;
+  --zen-muted: #8c827a;
+  --zen-accent: #b85d36;
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+  user-select: none;
+}
+
+.zen-clock {
+  width: 320px;
+  height: 320px;
+  touch-action: none;
+  /* ponytail: static 320px frame; convert to container queries for Sadar dashboard integration */
+}
+```
+skipped: dark-mode auto-switching (`prefers-color-scheme`) and CSS theming variables.  
+add when: user toggles night mode or system theme sync is required.
