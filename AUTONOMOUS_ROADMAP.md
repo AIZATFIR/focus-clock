@@ -3746,3 +3746,56 @@ add when: Direct drag feel needs damping under pointer-device stress tests.
 ```
 skipped: JS theme provider and dynamic CSS-in-JS runtimes.  
 add when: Manual user-configurable ambient themes are required.
+
+
+### Cycle #107 Directive (2026-11-03 07:08)
+### 1. HiDPI Canvas Normalizer (Apple Crispness)
+
+```js
+// Prevents fuzzy rendering on Retina displays; run on resize
+export function fitCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height };
+}
+```
+* Skipped: ResizeObserver lifecycle wrapping. Add when clock mounts in a fluid container.
+
+---
+
+### 2. Radial Angle-to-Time Snapping (15-Min Granularity)
+
+```js
+// ponytail: hardcoded to 15-min increments; upgrade to user-defined steps when settings exist
+export function snapAngleToMinutes(rad, step = 15) {
+  const tau = Math.PI * 2;
+  const normalized = ((rad + Math.PI / 2) % tau + tau) % tau;
+  const mins = (normalized / tau) * 60;
+  return Math.round(mins / step) * step % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(0) === 15, '3 o’clock must snap to 15m');
+console.assert(snapAngleToMinutes(Math.PI / 2) === 30, '6 o’clock must snap to 30m');
+```
+* Skipped: Multi-hour quadrant tracking. Add when timeblocks exceed 60-minute single rotations.
+
+---
+
+### 3. Warm Zen Clock Plate (firtofolio/SofizCake Tone)
+
+```css
+.clock-surface {
+  background: oklch(0.985 0.008 80 / 0.8);
+  backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid oklch(0 0 0 / 0.04);
+  box-shadow: 0 20px 40px -15px oklch(0.3 0.02 60 / 0.06);
+  touch-action: none;
+}
+```
+* Skipped: Dark mode variant via `@media (prefers-color-scheme: dark)`. Add when night-mode tokens are introduced.
