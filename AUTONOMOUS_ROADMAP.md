@@ -4191,3 +4191,72 @@ Dims periphery controls using pure CSS whenever the user is actively focused on 
 
 * skipped: custom JS inactivity timers and full-screen API calls.
 * add when: user explicitly requests timed ambient screen-saving.
+
+
+### Cycle #113 Directive (2026-11-03 07:42)
+```ts
+// clock-dial.ts
+export function snapAngleToMinutes(rad: number, step = 5): number {
+  const tau = Math.PI * 2;
+  const normalized = (rad + Math.PI / 2 + tau) % tau;
+  const rawMinutes = (normalized / tau) * 60;
+  // ponytail: 60-min single dial ceiling; upgrade to 12h multi-turn when sessions cross the 1-hour threshold
+  return (Math.round(rawMinutes / step) * step) % 60;
+}
+
+export function drawZenFace(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  startMin: number,
+  endMin: number
+) {
+  const tau = Math.PI * 2;
+  const toRad = (m: number) => (m / 60) * tau - Math.PI / 2;
+
+  ctx.clearRect(0, 0, cx * 2, cy * 2);
+
+  // Background track
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, tau);
+  ctx.strokeStyle = "#EDE8E1"; // firto warm sand
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Snapped Timeblock Arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, toRad(startMin), toRad(endMin));
+  ctx.strokeStyle = "#D97757"; // SofizCake terracotta
+  ctx.lineWidth = 10;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Subtle Center Pin
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, tau);
+  ctx.fillStyle = "#2D2A26"; // Apple warm ink
+  ctx.fill();
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(-Math.PI / 2, 5) === 0, "12 o'clock must snap to 0m");
+console.assert(snapAngleToMinutes(0, 5) === 15, "3 o'clock must snap to 15m");
+console.assert(snapAngleToMinutes(Math.PI / 2, 15) === 30, "6 o'clock must snap to 30m");
+```
+
+```css
+/* zen-clock.css */
+.clock-viewport {
+  background-color: #faf8f5;
+  color: #2d2a26;
+  font-feature-settings: "tnum" 1, "cv01" 1;
+  display: grid;
+  place-items: center;
+  touch-action: none;
+  user-select: none;
+}
+```
+
+skipped: drag gesture physics and tick-mark loops; add when interactive pointer event listeners are wired.
+skipped: multi-hour dial wrapping; add when focus sessions exceed 60 minutes.
