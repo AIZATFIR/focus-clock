@@ -4893,3 +4893,86 @@ add when: user requests non-5m pomodoro chunking.
 ```
 skipped: JS mouse-move idle timers.  
 add when: touch devices need a tap-to-toggle overlay mode.
+
+
+### Cycle #123 Directive (2026-11-03 08:39)
+```javascript
+// 1. Crisp HiDPI Zen Clockface Canvas
+export function renderZenClock(ctx, size, date = new Date()) {
+  const dpr = window.devicePixelRatio || 1;
+  if (ctx.canvas.width !== size * dpr) {
+    ctx.canvas.width = ctx.canvas.height = size * dpr;
+  }
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const cx = size / 2, cy = size / 2, r = cx - 20;
+
+  // Dial: 12 warm pips (SofizCake warm paper: #FAF8F5 / subtle ink: #2E2B27)
+  ctx.fillStyle = '#2e2b27';
+  for (let i = 0; i < 12; i++) {
+    const rad = (i * Math.PI) / 6;
+    ctx.beginPath();
+    ctx.arc(cx + Math.sin(rad) * r, cy - Math.cos(rad) * r, i % 3 === 0 ? 2 : 1, 0, 6.28318);
+    ctx.fill();
+  }
+
+  // Hands: Sub-millisecond continuous minute/hour hands
+  const s = date.getSeconds() + date.getMilliseconds() / 1000;
+  const m = date.getMinutes() + s / 60;
+  const h = (date.getHours() % 12) + m / 60;
+
+  // ponytail: Hardcoded stroke weights. Upgrade to dynamic scaling if viewport zoom controls are added.
+  strokeRay(ctx, cx, cy, (h * Math.PI) / 6, r * 0.52, 2.5, '#2e2b27');
+  strokeRay(ctx, cx, cy, (m * Math.PI) / 30, r * 0.78, 1.5, '#2e2b27');
+  strokeRay(ctx, cx, cy, (s * Math.PI) / 30, r * 0.85, 0.75, '#c95f38'); // Terracotta second tick
+
+  ctx.restore();
+}
+
+function strokeRay(ctx, cx, cy, rad, len, w, color) {
+  ctx.beginPath();
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = color;
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.sin(rad) * len, cy - Math.cos(rad) * len);
+  ctx.stroke();
+}
+
+// 2. Polar 5-Minute Timeblock Snapper
+export function snapPolarTime(rad, stepMinutes = 5) {
+  const step = (stepMinutes / 60) * 2 * Math.PI;
+  const norm = ((rad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  // ponytail: Snaps to top-of-hour origin. Upgrade to arbitrary offset if floating start times are needed.
+  return Math.round(norm / step) * step;
+}
+
+// Runnable test for timeblock snapping
+console.assert(
+  Math.abs(snapPolarTime((14 / 60) * 2 * Math.PI, 5) - (15 / 60) * 2 * Math.PI) < 1e-6,
+  'Snap failed: 14m did not round to 15m'
+);
+```
+
+```css
+/* 3. Zero-Jank Zen Canvas Wrapper */
+.clock-viewport {
+  width: min(80vw, 360px);
+  aspect-ratio: 1;
+  background-color: #faf8f5;
+  touch-action: none;
+  user-select: none;
+  display: grid;
+  place-items: center;
+}
+.clock-viewport canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+```
+
+skipped: Arc slice collision rendering and Bezier hand transitions.  
+add when: Timeblock duration dragging interaction is wired to state.
