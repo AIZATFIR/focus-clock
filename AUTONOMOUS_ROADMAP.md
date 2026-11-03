@@ -5487,3 +5487,92 @@ canvas {
 ```
 skipped: Theme toggle classes and complex layout containers.  
 add when: Explicit dark-mode contrast accessibility requirements are introduced.
+
+
+### Cycle #134 Directive (2026-11-03 09:42)
+### 1. HiDPI Canvas Scaling & Warm Zen Arc
+
+```javascript
+// Warm palette: base #FBF9F5, track #EFECE6, block #3D3935
+export function renderDial(canvas, startMin, endMin) {
+  const dpr = window.devicePixelRatio || 1;
+  const size = canvas.clientWidth;
+  if (canvas.width !== size * dpr) {
+    canvas.width = canvas.height = size * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const center = size / 2;
+  const radius = center - 16;
+  const toRad = (min) => ((min % 60) / 60) * 2 * Math.PI - Math.PI / 2;
+
+  // Track
+  ctx.beginPath();
+  ctx.arc(center, center, radius, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#EFECE6';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+
+  // Active Timeblock Arc
+  // ponytail: fixed-width stroke; upgrade to dynamic outer radius for multi-tier blocks
+  ctx.beginPath();
+  ctx.arc(center, center, radius, toRad(startMin), toRad(endMin));
+  ctx.strokeStyle = '#3D3935';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+skipped: tick marks, multi-day support, custom gradients.  
+add when: multiple overlapping timeblocks or explicit minute ticks are requested.
+
+---
+
+### 2. Native Polar-to-Timeblock Snapper
+
+```javascript
+export function snapToBlock(x, y, cx, cy, stepMin = 5) {
+  const rad = Math.atan2(y - cy, x - cx) + Math.PI / 2;
+  const normalized = (rad < 0 ? rad + 2 * Math.PI : rad) / (2 * Math.PI);
+  const rawMin = normalized * 60;
+  // ponytail: Math.round simple snap; add velocity/magnetic weighting if touch dragging feels rigid
+  return (Math.round(rawMin / stepMin) * stepMin) % 60;
+}
+
+// Self-check
+console.assert(snapToBlock(100, 0, 100, 100, 5) === 0, '12 o’clock must be 0 min');
+console.assert(snapToBlock(200, 100, 100, 100, 5) === 15, '3 o’clock must be 15 min');
+console.assert(snapToBlock(100, 200, 100, 100, 15) === 30, '6 o’clock must be 30 min');
+```
+skipped: gesture acceleration, inertia physics, angle dead-zones.  
+add when: user testing reports drag overshoot on mobile screens.
+
+---
+
+### 3. Ambient Zen Fade (Pure CSS)
+
+```css
+/* Zero-JS auto-dim: HUD vanishes during passive viewing */
+.clock-surface {
+  background-color: #FBF9F5;
+  color: #3D3935;
+}
+
+.zen-hud {
+  opacity: 0;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Reveal only when cursor or focus is proximate */
+.clock-surface:hover .zen-hud,
+.clock-surface:focus-within .zen-hud {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+```
+skipped: custom timer-based inactivity fade in JS.  
+add when: touch devices need timeout-based dimming without hover events.
