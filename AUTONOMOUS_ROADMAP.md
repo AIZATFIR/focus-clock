@@ -4758,3 +4758,71 @@ export const initZenCanvas = (canvas, size = 320) => {
 ```
 → skipped: JS-driven timer idle detection.  
 → add when: User requires pointer-idle hiding while hovering the dial.
+
+
+### Cycle #121 Directive (2026-11-03 08:27)
+### 1. Retina-Crisp Canvas Surface (Eliminates Canvas Blur)
+
+```javascript
+function fitClockCanvas(canvas, displaySize = 320) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = canvas.height = displaySize * dpr;
+  canvas.style.width = canvas.style.height = `${displaySize}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform?.();
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+skipped: ResizeObserver and non-square aspect handling.
+add when: The clock face needs to dynamically respond to arbitrary fluid viewport sizing.
+
+---
+
+### 2. Radial Timeblock Snapping (Exact 5-minute / 12-hour quantization)
+
+```javascript
+// ponytail: hardcoded to 12h clockface; upgrade when 24h military face mode is added.
+function snapAngleToMinutes(rad, step = 5) {
+  const TAU = Math.PI * 2;
+  const normalized = (rad % TAU + TAU) % TAU;
+  const minutes = (normalized / TAU) * 720;
+  const snapped = Math.round(minutes / step) * step % 720;
+  return (snapped / 720) * TAU;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(0.08, 5) === 0, 'Should snap near 0 rad to 0m');
+console.assert(Math.abs(snapAngleToMinutes(Math.PI / 2, 15) - Math.PI / 2) < 1e-6, 'Should snap 3 o-clock to 90deg');
+```
+skipped: Magnetic snapping weights and hysteresis thresholds.
+add when: Users report jittery dragging on touch devices.
+
+---
+
+### 3. Zen Warmth Palette & Soft Timeblock Fill (SofizCake/firtofolio aesthetic)
+
+```javascript
+const ZEN_PALETTE = {
+  face: '#FAF8F5',       // Warm linen background
+  track: '#ECE7E1',      // Low-contrast perimeter track
+  terracotta: '#CC785C', // SofizCake warm earth tone
+  graphite: '#2E2B29'    // Soft black hand/indices
+};
+
+function renderZenSlice(ctx, cx, cy, radius, startRad, endRad) {
+  ctx.save();
+  ctx.fillStyle = `${ZEN_PALETTE.terracotta}24`; // 14% warm alpha wash
+  ctx.strokeStyle = ZEN_PALETTE.terracotta;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, radius, startRad - Math.PI / 2, endRad - Math.PI / 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+}
+```
+skipped: Multi-block overlap handling and drag handles.
+add when: Multi-session layering is introduced to the daily log.
