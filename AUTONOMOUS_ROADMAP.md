@@ -4691,3 +4691,70 @@ skipped: Non-linear variable magnetic friction, add when physical haptic drag in
 }
 ```
 skipped: Idle-timer JS state engine, add when keyboard-only navigation needs explicit inactivity timeouts.
+
+
+### Cycle #120 Directive (2026-11-03 08:22)
+### 1. 5-Minute Timeblock Math Snap
+
+```javascript
+// Snap pointer angle to discrete time intervals (defaults to 5 mins)
+export const snapAngleToMinutes = (rad, stepMinutes = 5) => {
+  const totalSteps = 720 / stepMinutes; // 12h clockface = 720m
+  // ponytail: assumes 12-hour face; upgrade to 24-hour if day-planner mode added
+  const normalized = (rad + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  const stepIndex = Math.round((normalized / (2 * Math.PI)) * totalSteps) % totalSteps;
+  return (stepIndex * stepMinutes) % 720;
+};
+
+// Self-check
+console.assert(snapAngleToMinutes(0) === 180, 'Top-dead-center offset check');
+console.assert(snapAngleToMinutes(-Math.PI / 2) === 0, '12 o’clock check');
+```
+→ skipped: Drag gesture state machines and physics damping.  
+→ add when: Multi-hour overlapping timeblock collisions are introduced.
+
+---
+
+### 2. Crisp HiDPI Canvas Dial Setup (Zen Warmth)
+
+```javascript
+export const initZenCanvas = (canvas, size = 320) => {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.translate(size / 2, size / 2);
+  ctx.lineCap = 'round';
+  return ctx;
+};
+```
+→ skipped: ResizeObserver and auto-scaling responsive hooks.  
+→ add when: Layout allows dynamic fluid resizing rather than fixed tactile dials.
+
+---
+
+### 3. Ambient Zen Backdrop & Subtle Fade Chrome
+
+```css
+.zen-clockface-wrap {
+  position: relative;
+  background: radial-gradient(circle at center, #faf8f5 0%, #f2ece4 100%);
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 20px 40px -15px rgba(60, 50, 40, 0.07);
+}
+
+.zen-chrome {
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+.zen-clockface-wrap:hover .zen-chrome,
+.zen-clockface-wrap:focus-within .zen-chrome {
+  opacity: 1;
+}
+```
+→ skipped: JS-driven timer idle detection.  
+→ add when: User requires pointer-idle hiding while hovering the dial.
