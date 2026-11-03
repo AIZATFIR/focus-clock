@@ -4040,3 +4040,59 @@ add when: Mobile touch interactions demand physical confirmation.
 ```
 skipped: JS timer tracking mouse inactivity.  
 add when: Zero-cursor idle needs to trigger fullscreen ambient mode after N seconds.
+
+
+### Cycle #111 Directive (2026-11-03 07:31)
+### 1. High-DPI Retina Canvas Sync
+
+```javascript
+export function initZenCanvas(canvas, size = 320) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const ctx = canvas.getContext('2d');
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+  // ponytail: ctx.resetTransform covers modern engines; fallback to setTransform(1,0,0,1,0,0) if supporting Safari < 16
+  ctx.resetTransform?.();
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+skipped: ResizeObserver dynamic tracking.
+add when: Clockface container supports arbitrary responsive fluid resize rather than fixed step sizes.
+
+---
+
+### 2. Timeblock 5-Minute Radial Quantizer
+
+```javascript
+export function snapAngleToMinutes(angle, stepMinutes = 5) {
+  const stepRad = (stepMinutes / 60) * (2 * Math.PI);
+  const normalized = (angle % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / stepRad) * stepRad;
+}
+
+// Self-check
+const testSnap = snapAngleToMinutes(0.51, 5); // 0.51 rad ≈ 4.87 min -> snaps to 5 min (PI/6 ≈ 0.5235)
+console.assert(Math.abs(testSnap - Math.PI / 6) < 1e-4, 'Snap must align to 5-minute step');
+```
+skipped: Non-linear magnetic stickiness near existing block edges.
+add when: Multi-segment block overlapping interactions are implemented.
+
+---
+
+### 3. Zen Containment & Drag Surface (CSS)
+
+```css
+.zen-clock {
+  contain: strict;
+  background-color: #fbf9f5; /* Warm milk/parchment */
+  border-radius: 50%;
+  touch-action: none;        /* Kills gesture scroll/pinch during sector drag */
+  user-select: none;
+  -webkit-user-select: none;
+}
+```
+skipped: Dynamic dark/light theme switching variables.
+add when: System OS dark-mode listener requirement is defined.
