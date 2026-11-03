@@ -3951,3 +3951,92 @@ export function drawZenBlock(ctx, center, radius, startMin, endMin) {
 ```
 skipped: Drop-shadow glows and gradient shaders.  
 add when: User explicitly requests active-state animation flourishes.
+
+
+### Cycle #110 Directive (2026-11-03 07:25)
+### 1. HiDPI Canvas Dial & Warm Ticks
+
+```javascript
+export function initZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, cx: rect.width / 2, cy: rect.height / 2, r: rect.width / 2 - 20 };
+}
+
+export function renderClockface(ctx, cx, cy, r) {
+  ctx.clearRect(0, 0, cx * 2, cy * 2);
+  // ponytail: fixed 60-unit analog dial; upgrade to 24h dial if abrahamic-lore prayer arcs require it
+  for (let i = 0; i < 60; i++) {
+    const angle = (i * Math.PI) / 30;
+    const isHour = i % 5 === 0;
+    ctx.strokeStyle = isHour ? '#433A31' : '#D1C9BE';
+    ctx.lineWidth = isHour ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * (r - (isHour ? 10 : 5)), cy + Math.sin(angle) * (r - (isHour ? 10 : 5)));
+    ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+    ctx.stroke();
+  }
+}
+```
+skipped: ResizeObserver auto-resize and WebGL layers.  
+add when: Dynamic multi-resolution window resizes cause dial blur.
+
+---
+
+### 2. Radial Timeblock Snapping (5-Min Interval)
+
+```javascript
+export function snapAngle(clientX, clientY, rect, stepMinutes = 5) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  // ponytail: assumes 12-hour full rotation; upgrade to variable duration cycles if Pomodoro phase changes
+  let rad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  if (rad < 0) rad += 2 * Math.PI;
+  const stepRad = ((stepMinutes / 60) * 2 * Math.PI);
+  return Math.round(rad / stepRad) * stepRad % (2 * Math.PI);
+}
+
+// Runnable self-check (3 o'clock / 15-min mark = 0.5 * PI)
+console.assert(Math.abs(snapAngle(200, 100, { left: 0, top: 0, width: 200, height: 200 }) - Math.PI / 2) < 1e-6);
+```
+skipped: Magnetic haptic feedback and custom drag gesture recognizer.  
+add when: Mobile touch interactions demand physical confirmation.
+
+---
+
+### 3. Ambient Idle UI (Pure CSS Zen Warmth)
+
+```css
+.zen-shell {
+  --sand-50: #FAF8F5;
+  --sand-200: #E6E0D6;
+  --ink-900: #2C2621;
+  background-color: var(--sand-50);
+}
+
+.zen-hud {
+  opacity: 0.15;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.zen-shell:hover .zen-hud,
+.zen-shell:focus-within .zen-hud {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.zen-card {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(250, 248, 245, 0.82);
+  border: 1px solid var(--sand-200);
+  color: var(--ink-900);
+}
+```
+skipped: JS timer tracking mouse inactivity.  
+add when: Zero-cursor idle needs to trigger fullscreen ambient mode after N seconds.
