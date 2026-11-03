@@ -3799,3 +3799,90 @@ console.assert(snapAngleToMinutes(Math.PI / 2) === 30, '6 o’clock must snap to
 }
 ```
 * Skipped: Dark mode variant via `@media (prefers-color-scheme: dark)`. Add when night-mode tokens are introduced.
+
+
+### Cycle #108 Directive (2026-11-03 07:14)
+### 1. Pure Circular Timeblock Snapping
+
+```javascript
+// Snaps radial interaction to discrete minute intervals (default 5-min)
+export function snapAngle(rad, stepMinutes = 5) {
+  // ponytail: fixed to 60-min single cycle; add multi-hour offsets when spanning >12h.
+  const stepRad = (stepMinutes / 60) * (2 * Math.PI);
+  const normalized = ((rad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  return (Math.round(normalized / stepRad) * stepRad) % (2 * Math.PI);
+}
+
+// Self-check
+console.assert(Math.abs(snapAngle(0.04, 5)) === 0, 'Snaps down to 0');
+console.assert(Math.abs(snapAngle(Math.PI / 2 - 0.05, 15) - Math.PI / 2) < 1e-5, 'Snaps to 15m');
+```
+skipped: Elastic drag damping and kinetic momentum.
+add when: Drag physics are wired to pointer gestures.
+
+---
+
+### 2. DPR-Crisp Canvas Clockface & Warm Zen Arc
+
+```javascript
+export function renderZenClock(canvas, startAngle, endAngle) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (canvas.width !== width * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, width, height);
+
+  const cx = width / 2;
+  const cy = height / 2;
+  const r = Math.min(cx, cy) - 24;
+
+  // Track (zen cream-stone)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.strokeStyle = '#E6E4DF';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  // Active Focus Block (warm terracotta)
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAngle - Math.PI / 2, endAngle - Math.PI / 2);
+  ctx.strokeStyle = '#C85A32';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+```
+skipped: Custom tick subdivisions and numeric labels.
+add when: Dial clarity tests fail on screens under 360px width.
+
+---
+
+### 3. Zero-Distraction Zen Surface (CSS)
+
+```css
+:root {
+  --bg-zen: #F8F6F0;
+  --ink-primary: #2A2723;
+}
+
+body {
+  background: var(--bg-zen);
+  color: var(--ink-primary);
+  margin: 0;
+  overflow: hidden;
+}
+
+canvas.clockface {
+  display: block;
+  touch-action: none;
+  user-select: none;
+  margin: auto;
+}
+```
+skipped: Theme switching and ambient dark-mode tokens.
+add when: Platform `prefers-color-scheme: dark` contract is finalized.
