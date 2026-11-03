@@ -4260,3 +4260,64 @@ console.assert(snapAngleToMinutes(Math.PI / 2, 15) === 30, "6 o'clock must snap 
 
 skipped: drag gesture physics and tick-mark loops; add when interactive pointer event listeners are wired.
 skipped: multi-hour dial wrapping; add when focus sessions exceed 60 minutes.
+
+
+### Cycle #114 Directive (2026-11-03 07:48)
+### 1. HiDPI Canvas Crisp Scaler
+
+```javascript
+export function initZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // Smooth warm anti-aliased rendering
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  return ctx;
+}
+```
+skipped: ResizeObserver auto-listen; add when the clock face is fluidly resizable in a multi-pane layout.
+
+---
+
+### 2. Angular 15-Minute Timeblock Snapper
+
+```javascript
+export function clientToSnappedMinutes(clientX, clientY, rect, snapMinutes = 15) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  let rad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  if (rad < 0) rad += Math.PI * 2;
+
+  // 12-hour face = 720 minutes
+  const rawMinutes = (rad / (Math.PI * 2)) * 720;
+  // ponytail: 12-hour wraparound ceiling; add 24h toggle if multi-phase shifts needed.
+  return (Math.round(rawMinutes / snapMinutes) * snapMinutes) % 720;
+}
+
+// Self-check
+console.assert(clientToSnappedMinutes(150, 50, { left: 0, top: 0, width: 300, height: 300 }) === 0, '12 o’clock must be 0m');
+console.assert(clientToSnappedMinutes(250, 150, { left: 0, top: 0, width: 300, height: 300 }) === 180, '3 o’clock must be 180m');
+```
+skipped: Bezier drag damping; add when tactile haptic dragging feedback is requested.
+
+---
+
+### 3. Zen Palette & Precision Layout
+
+```css
+.zen-stage {
+  --zen-bg: #FDFCF9;
+  --zen-ink: #1C1C1A;
+  --zen-accent: #C86D51; /* Warm terracotta */
+  background-color: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  touch-action: none;
+  user-select: none;
+}
+```
+skipped: Dark mode auto-switch; add when user theme preference state is wired.
