@@ -4567,3 +4567,70 @@ body:focus-within .zen-controls {
 }
 ```
 skipped: CSS animation keyframes and ambient light themes; add when dark mode toggle is needed.
+
+
+### Cycle #118 Directive (2026-11-03 08:10)
+### 1. HiDPI Canvas Normalization (Retina Zen Precision)
+
+Eliminate dial blur on Apple displays with native DPR scaling.
+
+```javascript
+export function syncCanvasDPR(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    return true; // redraw needed
+  }
+  return false;
+}
+```
+`syncCanvasDPR(canvas)` → skipped: `ResizeObserver` listener, add when: clockface is hosted in a fluid draggable container.
+
+---
+
+### 2. Timeblock Radial Snapping (15-Minute Grid)
+
+Zero-dependency angular snapping from pointer coordinates to timeblock boundaries.
+
+```javascript
+// ponytail: hardcoded to 15-min intervals; add dynamic subdivisions when user preferences exist
+export function pointerToSnappedAngle(x, y, cx, cy, stepMinutes = 15) {
+  const angle = (Math.atan2(y - cy, x - cx) + Math.PI * 2.5) % (Math.PI * 2);
+  const stepRad = (stepMinutes / 60) * (Math.PI * 2);
+  return Math.round(angle / stepRad) * stepRad;
+}
+
+// Self-check
+(() => {
+  const cx = 100, cy = 100;
+  // 3 o'clock is 15 minutes (Math.PI / 2 radians from 12 o'clock)
+  const angle = pointerToSnappedAngle(150, 100, cx, cy, 15);
+  console.assert(Math.abs(angle - Math.PI / 2) < 1e-6, `Snap failed: ${angle}`);
+})();
+```
+`pointerToSnappedAngle(...)` → skipped: elastic drag physics, add when: direct haptic feedback integration is scoped.
+
+---
+
+### 3. Drift-Free Sleep-Aware Idle Loop
+
+Kill wasteful 60fps canvas loops. Re-render only at integer second boundaries or on interaction.
+
+```javascript
+export function scheduleNextTick(render) {
+  let timer;
+  const tick = () => {
+    render();
+    const now = Date.now();
+    // ponytail: floor-aligned to full seconds; switch to requestAnimationFrame when hand sweep is continuous
+    timer = setTimeout(tick, 1000 - (now % 1000));
+  };
+  tick();
+  return () => clearTimeout(timer);
+}
+```
+`scheduleNextTick(...)` → skipped: continuous smooth second-hand sweeping, add when: high-refresh-rate analog sweep is toggled on.
