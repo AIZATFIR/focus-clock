@@ -4394,3 +4394,105 @@ body {
 ```
 skipped: dark-mode auto-switching (`prefers-color-scheme`) and CSS theming variables.  
 add when: user toggles night mode or system theme sync is required.
+
+
+### Cycle #116 Directive (2026-11-03 07:59)
+### 1. HiDPI Canvas Normalizer & Warm Arc Renderer
+
+```typescript
+// clockface.ts - Crisp retina backing + warm Zen arc
+export function setupClock(canvas: HTMLCanvasElement) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  return { ctx, cx: width / 2, cy: height / 2, radius: Math.min(width, height) * 0.42 };
+}
+
+export function drawFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, progress: number) {
+  ctx.clearRect(0, 0, cx * 2, cy * 2);
+  
+  // Base track: muted warm linen
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#EFECE6';
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  // Active focus block: soft terracotta
+  if (progress > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+    ctx.strokeStyle = '#D97757';
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+```
+skipped: tick marks, complex shaders, multiple layers.  
+add when: 60-minute division notches are explicitly requested by users.
+
+---
+
+### 2. Zero-Dependency Timeblock Radial Snapping
+
+```typescript
+// snapping.ts - Angle-to-minute snap (5-min default, 12h face)
+export function snapAngle(rad: number, stepMinutes = 5): number {
+  // Normalize -PI..PI into 0..2PI relative to 12 o'clock (top)
+  const normalized = (rad + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2);
+  const minutes = (normalized / (Math.PI * 2)) * 60;
+  
+  // ponytail: assumes single 60m sweep; upgrade to 720m when supporting multi-hour blocks
+  const snappedMinutes = Math.round(minutes / stepMinutes) * stepMinutes % 60;
+  return (snappedMinutes / 60) * (Math.PI * 2) - Math.PI / 2;
+}
+
+// Self-check
+console.assert(snapAngle(-Math.PI / 2) === -Math.PI / 2, 'Top aligns to 0m');
+console.assert(Math.abs(snapAngle(0, 15) - 0) < 1e-6, '3 o clock aligns to 15m');
+```
+skipped: physics drag springs and momentum math.  
+add when: tactile haptic feedback is bound on pointer up.
+
+---
+
+### 3. Pure CSS Zen Mode & Warm Paper Texture
+
+```css
+/* zen-ui.css - Ambient firtofolio/SofizCake aesthetic without JS runtime */
+:root {
+  --bg-zen: #FBF9F5;
+  --fg-zen: #2E2C29;
+}
+
+body {
+  background: var(--bg-zen);
+  color: var(--fg-zen);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.clock-container {
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+
+.zen-controls {
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+.clock-container:hover .zen-controls,
+.clock-container:focus-within .zen-controls {
+  opacity: 1;
+}
+```
+skipped: dynamic JS mouse-idle timers and glassmorphism filters.  
+add when: dedicated distraction-free presentation mode is triggered via keyboard shortcut.
