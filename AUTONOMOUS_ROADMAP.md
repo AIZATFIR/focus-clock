@@ -4976,3 +4976,50 @@ console.assert(
 
 skipped: Arc slice collision rendering and Bezier hand transitions.  
 add when: Timeblock duration dragging interaction is wired to state.
+
+
+### Cycle #124 Directive (2026-11-03 08:45)
+```javascript
+// 1. Retina Crispness: Canvas buffer sync
+function initZenCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+
+// 2. Magnetic Radial Snapping (12h face, 5-min steps)
+function snapAngleToMinutes(cx, cy, px, py, step = 5) {
+  // ponytail: 12-hour dial only; upgrade to 24-hour if day-planner mode is added
+  const rad = Math.atan2(py - cy, px - cx) + Math.PI / 2;
+  const normalized = (rad + Math.PI * 2) % (Math.PI * 2);
+  const rawMin = (normalized / (Math.PI * 2)) * 60;
+  return (Math.round(rawMin / step) * step) % 60;
+}
+
+// Runnable self-check
+console.assert(snapAngleToMinutes(100, 100, 100, 20) === 0, 'Top must be 0m');
+console.assert(snapAngleToMinutes(100, 100, 180, 100) === 15, 'Right must be 15m');
+console.assert(snapAngleToMinutes(100, 100, 100, 180) === 30, 'Bottom must be 30m');
+console.assert(snapAngleToMinutes(100, 100, 20, 100) === 45, 'Left must be 45m');
+```
+
+```css
+/* 3. Zen Warmth Dial Base (Offload static chrome from Canvas to CSS) */
+.clock-dial {
+  width: 20rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fbf9f5; /* warm rice paper */
+  box-shadow: 
+    inset 0 0 0 1px rgba(60, 40, 20, 0.05),
+    0 12px 32px -8px rgba(60, 40, 20, 0.06);
+  touch-action: none;
+}
+```
+
+skipped: requestAnimationFrame loop with inertia; add when continuous free-drag physics are needed.
+skipped: tick-mark canvas rendering; add when static CSS conical gradients fail dial requirements.
+skipped: multi-hour duration spans; add when timeblocks extend past 60-minute single-ring boundaries.
