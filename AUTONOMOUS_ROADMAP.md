@@ -3886,3 +3886,68 @@ canvas.clockface {
 ```
 skipped: Theme switching and ambient dark-mode tokens.
 add when: Platform `prefers-color-scheme: dark` contract is finalized.
+
+
+### Cycle #109 Directive (2026-11-03 07:19)
+### 1. High-DPI Zen Dial Setup
+
+```javascript
+// clock-canvas.js
+export function setupZenDial(canvas, size = 360) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = `${size}px`;
+  canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: static warm palette hardcoded; upgrade to theme tokens if dark mode is requested
+  ctx.lineCap = 'round';
+  return { ctx, center: size / 2, radius: size * 0.42 };
+}
+```
+skipped: Dynamic resize observer and CSS token parsing.  
+add when: Responsive multi-layout support or live theme switching is required.
+
+---
+
+### 2. Native Circular Pointer Snapping (5-min Quantization)
+
+```javascript
+// snap.js
+export function snapPointerToMinutes(dx, dy, stepMin = 5) {
+  const rad = (Math.atan2(dy, dx) + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  const rawMin = (rad / (2 * Math.PI)) * 60;
+  const snappedMin = (Math.round(rawMin / stepMin) * stepMin) % 60;
+  const snappedRad = (snappedMin / 60) * 2 * Math.PI - Math.PI / 2;
+  return { min: snappedMin, rad: snappedRad };
+}
+
+// Self-check
+console.assert(snapPointerToMinutes(0, -100).min === 0, 'Top must be 0m');
+console.assert(snapPointerToMinutes(100, 0).min === 15, 'Right must be 15m');
+console.assert(snapPointerToMinutes(0, 100).min === 30, 'Bottom must be 30m');
+```
+skipped: Non-linear snapping and magnetic anchor points.  
+add when: Freeform custom session durations (>60m) are modeled on the dial.
+
+---
+
+### 3. Minimal Ambient Timeblock Arc Pass
+
+```javascript
+// dial-render.js
+export function drawZenBlock(ctx, center, radius, startMin, endMin) {
+  const toRad = (m) => (m / 60) * 2 * Math.PI - Math.PI / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center, center, radius, toRad(startMin), toRad(endMin));
+  ctx.strokeStyle = '#D97757'; // Terracotta accent
+  ctx.lineWidth = 14;
+  ctx.stroke();
+  ctx.restore();
+}
+```
+skipped: Drop-shadow glows and gradient shaders.  
+add when: User explicitly requests active-state animation flourishes.
