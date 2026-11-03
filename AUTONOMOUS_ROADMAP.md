@@ -5117,3 +5117,83 @@ console.assert(
 }
 ```
 *   `.zen-chrome` → skipped: JavaScript inactivity timers; add when tablet/touch-only without hover requires manual tap-away.
+
+
+### Cycle #129 Directive (2026-11-03 09:13)
+### 1. HiDPI Retina-Crisp Canvas Scaler
+
+```javascript
+// canvas.js
+export function syncCanvasDPI(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height };
+}
+```
+skipped: ResizeObserver abstraction, dynamic layout observers.  
+add when: canvas is dynamically resizable inside responsive split-panes.
+
+---
+
+### 2. Timeblock Snap Engine (Pure Polar Math)
+
+```javascript
+// snap.js
+// ponytail: single 60-min ring ceiling; upgrade to multi-hour layered arcs when Sadar schedule integration arrives.
+export function snapPointerToMinutes(clientX, clientY, rect, stepMins = 5) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const rad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  const normalized = (rad < 0 ? rad + Math.PI * 2 : rad) / (Math.PI * 2);
+  const rawMins = normalized * 60;
+  return (Math.round(rawMins / stepMins) * stepMins) % 60;
+}
+
+// Runnable self-check
+console.assert(snapPointerToMinutes(100, 50, { left: 50, top: 50, width: 100, height: 100 }) === 0, '12 oclock failed');
+console.assert(snapPointerToMinutes(150, 100, { left: 50, top: 50, width: 100, height: 100 }) === 15, '3 oclock failed');
+console.assert(snapPointerToMinutes(100, 150, { left: 50, top: 50, width: 100, height: 100 }) === 30, '6 oclock failed');
+```
+skipped: Bezier handle tracking, multi-ring radial math.  
+add when: implementing 12-hour or full-day 24h timeline views.
+
+---
+
+### 3. Zen Palette & Pure-CSS Ambient Focus Shell
+
+```css
+/* zen-clock.css */
+:root {
+  --zen-bg: #F7F5F0;
+  --zen-ink: #262320;
+  --zen-track: #E9E5DD;
+  --zen-terracotta: #B8583B;
+}
+
+.focus-stage {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-variant-numeric: tabular-nums;
+  touch-action: none;
+}
+
+/* Zero-distraction: controls recede into background when idling */
+.zen-controls {
+  opacity: 0;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.focus-stage:hover .zen-controls,
+.focus-stage:focus-within .zen-controls {
+  opacity: 1;
+}
+```
+skipped: JS mousemove timer and auto-hide controller state machines.  
+add when: custom touch-device tap-to-reveal gestures are required.
