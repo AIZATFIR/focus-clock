@@ -5651,3 +5651,114 @@ export function drawTimeblockArc(ctx, cx, cy, radius, startMin, endMin, color = 
 ```
 *   Skipped: JS full-screen lock and custom backdrop filter transitions.
 *   Add when: Ambient focus mode requires dimming unselected desktop viewports.
+
+
+### Cycle #136 Directive (2026-11-03 09:53)
+### 1. Radial Timeblock 15-Minute Snapping Engine
+
+```typescript
+// snap.ts
+export function snapAngleToMinutes(
+  clientX: number,
+  clientY: number,
+  rect: DOMRect,
+  stepMinutes = 15
+): { minutes: number; rad: number } {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const rawRad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  const normRad = (rawRad + 2 * Math.PI) % (2 * Math.PI);
+  
+  // ponytail: 12h clockface default; upgrade to 24h if day-planner mode added
+  const totalMinutes = (normRad / (2 * Math.PI)) * 720;
+  const snappedMinutes = Math.round(totalMinutes / stepMinutes) * stepMinutes % 720;
+  const rad = (snappedMinutes / 720) * 2 * Math.PI - Math.PI / 2;
+
+  return { minutes: snappedMinutes, rad };
+}
+
+// Runnable check
+console.assert(
+  snapAngleToMinutes(200, 100, { left: 0, top: 0, width: 200, height: 200 } as DOMRect).minutes === 180,
+  "3 o'clock must resolve to 180 mins"
+);
+```
+skipped: Bezier curve dampening and haptic hooks.  
+add when: Touch/pointer drag interactions feel rigid on mobile WebKit.
+
+---
+
+### 2. High-DPI Zen Clockface Canvas Renderer
+
+```typescript
+// clockface.ts
+export function initZenCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  return ctx;
+}
+
+export function drawZenFace(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  block?: { startRad: number; endRad: number }
+) {
+  const r = size / 2;
+  ctx.clearRect(0, 0, size, size);
+
+  if (block) {
+    ctx.beginPath();
+    ctx.moveTo(r, r);
+    ctx.arc(r, r, r - 16, block.startRad, block.endRad);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(217, 107, 67, 0.12)'; // Warm Terracotta tint
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  ctx.arc(r, r, r - 16, 0, Math.PI * 2);
+  ctx.strokeStyle = '#E8E5DF'; // Soft Stone ring
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+```
+skipped: Tick numbers, secondary markers, and dynamic `ResizeObserver`.  
+add when: Variable viewport scaling causes subpixel aliasing or tick labels are explicitly requested.
+
+---
+
+### 3. Anti-Slop Zero-Distraction Shell
+
+```css
+/* zen-stage.css */
+:root {
+  --zen-bg: #FBF9F5;
+  --zen-ink: #2C2825;
+  --zen-accent: #D96B43;
+}
+
+body, .zen-stage {
+  margin: 0;
+  background-color: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  user-select: none;
+  touch-action: none;
+}
+
+canvas {
+  width: min(75vw, 380px);
+  aspect-ratio: 1;
+}
+```
+skipped: CSS theme switcher and toggle drawer.  
+add when: Persistent dark mode or manual ambient overrides are introduced.
