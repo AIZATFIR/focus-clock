@@ -5267,3 +5267,81 @@ add when: Touch release micro-wobble causes mis-selection during rapid dragging.
 ```
 skipped: JavaScript inactivity timers and event listener churn.  
 add when: Non-mouse touch devices require a tap-to-wake HUD overlay.
+
+
+### Cycle #131 Directive (2026-11-03 09:25)
+### 1. HiDPI Canvas & Zen Warm Dial (`canvas-dial.js`)
+
+```javascript
+export function mountZenClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: hardcoded stone-200/400. upgrade path: read CSS custom properties via getComputedStyle.
+  return function draw(progressRad = 0) {
+    const c = size / 2;
+    ctx.clearRect(0, 0, size, size);
+
+    // Subtle tick ring
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 60; i++) {
+      const rad = (i * Math.PI) / 30;
+      const len = i % 5 === 0 ? 6 : 3;
+      ctx.strokeStyle = i % 5 === 0 ? '#a8a29e' : '#e7e5e4';
+      ctx.beginPath();
+      ctx.moveTo(c + (c - 16) * Math.sin(rad), c - (c - 16) * Math.cos(rad));
+      ctx.lineTo(c + (c - 16 - len) * Math.sin(rad), c - (c - 16 - len) * Math.cos(rad));
+      ctx.stroke();
+    }
+  };
+}
+```
+
+### 2. Timeblock Angular Snapping (`snap-time.js`)
+
+```javascript
+// Snaps drag offset (x, y relative to center) to quantized minute buckets (default 5m)
+export function snapAngleToMinutes(x, y, stepMin = 5) {
+  // ponytail: fixed to 60m cycle. upgrade path: parameterized duration mode (e.g. 120m deep work).
+  const rad = (Math.atan2(y, x) + Math.PI * 2.5) % (Math.PI * 2);
+  const rawMin = (rad / (Math.PI * 2)) * 60;
+  return (Math.round(rawMin / stepMin) * stepMin) % 60;
+}
+
+// Runnable check
+console.assert(snapAngleToMinutes(0, -100, 5) === 0, '12 o clock snap fail');
+console.assert(snapAngleToMinutes(100, 0, 5) === 15, '3 o clock snap fail');
+console.assert(snapAngleToMinutes(-1, -100, 5) === 0, 'Boundary snap fail');
+```
+
+### 3. Firtofolio Warm Base + Zen Auto-Dim (`zen.css`)
+
+```css
+:root {
+  --zen-bg: #f9f8f6; /* firto warm oatmeal */
+  --zen-ink: #2b2725;
+}
+
+body {
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Zero-distraction: fade controls out until intent is shown */
+.clock-hud {
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body:hover .clock-hud,
+.clock-hud:focus-within {
+  opacity: 1;
+}
+```
+
+skipped: dynamic theme switcher and custom bezier curves, add when persistent multi-theme preference is required.
