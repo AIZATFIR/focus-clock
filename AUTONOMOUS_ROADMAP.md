@@ -4826,3 +4826,70 @@ function renderZenSlice(ctx, cx, cy, radius, startRad, endRad) {
 ```
 skipped: Multi-block overlap handling and drag handles.
 add when: Multi-session layering is introduced to the daily log.
+
+
+### Cycle #122 Directive (2026-11-03 08:33)
+### 1. HiDPI Canvas Normalization & Warmth Palette
+
+```css
+:root {
+  --bg-zen: #fbf9f5;
+  --clock-face: #f4efe6;
+  --clock-hand: #2b2927;
+  --clock-accent: #c86d51; /* terracotta warmth */
+}
+body { background: var(--bg-zen); color: var(--clock-hand); }
+canvas { display: block; width: 100%; height: 100%; }
+```
+
+```javascript
+// ponytail: assumes fixed aspect-ratio container; add ResizeObserver if canvas is fluidly resizable
+export function setupClockCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, width: rect.width, height: rect.height };
+}
+```
+skipped: ResizeObserver dynamic scaling.  
+add when: viewport resizing causes canvas blur mid-session.
+
+---
+
+### 2. 5-Minute Timeblock Angle Snapper
+
+```javascript
+// Snaps radian angle to 5-minute buckets (12 buckets/hr = π/6 rads) on a 60-min dial
+// ponytail: 60-min single-hour dial only; upgrade to 12h if multi-hour dragging is needed
+export const snapToBlock = (rad, stepMinutes = 5) => {
+  const stepRad = (stepMinutes / 60) * (2 * Math.PI);
+  const normalized = (rad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / stepRad) * stepRad % (2 * Math.PI);
+};
+
+// runnable self-check
+console.assert(Math.abs(snapToBlock(0.24, 5) - (Math.PI / 6)) < 1e-6, "Snapping 0.24 rad failed");
+```
+skipped: variable minute granularity configurations (1m, 15m, 30m UI toggles).  
+add when: user requests non-5m pomodoro chunking.
+
+---
+
+### 3. Zero-Distraction Zen UI Fade (Pure CSS)
+
+```css
+/* Zero-JS auto-fade: Clock chrome hides during idle focus, reveals on hover or tab navigation */
+.clock-chrome {
+  opacity: 0.15;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.clock-container:hover .clock-chrome,
+.clock-container:focus-within .clock-chrome {
+  opacity: 1;
+}
+```
+skipped: JS mouse-move idle timers.  
+add when: touch devices need a tap-to-toggle overlay mode.
