@@ -4496,3 +4496,74 @@ body {
 ```
 skipped: dynamic JS mouse-idle timers and glassmorphism filters.  
 add when: dedicated distraction-free presentation mode is triggered via keyboard shortcut.
+
+
+### Cycle #117 Directive (2026-11-03 08:05)
+### 1. HiDPI Canvas Normalization & Warm Ink Setup
+
+```javascript
+export function setupZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { ctx, width, height, dpr };
+}
+```
+skipped: ResizeObserver auto-rescaling; add when fluid/split-pane layout is implemented.
+
+---
+
+### 2. Radial Timeblock Snapping (5/15-min Intervals)
+
+```javascript
+// ponytail: step fixed to 5m increments; extract to settings only if variable intervals are requested
+export const snapRadial = (angleRad, stepMinutes = 5) => {
+  const stepRad = (2 * Math.PI) / (12 * (60 / stepMinutes));
+  const normalized = (angleRad % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.round(normalized / stepRad) * stepRad;
+};
+
+// Self-check
+console.assert(
+  Math.abs(snapRadial(0.09, 5) - (2 * Math.PI / 144)) < 1e-6,
+  'Radial snap failed'
+);
+```
+skipped: Non-linear magnetic thresholds; add when drag-feel requires hysteresis on touch devices.
+
+---
+
+### 3. Zen Warmth & Subtle Interaction Layer (CSS-only)
+
+```css
+:root {
+  --bg: #FAF7F2;
+  --ink: #2C2623;
+  --warm-gray: #E8E2D9;
+  --accent: #C86446;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  user-select: none;
+}
+
+/* Zero-distraction HUD: reveal only on interaction */
+.zen-controls {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body:hover .zen-controls,
+body:focus-within .zen-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+skipped: CSS animation keyframes and ambient light themes; add when dark mode toggle is needed.
