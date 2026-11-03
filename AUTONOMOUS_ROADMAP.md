@@ -5576,3 +5576,78 @@ add when: user testing reports drag overshoot on mobile screens.
 ```
 skipped: custom timer-based inactivity fade in JS.  
 add when: touch devices need timeout-based dimming without hover events.
+
+
+### Cycle #135 Directive (2026-11-03 09:47)
+### 1. Pointer-to-Dial 5-Minute Polar Snapping
+
+```javascript
+// utils/clock-math.js
+export function pointerToSnappedMinutes(cx, cy, px, py, step = 5) {
+  const rad = Math.atan2(py - cy, px - cx);
+  // ponytail: 60m dial ceiling; adjust modulo to 720 if multi-hour dragging is introduced
+  const normalized = (rad + Math.PI / 2 + 2 * Math.PI) % (2 * Math.PI);
+  const rawMinutes = (normalized / (2 * Math.PI)) * 60;
+  return Math.round(rawMinutes / step) * step % 60;
+}
+
+// Self-check
+console.assert(pointerToSnappedMinutes(100, 100, 100, 20) === 0, '12 o’clock must be 0m');
+console.assert(pointerToSnappedMinutes(100, 100, 180, 100) === 15, '3 o’clock must be 15m');
+console.assert(pointerToSnappedMinutes(100, 100, 99, 180) === 30, '6 o’clock must be 30m');
+```
+*   Skipped: Freeform degree math, friction algorithms, and dynamic tick-step configs.
+*   Add when: Variable granularity (e.g., 1-minute fine-tune on Shift+drag) is required.
+
+---
+
+### 2. DPR-Crisp Canvas Mount with Zen Warm Palette
+
+```javascript
+// components/ZenClockCanvas.js
+export function initClockCanvas(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  // ponytail: static warm cream/stone palette; defer dynamic theming to CSS variables
+  return { ctx, cx: size / 2, cy: size / 2, radius: size * 0.42 };
+}
+
+export function drawTimeblockArc(ctx, cx, cy, radius, startMin, endMin, color = '#E07A5F') {
+  const toRad = (m) => ((m / 60) * 2 * Math.PI) - (Math.PI / 2);
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, toRad(startMin), toRad(endMin), false);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = color;
+  ctx.stroke();
+}
+```
+*   Skipped: Canvas scene graph libraries, layer compositing, and resize listeners.
+*   Add when: Window resize dynamically changes clock diameter or layers exceed 60fps budget.
+
+---
+
+### 3. Native Zero-Distraction Zen Backdrop & Subtle Pointer Lock
+
+```css
+/* styles/zen-clock.css */
+.zen-clock-container {
+  background-color: #FDFBF7; /* warm zen base */
+  color: #2F3E46;
+  touch-action: none;        /* prevents pinch/scroll during dial scrub */
+  user-select: none;
+  display: grid;
+  place-content: center;
+  transition: opacity 200ms ease;
+}
+
+.zen-clock-container:focus-within {
+  outline: none;
+}
+```
+*   Skipped: JS full-screen lock and custom backdrop filter transitions.
+*   Add when: Ambient focus mode requires dimming unselected desktop viewports.
