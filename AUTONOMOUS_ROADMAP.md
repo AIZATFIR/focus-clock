@@ -5412,3 +5412,78 @@ export function drawDial(ctx, cx, cy, radius, startRad, endRad) {
 ```
 skipped: Complex radial tick marks, drop shadows, and numeric labels.  
 add when: User testing shows orientation disorientation without hour numerals.
+
+
+### Cycle #133 Directive (2026-11-03 09:36)
+### 1. Snapping Logic with Boundary Normalization
+
+```javascript
+// snap.js
+export function snapAngleToMinutes(angleRad, stepMin = 5) {
+  // 0 rad = 3 o'clock; offset to 12 o'clock and clamp to [0, 2π)
+  const tau = Math.PI * 2;
+  const norm = (angleRad + Math.PI / 2 + tau) % tau;
+  const rawMin = (norm / tau) * 60;
+  // ponytail: 60-min single turn ceiling; upgrade to 12h/720m tracking when supporting multi-hour blocks.
+  return Math.round(rawMin / stepMin) * stepMin % 60;
+}
+
+// Self-check
+console.assert(snapAngleToMinutes(-Math.PI / 2) === 0, 'Top is 0m');
+console.assert(snapAngleToMinutes(0) === 15, 'Right is 15m');
+console.assert(snapAngleToMinutes(Math.PI / 6) === 20, 'Snaps 30deg to 20m');
+```
+skipped: Bezier drag smoothing and multi-hour state.  
+add when: Users drag continuously beyond a single 60-minute quadrant.
+
+---
+
+### 2. HiDPI Canvas Dial Initialization (Zen Warmth)
+
+```javascript
+// canvas.js
+export function initZenCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: hardcoded palette tokens; upgrade to getComputedStyle when user themes exist.
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#E8E3DC'; 
+  return { ctx, size: rect.width, center: rect.width / 2 };
+}
+```
+skipped: ResizeObserver auto-rescaling loops and offscreen canvas caching.  
+add when: Dynamic window resizing causes redraw performance regressions.
+
+---
+
+### 3. Zero-Distraction Shell & Tabular Precision
+
+```css
+/* zen.css */
+:root {
+  --zen-bg: #FBF9F5;
+  --zen-ink: #2D2825;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--zen-bg);
+  color: var(--zen-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+canvas {
+  display: block;
+  touch-action: none;
+}
+```
+skipped: Theme toggle classes and complex layout containers.  
+add when: Explicit dark-mode contrast accessibility requirements are introduced.
