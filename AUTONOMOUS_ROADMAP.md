@@ -5197,3 +5197,73 @@ add when: implementing 12-hour or full-day 24h timeline views.
 ```
 skipped: JS mousemove timer and auto-hide controller state machines.  
 add when: custom touch-device tap-to-reveal gestures are required.
+
+
+### Cycle #130 Directive (2026-11-03 09:19)
+### 1. HiDPI Canvas Normalization & Warm Zen Dial
+
+```javascript
+export function setupZenClock(canvas, size = 320) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round';
+  return ctx;
+}
+
+export function drawArcBlock(ctx, cx, cy, r, startAngle, endAngle, color = '#E6D5C3') {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAngle - Math.PI / 2, endAngle - Math.PI / 2);
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = color; // ponytail: hardcoded warm stone tone; upgrade to theme tokens if dark mode added.
+  ctx.stroke();
+}
+```
+skipped: Bezier drag handles, multi-theme config objects.  
+add when: Dynamic user-customizable color palettes or gradient arcs are requested.
+
+---
+
+### 2. 5-Minute Magnetic Angle Snapping
+
+```javascript
+const TAU = Math.PI * 2;
+
+export function snapToInterval(rad, totalMinutes = 60, intervalMinutes = 5) {
+  const normalized = (rad % TAU + TAU) % TAU;
+  const step = (TAU / totalMinutes) * intervalMinutes;
+  return Math.round(normalized / step) * step;
+}
+
+// Self-check
+console.assert(snapToInterval(0.1, 60, 5) === 0, 'Snap down failed');
+console.assert(Math.abs(snapToInterval(0.5, 60, 5) - (TAU / 12)) < 1e-6, 'Snap to 5m failed');
+```
+skipped: Hysteresis velocity tracking, spring physics.  
+add when: Touch release micro-wobble causes mis-selection during rapid dragging.
+
+---
+
+### 3. Zero-Distraction Zen Idle Dimmer (CSS-Only)
+
+```css
+/* Container auto-fades chrome; clockface stays sharp */
+.zen-clock-container {
+  --zen-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  background: #FBF9F5;
+}
+
+.zen-clock-container .hud-control {
+  opacity: 0.15;
+  transition: opacity 600ms var(--zen-ease);
+}
+
+.zen-clock-container:is(:hover, :focus-within) .hud-control {
+  opacity: 1;
+  transition-duration: 150ms;
+}
+```
+skipped: JavaScript inactivity timers and event listener churn.  
+add when: Non-mouse touch devices require a tap-to-wake HUD overlay.
