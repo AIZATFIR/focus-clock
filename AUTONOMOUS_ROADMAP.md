@@ -4634,3 +4634,60 @@ export function scheduleNextTick(render) {
 }
 ```
 `scheduleNextTick(...)` → skipped: continuous smooth second-hand sweeping, add when: high-refresh-rate analog sweep is toggled on.
+
+
+### Cycle #119 Directive (2026-11-03 08:16)
+### 1. HiDPI Canvas Scaling (Apple-grade dial sharpness)
+
+```js
+export function bindZenCanvas(canvas, size) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.height = size * dpr;
+  canvas.style.width = canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  // ponytail: ignores sub-pixel canvas resize observers; upgrade when fluid/responsive auto-resizing is required.
+  return ctx;
+}
+```
+skipped: ResizeObserver auto-scaling, add when dial container becomes dynamically resizable.
+
+---
+
+### 2. Timeblock Angular Snapping (5-minute dial increments)
+
+```js
+export function snapToInterval(rad, totalMinutes = 60, stepMinutes = 5) {
+  const twoPi = Math.PI * 2;
+  const norm = (rad % twoPi + twoPi) % twoPi;
+  const step = (stepMinutes / totalMinutes) * twoPi;
+  return (Math.round(norm / step) * step) % twoPi;
+}
+
+// Runnable self-check (Stdlib only)
+console.assert(snapToInterval(0.51, 60, 5) === Math.PI / 6, 'Should snap ~29° to 30° (5m)');
+console.assert(snapToInterval(6.27, 60, 5) === 0, 'Should snap 359° to 0°');
+```
+skipped: Non-linear variable magnetic friction, add when physical haptic drag interaction is implemented.
+
+---
+
+### 3. Zen Ambient UI (CSS-native distraction suppression)
+
+```css
+/* Zero-distraction ambient mode: controls recede into dial background */
+.zen-clock-surface {
+  background: #FAF8F5; /* Warm rice paper / SofizCake aesthetic */
+  color: #2D2B28;
+}
+
+.zen-chrome {
+  opacity: 0.12;
+  transition: opacity 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-clock-surface:is(:hover, :focus-within) .zen-chrome {
+  opacity: 1;
+}
+```
+skipped: Idle-timer JS state engine, add when keyboard-only navigation needs explicit inactivity timeouts.
