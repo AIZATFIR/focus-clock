@@ -5023,3 +5023,97 @@ console.assert(snapAngleToMinutes(100, 100, 20, 100) === 45, 'Left must be 45m')
 skipped: requestAnimationFrame loop with inertia; add when continuous free-drag physics are needed.
 skipped: tick-mark canvas rendering; add when static CSS conical gradients fail dial requirements.
 skipped: multi-hour duration spans; add when timeblocks extend past 60-minute single-ring boundaries.
+
+
+### Cycle #125 Directive (2026-11-03 08:50)
+### 1. Canvas Retina Scaling & Zen Dial
+
+```javascript
+export function renderZenClockface(ctx, size) {
+  const dpr = window.devicePixelRatio || 1;
+  ctx.canvas.width = size * dpr;
+  ctx.canvas.height = size * dpr;
+  ctx.canvas.style.width = `${size}px`;
+  ctx.canvas.style.height = `${size}px`;
+  ctx.scale(dpr, dpr);
+
+  const c = size / 2, r = c - 10;
+  ctx.clearRect(0, 0, size, size);
+
+  // Soft muted dial perimeter
+  ctx.beginPath();
+  ctx.arc(c, c, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#E8E2D9';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ponytail: static 12-interval ticks; upgrade to dynamic 60-interval zoom on drag
+  for (let i = 0; i < 12; i++) {
+    const rad = (i * Math.PI) / 6 - Math.PI / 2;
+    const isQuarter = i % 3 === 0;
+    const tickLen = isQuarter ? 8 : 4;
+
+    ctx.beginPath();
+    ctx.moveTo(c + Math.cos(rad) * (r - 4), c + Math.sin(rad) * (r - 4));
+    ctx.lineTo(c + Math.cos(rad) * (r - 4 - tickLen), c + Math.sin(rad) * (r - 4 - tickLen));
+    ctx.strokeStyle = isQuarter ? '#6E665F' : '#B8B0A6';
+    ctx.lineWidth = isQuarter ? 2 : 1;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+}
+```
+*   `drawDial` → skipped: text labels and complex gradient masks; add when user requests numeric hour readouts.
+
+---
+
+### 2. Radial Timeblock Snapping
+
+```javascript
+export function snapPointerToMinutes(clientX, clientY, rect, stepMin = 5) {
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  // 12 o'clock = 0 rad
+  let rad = Math.atan2(clientY - cy, clientX - cx) + Math.PI / 2;
+  if (rad < 0) rad += Math.PI * 2;
+
+  // ponytail: 60-min single turn clamp; upgrade to multi-hour modulo if sessions > 60m
+  const rawMin = (rad / (Math.PI * 2)) * 60;
+  const snappedMin = Math.round(rawMin / stepMin) * stepMin % 60;
+  const snappedRad = (snappedMin / 60) * Math.PI * 2 - Math.PI / 2;
+
+  return { minutes: snappedMin, radians: snappedRad };
+}
+
+// Self-check
+console.assert(
+  snapPointerToMinutes(100, 50, { left: 0, top: 0, width: 200, height: 200 }, 5).minutes === 15,
+  '3 o clock must snap to 15m'
+);
+```
+*   `snapPointerToMinutes` → skipped: elastic overshoot physics; add when touch drag gesture polish is requested.
+
+---
+
+### 3. Zero-Distraction Chrome Auto-Fade
+
+```css
+/* Warm zen container + idle-hidden chrome */
+.zen-clock-surface {
+  background-color: #FAF8F5;
+  color: #2D2825;
+}
+
+.zen-clock-surface .zen-chrome {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-clock-surface:hover .zen-chrome,
+.zen-clock-surface:focus-within .zen-chrome {
+  opacity: 1;
+  pointer-events: auto;
+}
+```
+*   `.zen-chrome` → skipped: JavaScript inactivity timers; add when tablet/touch-only without hover requires manual tap-away.
