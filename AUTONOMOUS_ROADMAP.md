@@ -4096,3 +4096,98 @@ add when: Multi-segment block overlapping interactions are implemented.
 ```
 skipped: Dynamic dark/light theme switching variables.
 add when: System OS dark-mode listener requirement is defined.
+
+
+### Cycle #112 Directive (2026-11-03 07:36)
+### 1. HiDPI Canvas Scaling with Zen Warmth Palette
+
+Eliminates pixelated canvas arcs on Retina displays while defining the SofizCake-inspired warm background and earthen ink tokens.
+
+```css
+:root {
+  --bg-zen: #faf8f5;
+  --ink-primary: #2d2926;
+  --ink-muted: #8c827a;
+  --accent-baked: #c86d51; /* warm terracotta */
+}
+
+body {
+  background: var(--bg-zen);
+  color: var(--ink-primary);
+  margin: 0;
+}
+
+canvas#clockface {
+  width: 320px;
+  height: 320px;
+}
+```
+
+```javascript
+function initClockCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return ctx;
+}
+```
+
+* skipped: dynamic resize observer and multi-theme switcher.
+* add when: the clockface container is made resizable by the user.
+
+---
+
+### 2. Zero-Dependency 15-Minute Angle Snapping
+
+Snaps pointer angle around a 60-minute dial to clean 15-minute intervals ($\frac{\pi}{2}$ radians).
+
+```javascript
+function snapAngle(rad, stepMinutes = 15, dialMinutes = 60) {
+  const step = (Math.PI * 2) * (stepMinutes / dialMinutes);
+  const normalized = (rad % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  // ponytail: assumes top-aligned 0 rad; add dial offset if 12 o'clock is -PI/2
+  return Math.round(normalized / step) * step % (Math.PI * 2);
+}
+
+// Self-check
+console.assert(snapAngle(0.7) === 0, 'Should snap ~40 deg to 0');
+console.assert(snapAngle(1.5) === Math.PI / 2, 'Should snap ~85 deg to 90 deg (15m)');
+```
+
+* skipped: magnetic drag thresholds and tactile audio clicks.
+* add when: live touch/drag events are hooked to the clockface arc.
+
+---
+
+### 3. Native Zero-Distraction Zen UI Fade
+
+Dims periphery controls using pure CSS whenever the user is actively focused on or hovering the clock.
+
+```css
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.controls, .session-meta {
+  transition: opacity 280ms ease, filter 280ms ease;
+}
+
+/* Zen focus state: blur & dim chrome during clock interaction */
+.app-layout:has(#clockface:hover),
+.app-layout:has(#clockface:active) {
+  .controls, .session-meta {
+    opacity: 0.15;
+    filter: blur(2px);
+    pointer-events: none;
+  }
+}
+```
+
+* skipped: custom JS inactivity timers and full-screen API calls.
+* add when: user explicitly requests timed ambient screen-saving.
