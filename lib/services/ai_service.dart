@@ -7,6 +7,7 @@ import '../core/time_math.dart';
 import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../models/activity.dart';
+import 'goal_schedule_planner.dart';
 import 'secure_storage_service.dart';
 
 /// Enum representing the active AI execution mode
@@ -27,10 +28,9 @@ List<Content> openAiMessagesToGeminiHistory(
       if ((message['role'] == 'user' || message['role'] == 'assistant') &&
           message['content'] is String &&
           (message['content'] as String).isNotEmpty)
-        Content(
-          message['role'] == 'assistant' ? 'model' : 'user',
-          [TextPart(message['content'] as String)],
-        ),
+        Content(message['role'] == 'assistant' ? 'model' : 'user', [
+          TextPart(message['content'] as String),
+        ]),
   ];
 }
 
@@ -124,7 +124,10 @@ const _tools = [
             'type': 'integer',
             'description': '0-23 (24h). 7=7am, 14=2pm.',
           },
-          'start_minute': {'type': 'integer', 'description': '0-59. Default 0.'},
+          'start_minute': {
+            'type': 'integer',
+            'description': '0-59. Default 0.',
+          },
           'duration_minutes': {
             'type': 'integer',
             'description': 'Duration minutes. Default 60.',
@@ -142,7 +145,8 @@ const _tools = [
     'type': 'function',
     'function': {
       'name': 'update_activity',
-      'description': 'Update an existing activity. Only supply fields to change.',
+      'description':
+          'Update an existing activity. Only supply fields to change.',
       'parameters': {
         'type': 'object',
         'required': ['id'],
@@ -181,16 +185,22 @@ const _tools = [
     'function': {
       'name': 'schedule_adaptive_goal',
       'description':
-          'Analyze a long-term target goal (e.g. LKS IT Software Solutions, Juara Competition, Master Skill) '
-          'and adaptively schedule required daily practice/study blocks from current date until target event date. '
-          'Calculates target daily hours and plots flexible recurring blocks into empty clock face slots.',
+          'Create a recurring practice block for a long-term goal using schedule details explicitly provided by the user. '
+          'Ask for the target date, practice hours, time window, and 5 weekdays or all 7 days. Do not guess missing details.',
       'parameters': {
         'type': 'object',
-        'required': ['goal_title', 'target_date', 'daily_hours'],
+        'required': [
+          'goal_title',
+          'target_date',
+          'daily_hours',
+          'preferred_time',
+          'days_per_week',
+        ],
         'properties': {
           'goal_title': {
             'type': 'string',
-            'description': 'Title of goal/identity, e.g. "Juara 1 LKS IT Software Solutions"',
+            'description':
+                'Title of goal/identity, e.g. "Juara 1 LKS IT Software Solutions"',
           },
           'target_date': {
             'type': 'string',
@@ -198,15 +208,17 @@ const _tools = [
           },
           'daily_hours': {
             'type': 'number',
-            'description': 'Required target practice hours per day, e.g. 3.0',
+            'description': 'Practice hours per session, from 0.5 to 4.0.',
           },
           'preferred_time': {
             'type': 'string',
-            'description': 'Preferred time slot: "morning" | "afternoon" | "evening" | "flexible"',
+            'enum': ['morning', 'afternoon', 'evening'],
+            'description': 'User-selected practice window.',
           },
           'days_per_week': {
             'type': 'integer',
-            'description': 'Days per week (1-7). Default 6.',
+            'enum': [5, 7],
+            'description': '5 means weekdays; 7 means every day.',
           },
         },
       },
@@ -239,9 +251,9 @@ class AiService {
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
     SecureStorageService? secureStorage,
-  })  : _activityRepo = activityRepo,
-        _presetRepo = presetRepo,
-        _secureStorage = secureStorage ?? SecureStorageService();
+  }) : _activityRepo = activityRepo,
+       _presetRepo = presetRepo,
+       _secureStorage = secureStorage ?? SecureStorageService();
 
   final String baseUrl;
   final String apiKey;
@@ -258,7 +270,12 @@ class AiService {
   AiExecutionMode get activeMode => _activeMode;
 
   /// Format system prompt for Persona "Aura"
-  String _buildAuraSystemPrompt(String dateStr, String timeStr, String timezone, String presetList) {
+  String _buildAuraSystemPrompt(
+    String dateStr,
+    String timeStr,
+    String timezone,
+    String presetList,
+  ) {
     return '''Kamu adalah Aura, pendamping tujuan dan waktu yang hangat, jujur, dan tidak menghakimi.
 
 ATURAN PERILAKU:
@@ -277,7 +294,7 @@ ARAH FOCUS CLOCK:
 
 IDENTITAS & ADAPTIVE GOAL SCHEDULING:
 - Jika pengguna menyampaikan tujuan jangka panjang, pahami dulu arti tujuan itu bagi mereka dan apa langkah yang sudah pernah dicoba.
-- Sebelum memakai `schedule_adaptive_goal`, pastikan tenggat, waktu yang tersedia, dan frekuensi latihan berasal dari pengguna. Jika belum jelas, tanyakan; jangan menebak nilai default.
+- Sebelum memakai `schedule_adaptive_goal`, pastikan tenggat, jam latihan, rentang waktu, dan pilihan 5 hari kerja atau 7 hari berasal dari pengguna. Jika belum jelas, tanyakan; jangan menebak nilai.
 - Sampaikan apa yang akan dijadwalkan dengan bahasa biasa. Jangan mengklaim jadwal berhasil sebelum tool mengonfirmasi.
 
 PANGGILAN TOOL AUTOMATION:
@@ -298,16 +315,23 @@ PANGGILAN TOOL AUTOMATION:
     final presets = await _presetRepo.getAll();
     final presetList = presets.isEmpty
         ? 'tidak ada'
-        : presets.asMap().entries.map((e) => '${e.key + 1}. "${e.value.name}"').join(', ');
+        : presets
+              .asMap()
+              .entries
+              .map((e) => '${e.key + 1}. "${e.value.name}"')
+              .join(', ');
     final dateStr = _fmtDate(now);
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-    final systemPrompt = _buildAuraSystemPrompt(dateStr, timeStr, timezone, presetList);
+    final systemPrompt = _buildAuraSystemPrompt(
+      dateStr,
+      timeStr,
+      timezone,
+      presetList,
+    );
 
-    _history.add({
-      'role': 'system',
-      'content': systemPrompt,
-    });
+    _history.add({'role': 'system', 'content': systemPrompt});
     _initialized = true;
   }
 
@@ -337,10 +361,12 @@ PANGGILAN TOOL AUTOMATION:
   // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
   Future<String> _sendGeminiDirect(String userMessage, String geminiKey) async {
     try {
-      final systemPromptObj = _history.firstWhere(
-        (m) => m['role'] == 'system',
-        orElse: () => {'content': ''},
-      )['content'] as String;
+      final systemPromptObj =
+          _history.firstWhere(
+                (m) => m['role'] == 'system',
+                orElse: () => {'content': ''},
+              )['content']
+              as String;
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
         apiKey: geminiKey,
@@ -351,7 +377,8 @@ PANGGILAN TOOL AUTOMATION:
         history: openAiMessagesToGeminiHistory(priorMessages),
       );
       final response = await chat.sendMessage(Content.text(userMessage));
-      final reply = response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
+      final reply =
+          response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
 
       _history.add({'role': 'assistant', 'content': reply});
       return reply;
@@ -369,18 +396,22 @@ PANGGILAN TOOL AUTOMATION:
     // 1. Try local/custom server endpoint `/api/chat/secretary`
     try {
       final uri = Uri.parse('$serverUrl/api/chat/secretary');
-      final resp = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'messages': _history,
-          'userMessage': userMessage,
-        }),
-      ).timeout(const Duration(seconds: 8));
+      final resp = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'messages': _history,
+              'userMessage': userMessage,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        final reply = (data['reply'] as String?)?.trim() ?? 'Siap, Aura sudah memproses jadwal Anda.';
+        final reply =
+            (data['reply'] as String?)?.trim() ??
+            'Siap, Aura sudah memproses jadwal Anda.';
         _history.add({'role': 'assistant', 'content': reply});
         return reply;
       }
@@ -398,7 +429,10 @@ PANGGILAN TOOL AUTOMATION:
       defaultValue: 'https://generativelanguage.googleapis.com/v1beta/openai',
     );
     const demoKey = String.fromEnvironment('DEMO_AI_KEY');
-    const demoModel = String.fromEnvironment('DEMO_AI_MODEL', defaultValue: 'gemini-2.5-flash');
+    const demoModel = String.fromEnvironment(
+      'DEMO_AI_MODEL',
+      defaultValue: 'gemini-2.5-flash',
+    );
 
     final effectiveKey = (openRouterKey != null && openRouterKey.isNotEmpty)
         ? openRouterKey
@@ -416,7 +450,11 @@ PANGGILAN TOOL AUTOMATION:
 
     // Agentic loop
     for (int loop = 0; loop < 5; loop++) {
-      final response = await _callOpenAiFormatApi(effectiveUrl, effectiveKey, effectiveModel);
+      final response = await _callOpenAiFormatApi(
+        effectiveUrl,
+        effectiveKey,
+        effectiveModel,
+      );
       final choice = response['choices'][0];
       final msg = choice['message'] as Map<String, dynamic>;
 
@@ -424,12 +462,15 @@ PANGGILAN TOOL AUTOMATION:
 
       final toolCalls = msg['tool_calls'] as List?;
       if (toolCalls == null || toolCalls.isEmpty) {
-        return (msg['content'] as String?)?.trim() ?? 'Aura siap mendampingi waktu Anda.';
+        return (msg['content'] as String?)?.trim() ??
+            'Aura siap mendampingi waktu Anda.';
       }
 
       for (final tc in toolCalls) {
         final name = tc['function']['name'] as String;
-        final args = jsonDecode(tc['function']['arguments'] as String) as Map<String, dynamic>;
+        final args =
+            jsonDecode(tc['function']['arguments'] as String)
+                as Map<String, dynamic>;
         final result = await _executeTool(name, args);
         _history.add({
           'role': 'tool',
@@ -442,7 +483,11 @@ PANGGILAN TOOL AUTOMATION:
     return 'Proses penjadwalan selesais.';
   }
 
-  Future<Map<String, dynamic>> _callOpenAiFormatApi(String url, String key, String modelName) async {
+  Future<Map<String, dynamic>> _callOpenAiFormatApi(
+    String url,
+    String key,
+    String modelName,
+  ) async {
     final uri = Uri.parse('$url/chat/completions');
     final body = jsonEncode({
       'model': modelName,
@@ -456,7 +501,8 @@ PANGGILAN TOOL AUTOMATION:
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $key',
-        if (url.contains('openrouter')) 'HTTP-Referer': 'https://focusclock.app',
+        if (url.contains('openrouter'))
+          'HTTP-Referer': 'https://focusclock.app',
       },
       body: body,
     );
@@ -470,7 +516,9 @@ PANGGILAN TOOL AUTOMATION:
   // ── Tool executor ─────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _executeTool(
-      String name, Map<String, dynamic> args) async {
+    String name,
+    Map<String, dynamic> args,
+  ) async {
     try {
       return switch (name) {
         'list_activities' => await _listActivities(args),
@@ -488,21 +536,24 @@ PANGGILAN TOOL AUTOMATION:
   }
 
   Future<Map<String, dynamic>> _listActivities(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final dateStr = args['date'] as String?;
     final date = dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
     final activities = await _activityRepo.getByDate(dateOnly(date));
     return {
       'activities': activities
-          .map((a) => {
-                'id': a.id,
-                'title': a.title,
-                'date': _fmtDate(a.date),
-                'start': _fmtTime(a.ampmHalf, a.startMinute),
-                'end': _fmtTime(a.ampmHalf, a.endMinute),
-                'description': a.description,
-                'recurrence': a.recurrence,
-              })
+          .map(
+            (a) => {
+              'id': a.id,
+              'title': a.title,
+              'date': _fmtDate(a.date),
+              'start': _fmtTime(a.ampmHalf, a.startMinute),
+              'end': _fmtTime(a.ampmHalf, a.endMinute),
+              'description': a.description,
+              'recurrence': a.recurrence,
+            },
+          )
           .toList(),
     };
   }
@@ -515,17 +566,26 @@ PANGGILAN TOOL AUTOMATION:
     required int durationMinutes,
     String description = '',
     String recurrence = 'none',
+    DateTime? recurrenceEndDate,
     int colorValue = 0xFFFFD700,
   }) async {
-    final startDt =
-        DateTime(date.year, date.month, date.day, startHour, startMin);
+    final startDt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      startHour,
+      startMin,
+    );
     final endDt = startDt.add(Duration(minutes: durationMinutes));
     final segments = splitSpan(startDt, endDt);
     final groupId = segments.length > 1 ? const Uuid().v4() : null;
 
     for (final s in segments) {
       final conflicts = await _activityRepo.getConflicting(
-        s.date, s.half, s.start, s.end,
+        s.date,
+        s.half,
+        s.start,
+        s.end,
       );
       if (conflicts.isNotEmpty) {
         final c = conflicts.first;
@@ -549,18 +609,22 @@ PANGGILAN TOOL AUTOMATION:
           ..groupId = groupId
           ..description = description
           ..recurrence = recurrence
+          ..recurrenceEndDate = recurrenceEndDate
           ..colorValue = colorValue
           ..createdAt = now
           ..updatedAt = now,
     ];
     if (acts.length == 1) return _activityRepo.upsert(acts.first);
     await _activityRepo.replaceSpan(
-        original: Activity()..title = title, segments: acts);
+      original: Activity()..title = title,
+      segments: acts,
+    );
     return acts.first.id;
   }
 
   Future<Map<String, dynamic>> _createActivity(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final title = args['title'] as String;
     final dateStr = args['date'] as String;
     final startHour = (args['start_hour'] as num).toInt();
@@ -582,7 +646,8 @@ PANGGILAN TOOL AUTOMATION:
   }
 
   Future<Map<String, dynamic>> _updateActivity(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final id = (args['id'] as num).toInt();
     final existing = await _activityRepo.get(id);
     if (existing == null) return {'error': 'Activity $id not found'};
@@ -598,7 +663,8 @@ PANGGILAN TOOL AUTOMATION:
       existing.date = dateOnly(DateTime.parse(args['date'] as String));
     }
 
-    final timeChanged = args['start_hour'] != null ||
+    final timeChanged =
+        args['start_hour'] != null ||
         args['start_minute'] != null ||
         args['duration_minutes'] != null;
     if (!timeChanged) {
@@ -609,7 +675,7 @@ PANGGILAN TOOL AUTOMATION:
     final h = args['start_hour'] != null
         ? (args['start_hour'] as num).toInt()
         : (existing.ampmHalf == AmPmHalf.pm ? 12 : 0) +
-            existing.startMinute ~/ 60;
+              existing.startMinute ~/ 60;
     final m = args['start_minute'] != null
         ? (args['start_minute'] as num).toInt()
         : existing.startMinute % 60;
@@ -625,7 +691,12 @@ PANGGILAN TOOL AUTOMATION:
     }
 
     final startDt = DateTime(
-        existing.date.year, existing.date.month, existing.date.day, h, m);
+      existing.date.year,
+      existing.date.month,
+      existing.date.day,
+      h,
+      m,
+    );
     final segments = splitSpan(startDt, startDt.add(Duration(minutes: dur)));
     final groupId = segments.length > 1
         ? (existing.groupId ?? const Uuid().v4())
@@ -633,7 +704,11 @@ PANGGILAN TOOL AUTOMATION:
 
     for (final s in segments) {
       final conflicts = await _activityRepo.getConflicting(
-        s.date, s.half, s.start, s.end, excludeId: id,
+        s.date,
+        s.half,
+        s.start,
+        s.end,
+        excludeId: id,
       );
       if (conflicts.isNotEmpty) {
         final c = conflicts.first;
@@ -672,32 +747,37 @@ PANGGILAN TOOL AUTOMATION:
   }
 
   Future<Map<String, dynamic>> _deleteActivity(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final id = (args['id'] as num).toInt();
     final ok = await _activityRepo.delete(id);
     return {'success': ok, 'id': id};
   }
 
-  Future<Map<String, dynamic>> _setPriority(
-      Map<String, dynamic> args) async {
+  Future<Map<String, dynamic>> _setPriority(Map<String, dynamic> args) async {
     final id = (args['id'] as num).toInt();
     final existing = await _activityRepo.get(id);
     if (existing == null) return {'error': 'Activity $id not found'};
 
     if (args['importance'] != null) {
       await _activityRepo.setImportance(
-          existing, (args['importance'] as num).toInt());
+        existing,
+        (args['importance'] as num).toInt(),
+      );
     }
     if (args.containsKey('deadline')) {
       final dl = args['deadline'] as String?;
       await _activityRepo.setDeadline(
-          existing, dl != null ? DateTime.parse(dl) : null);
+        existing,
+        dl != null ? DateTime.parse(dl) : null,
+      );
     }
     return {'success': true, 'id': id};
   }
 
   Future<Map<String, dynamic>> _generateBlueprint(
-      Map<String, dynamic> args) async {
+    Map<String, dynamic> args,
+  ) async {
     final dateStr = args['date'] as String;
     final date = DateTime.parse(dateStr);
     final wakeH = (args['wake_hour'] as num).toInt();
@@ -712,7 +792,8 @@ PANGGILAN TOOL AUTOMATION:
       'start_hour': wakeH,
       'start_minute': 0,
       'duration_minutes': 30,
-      'description': 'Minum air, peregangan ringan, dan tinjau rencana hari ini.',
+      'description':
+          'Minum air, peregangan ringan, dan tinjau rencana hari ini.',
       'color': 0xFFFFD700,
     });
 
@@ -737,7 +818,8 @@ PANGGILAN TOOL AUTOMATION:
         'start_hour': cursor ~/ 60,
         'start_minute': cursor % 60,
         'duration_minutes': 20,
-        'description': 'Istirahat tanpa layar untuk aktivasi Default Mode Network (DMN).',
+        'description':
+            'Istirahat tanpa layar untuk aktivasi Default Mode Network (DMN).',
         'color': 0xFF6BCB77,
       });
       cursor += 20;
@@ -772,7 +854,8 @@ PANGGILAN TOOL AUTOMATION:
       'start_hour': sleepH,
       'start_minute': 0,
       'duration_minutes': ((wakeH + 24 - sleepH) * 60).clamp(270, 540),
-      'description': 'Kelipatan 90 menit untuk bangun tidur tanpa sleep inertia.',
+      'description':
+          'Kelipatan 90 menit untuk bangun tidur tanpa sleep inertia.',
       'color': 0xFF2E2E4E,
     });
 
@@ -793,67 +876,107 @@ PANGGILAN TOOL AUTOMATION:
     return {
       'success': true,
       'blocks_created': created.length,
-      'message': 'Fitrah Blueprint berhasil dibuat: ${created.length} blok untuk $dateStr.',
+      'message':
+          'Fitrah Blueprint berhasil dibuat: ${created.length} blok untuk $dateStr.',
     };
   }
 
   Future<Map<String, dynamic>> _scheduleAdaptiveGoal(
-      Map<String, dynamic> args) async {
-    final goalTitle = args['goal_title'] as String;
-    final targetDateStr = args['target_date'] as String;
-    final dailyHours = (args['daily_hours'] as num).toDouble();
-    final preferredTime = (args['preferred_time'] as String?) ?? 'afternoon';
-    final daysPerWeek = (args['days_per_week'] as num?)?.toInt() ?? 6;
+    Map<String, dynamic> args,
+  ) async {
+    final rawGoalTitle = args['goal_title'];
+    final goalTitle = rawGoalTitle is String ? rawGoalTitle.trim() : '';
+    final rawTargetDate = args['target_date'];
+    final targetDateStr = rawTargetDate is String ? rawTargetDate : '';
+    final dailyHoursValue = args['daily_hours'];
+    final rawPreferredTime = args['preferred_time'];
+    final preferredTime = rawPreferredTime is String ? rawPreferredTime : null;
+    final rawDaysPerWeek = args['days_per_week'];
+    final daysPerWeek = rawDaysPerWeek is num ? rawDaysPerWeek.toInt() : null;
 
+    if (goalTitle.isEmpty) return {'error': 'Goal title is required.'};
+    if (dailyHoursValue is! num) {
+      return {'error': 'Tell me how many hours to practice per session.'};
+    }
+    final dailyHours = dailyHoursValue.toDouble();
+    if (!dailyHours.isFinite || dailyHours < 0.5 || dailyHours > 4) {
+      return {'error': 'Practice duration must be between 0.5 and 4 hours.'};
+    }
+    if (daysPerWeek != 5 && daysPerWeek != 7) {
+      return {
+        'error':
+            'Choose 5 weekdays or 7 days; other patterns are not supported yet.',
+      };
+    }
+    if (!['morning', 'afternoon', 'evening'].contains(preferredTime)) {
+      return {'error': 'Choose morning, afternoon, or evening.'};
+    }
+
+    final parsedTargetDate = DateTime.tryParse(targetDateStr);
+    if (parsedTargetDate == null) {
+      return {'error': 'Give me a valid target date in YYYY-MM-DD format.'};
+    }
     final today = DateTime.now();
-    final targetDate = DateTime.parse(targetDateStr);
-    final totalDays = targetDate.difference(today).inDays;
-    if (totalDays <= 0) {
+    final targetDate = dateOnly(parsedTargetDate);
+    if (!targetDate.isAfter(dateOnly(today))) {
       return {'error': 'Target date must be in the future.'};
     }
 
-    final totalTargetHours =
-        (totalDays * (daysPerWeek / 7.0) * dailyHours).round();
-
-    int startHour = 14;
-    if (preferredTime == 'morning') startHour = 8;
-    if (preferredTime == 'evening') startHour = 19;
-
-    final durationMins = (dailyHours * 60).round().clamp(30, 240);
+    final startHour = switch (preferredTime) {
+      'morning' => 8,
+      'afternoon' => 14,
+      'evening' => 19,
+      _ => 14,
+    };
+    final practiceDates = GoalSchedulePlanner.practiceDates(
+      now: today,
+      targetDate: targetDate,
+      daysPerWeek: daysPerWeek!,
+      startHour: startHour,
+    );
+    if (practiceDates.isEmpty) {
+      return {'error': 'No practice day falls before the target date.'};
+    }
+    final totalTargetHours = practiceDates.length * dailyHours;
+    final durationMins = (dailyHours * 60).round();
+    final conflict = await GoalSchedulePlanner.firstConflict(
+      repository: _activityRepo,
+      dates: practiceDates,
+      startHour: startHour,
+      durationMinutes: durationMins,
+    );
+    if (conflict != null) {
+      return {
+        'error':
+            'Jadwal belum dibuat: waktu itu bentrok dengan '
+            '"${conflict.activity.title}" pada ${_fmtDate(conflict.date)}. '
+            'Pilih rentang waktu lain atau ubah hari latihan.',
+      };
+    }
 
     final primaryId = await _createSpan(
       title: '🎯 Latihan $goalTitle',
-      date: dateOnly(today),
+      date: practiceDates.first,
       startHour: startHour,
       startMin: 0,
       durationMinutes: durationMins,
       description:
-          'Latihan intensif & simulasi target $goalTitle. (Estimasi: $totalTargetHours jam total hingga ${_fmtDate(targetDate)}).',
-      recurrence: daysPerWeek >= 6 ? 'daily' : 'weekday',
+          'Latihan untuk $goalTitle. Total rencana $totalTargetHours jam sebelum ${_fmtDate(targetDate)}.',
+      recurrence: daysPerWeek == 7 ? 'daily' : 'weekday',
+      recurrenceEndDate: practiceDates.last,
       colorValue: 0xFF4A9EFF,
-    );
-
-    await _createSpan(
-      title: '🏆 HARI-H: $goalTitle',
-      date: dateOnly(targetDate),
-      startHour: 8,
-      startMin: 0,
-      durationMinutes: 480,
-      description: 'Hari pelaksanaan target $goalTitle!',
-      recurrence: 'none',
-      colorValue: 0xFFFFD700,
     );
 
     return {
       'success': true,
       'goal_title': goalTitle,
       'target_date': _fmtDate(targetDate),
-      'days_remaining': totalDays,
+      'practice_days': practiceDates.length,
       'total_hours_planned': totalTargetHours,
       'daily_hours': dailyHours,
       'primary_activity_id': primaryId,
       'message':
-          'Jadwal latihan adaptif $goalTitle ($dailyHours jam/hari) berhasil ditanamkan ke dalam jam fokus hingga ${_fmtDate(targetDate)}.',
+          'Latihan $goalTitle berulang sampai ${_fmtDate(practiceDates.last)}. Total ${practiceDates.length} sesi sebelum tanggal target.',
     };
   }
 

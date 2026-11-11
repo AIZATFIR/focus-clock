@@ -30,6 +30,9 @@ class Activity {
   /// Recurrence: 'none' | 'daily' | 'weekly'
   String recurrence = 'none';
 
+  /// Last date on which a recurring activity can appear; null means no end.
+  DateTime? recurrenceEndDate;
+
   /// Segments of one cross-midnight block share a groupId (null = standalone).
   @Index(name: 'groupId210300')
   String? groupId;

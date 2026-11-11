@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "echo 'Deploying static web bundle'",
-    "build:focus": "flutter build web -t lib/main.dart --no-wasm-dry-run",
-    "deploy:focus": "npm run build:focus && npx -y vercel deploy build/web --project focus-clock-web --prod --yes"
+    "build:focus": "python3 tool/normalize_isar_web_ids.py && flutter build web -t lib/main.dart --no-wasm-dry-run",
+    "deploy:focus": "npm run build:focus && npx -y vercel deploy build/web --project focus-clock-web --prod --yes",
+    "generate:schemas": "dart run build_runner build --delete-conflicting-outputs && python3 tool/normalize_isar_web_ids.py"
   }
 }

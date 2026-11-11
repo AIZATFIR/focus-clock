@@ -15,7 +15,7 @@ extension GetActivityCollection on Isar {
 
 const ActivitySchema = CollectionSchema(
   name: r'Activity81850',
-  id: 7577928743684601,
+  id: (5438919 * 1000000000000 + 79352502174),
   properties: {
     r'ampmHalf': PropertySchema(
       id: 0,
@@ -103,6 +103,11 @@ const ActivitySchema = CollectionSchema(
       name: r'recurrence',
       type: IsarType.string,
     ),
+    r'recurrenceEndDate': PropertySchema(
+      id: 20,
+      name: r'recurrenceEndDate',
+      type: IsarType.dateTime,
+    ),
     r'startMinute': PropertySchema(
       id: 17,
       name: r'startMinute',
@@ -126,7 +131,7 @@ const ActivitySchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'date15200': IndexSchema(
-      id: -5160640643944666,
+      id: -(1428298 * 1000000000000 + 122893021244),
       name: r'date15200',
       unique: false,
       replace: false,
@@ -139,7 +144,7 @@ const ActivitySchema = CollectionSchema(
       ],
     ),
     r'groupId210300': IndexSchema(
-      id: -3670983333522158,
+      id: -(5903386 * 1000000000000 + 495188871263),
       name: r'groupId210300',
       unique: false,
       replace: false,
@@ -211,6 +216,7 @@ void _activitySerialize(
   writer.writeLong(offsets[17], object.startMinute);
   writer.writeString(offsets[18], object.title);
   writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeDateTime(offsets[20], object.recurrenceEndDate);
 }
 
 Activity _activityDeserialize(
@@ -241,6 +247,7 @@ Activity _activityDeserialize(
   object.startMinute = reader.readLong(offsets[17]);
   object.title = reader.readString(offsets[18]);
   object.updatedAt = reader.readDateTime(offsets[19]);
+  object.recurrenceEndDate = reader.readDateTimeOrNull(offsets[20]);
   return object;
 }
 
@@ -292,6 +299,8 @@ P _activityDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 19:
       return (reader.readDateTime(offset)) as P;
+    case 20:
+      return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
