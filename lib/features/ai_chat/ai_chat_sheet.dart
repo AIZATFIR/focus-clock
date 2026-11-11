@@ -61,7 +61,14 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
       final reply = await ai.send(text);
       final modeLabel = ai.activeMode.label;
 
-      _replaceLast(ChatMessage(role: 'model', text: reply, modeLabel: modeLabel));
+      _replaceLast(
+        ChatMessage(
+          role: 'model',
+          text: reply,
+          modeLabel: modeLabel,
+          proposalIds: ai.lastTurnProposals.map((proposal) => proposal.id).toList(),
+        ),
+      );
 
       // Aura Voice Output (TTS)
       ref.read(voiceAssistantServiceProvider).speak(reply);
@@ -93,6 +100,20 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     ref.read(voiceAssistantServiceProvider).stopSpeaking();
     ref.read(aiServiceProvider).reset();
     ref.read(aiTranscriptProvider.notifier).state = <ChatMessage>[];
+  }
+
+  Future<void> _confirmProposal(AiActionProposal proposal) async {
+    final ai = ref.read(aiServiceProvider);
+    final result = ai.confirmProposal(proposal.id);
+    setState(() {});
+    await result;
+    if (mounted) setState(() {});
+  }
+
+  void _cancelProposal(AiActionProposal proposal) {
+    if (ref.read(aiServiceProvider).cancelProposal(proposal.id)) {
+      setState(() {});
+    }
   }
 
   Future<void> _showBlueprintDialog(BuildContext context) async {
@@ -214,7 +235,8 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
     final pad = MediaQuery.of(context).viewInsets.bottom;
     final messages = ref.watch(aiTranscriptProvider);
     final voice = ref.watch(voiceAssistantServiceProvider);
-    final activeMode = ref.watch(aiServiceProvider).activeMode;
+    final ai = ref.watch(aiServiceProvider);
+    final activeMode = ai.activeMode;
 
     return Column(
       children: [
@@ -274,7 +296,15 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   controller: _listCtrl,
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   itemCount: messages.length,
-                  itemBuilder: (_, i) => _Bubble(msg: messages[i]),
+                  itemBuilder: (_, i) => _Bubble(
+                    msg: messages[i],
+                    proposals: messages[i].proposalIds
+                        .map(ai.proposalById)
+                        .whereType<AiActionProposal>()
+                        .toList(),
+                    onConfirm: _confirmProposal,
+                    onCancel: _cancelProposal,
+                  ),
                 ),
         ),
 
@@ -380,8 +410,16 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
 // ── Bubble ─────────────────────────────────────────────────────────────────
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.msg});
+  const _Bubble({
+    required this.msg,
+    required this.proposals,
+    required this.onConfirm,
+    required this.onCancel,
+  });
   final ChatMessage msg;
+  final List<AiActionProposal> proposals;
+  final ValueChanged<AiActionProposal> onConfirm;
+  final ValueChanged<AiActionProposal> onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -432,18 +470,103 @@ class _Bubble extends StatelessWidget {
                       height: 16,
                       child: _ThreeDots(),
                     )
-                  : MarkdownBody(
-                      data: msg.text,
-                      styleSheet: MarkdownStyleSheet(
-                        p: const TextStyle(fontSize: 14, color: AppPalette.text),
-                        strong: const TextStyle(fontWeight: FontWeight.w600, color: AppPalette.text),
-                        em: const TextStyle(fontStyle: FontStyle.italic, color: AppPalette.text),
-                        listBullet: const TextStyle(color: AppPalette.text),
-                      ),
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MarkdownBody(
+                          data: msg.text,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(fontSize: 14, color: AppPalette.text),
+                            strong: const TextStyle(fontWeight: FontWeight.w600, color: AppPalette.text),
+                            em: const TextStyle(fontStyle: FontStyle.italic, color: AppPalette.text),
+                            listBullet: const TextStyle(color: AppPalette.text),
+                          ),
+                        ),
+                        for (final proposal in proposals) ...[
+                          const SizedBox(height: 10),
+                          _ActionProposalCard(
+                            proposal: proposal,
+                            onConfirm: () => onConfirm(proposal),
+                            onCancel: () => onCancel(proposal),
+                          ),
+                        ],
+                      ],
                     ),
             ),
           ),
           if (isUser) const SizedBox(width: 34),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionProposalCard extends StatelessWidget {
+  const _ActionProposalCard({
+    required this.proposal,
+    required this.onConfirm,
+    required this.onCancel,
+  });
+
+  final AiActionProposal proposal;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = proposal.status == AiActionProposalStatus.pending;
+    final statusText = switch (proposal.status) {
+      AiActionProposalStatus.pending => 'Menunggu persetujuan',
+      AiActionProposalStatus.applying => 'Menerapkan…',
+      AiActionProposalStatus.applied => 'Diterapkan ke jadwal',
+      AiActionProposalStatus.cancelled => 'Dibatalkan',
+      AiActionProposalStatus.failed => 'Belum diterapkan',
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppPalette.card,
+        border: Border.all(color: AppPalette.stroke),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            proposal.summary,
+            style: const TextStyle(
+              color: AppPalette.text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            proposal.error ?? statusText,
+            style: const TextStyle(color: AppPalette.textDim, fontSize: 12),
+          ),
+          if (pending) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: onCancel,
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: onConfirm,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppPalette.accent,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('Terapkan ke clock'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

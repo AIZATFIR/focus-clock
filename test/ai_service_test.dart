@@ -121,7 +121,7 @@ void main() {
     expect(service.activeMode, AiExecutionMode.byokOpenAiCompatibleDirect);
   });
 
-  test('links AI-created activities to the exact current focus goal', () async {
+  test('requires approval before creating a goal-linked activity', () async {
     final repository = ActivityRepository(null, NotificationService());
     var requestCount = 0;
     final service = AiService(
@@ -180,14 +180,153 @@ void main() {
       }),
     );
 
+    final reply = await service.send('Jadwalkan latihan LKS besok');
+    expect(reply, contains('Draf tindakan siap ditinjau'));
+    expect(reply, isNot(contains('Sudah dijadwalkan')));
+    final proposal = service.pendingProposals.single;
+    expect(proposal.toolName, 'create_activity');
+    expect(proposal.summary, contains('Latihan LKS'));
+    expect(await repository.getByDate(DateTime(2026, 11, 12)), isEmpty);
+
     expect(
-      await service.send('Jadwalkan latihan LKS besok'),
-      'Sudah dijadwalkan.',
+      await service.confirmProposal(proposal.id),
+      containsPair('success', true),
+    );
+    expect(proposal.status, AiActionProposalStatus.applied);
+    expect(
+      await service.confirmProposal(proposal.id),
+      containsPair('error', isA<String>()),
     );
     final activities = await repository.getByDate(DateTime(2026, 11, 12));
     expect(activities, hasLength(1));
     expect(activities.single.focusGoalLink, 'Menang LKS nasional');
   });
+
+  test(
+    'adaptive goal schedule stays a draft until user confirmation',
+    () async {
+      final repository = ActivityRepository(null, NotificationService());
+      var requestCount = 0;
+      final service = AiService(
+        baseUrl: 'https://provider.example/v1',
+        apiKey: 'sk-user-key',
+        model: 'provider-model',
+        focusGoal: 'Menang LKS nasional',
+        activityRepo: repository,
+        presetRepo: PresetRepository(null),
+        secureStorage: _FakeAiStorage(),
+        httpClient: MockClient((request) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return http.Response(
+              jsonEncode({
+                'choices': [
+                  {
+                    'message': {
+                      'role': 'assistant',
+                      'tool_calls': [
+                        {
+                          'id': 'call-plan',
+                          'type': 'function',
+                          'function': {
+                            'name': 'schedule_adaptive_goal',
+                            'arguments': jsonEncode({
+                              'goal_title': 'Menang LKS nasional',
+                              'target_date': '2026-11-20',
+                              'daily_hours': 1,
+                              'preferred_time': 'morning',
+                              'days_per_week': 5,
+                            }),
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'role': 'assistant',
+                    'content': 'Tinjau dulu drafnya.',
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      await service.send('Buatkan jadwal latihan untuk LKS.');
+      final proposal = service.pendingProposals.single;
+      expect(proposal.toolName, 'schedule_adaptive_goal');
+      expect(proposal.summary, contains('Menang LKS nasional'));
+      expect(await repository.getByDate(DateTime(2026, 11, 13)), isEmpty);
+
+      await service.confirmProposal(proposal.id);
+      final activities = await repository.getByDate(DateTime(2026, 11, 13));
+      expect(activities, hasLength(1));
+      expect(activities.single.recurrence, 'weekday');
+    },
+  );
+
+  test(
+    'keeps a draft visible if the provider fails after proposing it',
+    () async {
+      final repository = ActivityRepository(null, NotificationService());
+      var requestCount = 0;
+      final service = AiService(
+        baseUrl: 'https://provider.example/v1',
+        apiKey: 'sk-user-key',
+        model: 'provider-model',
+        activityRepo: repository,
+        presetRepo: PresetRepository(null),
+        secureStorage: _FakeAiStorage(),
+        httpClient: MockClient((request) async {
+          requestCount++;
+          if (requestCount > 1) return http.Response('provider down', 503);
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'role': 'assistant',
+                    'tool_calls': [
+                      {
+                        'id': 'call-create',
+                        'type': 'function',
+                        'function': {
+                          'name': 'create_activity',
+                          'arguments': jsonEncode({
+                            'title': 'Latihan LKS',
+                            'date': '2026-11-13',
+                            'start_hour': 10,
+                          }),
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      final reply = await service.send('Tolong jadwalkan latihan LKS.');
+
+      expect(reply, contains('Draf tindakan siap ditinjau'));
+      expect(service.lastTurnProposals, hasLength(1));
+      expect(await repository.getByDate(DateTime(2026, 11, 13)), isEmpty);
+    },
+  );
 
   test('converts earlier plain chat turns into Gemini roles', () {
     final history = openAiMessagesToGeminiHistory([

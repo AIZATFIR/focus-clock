@@ -246,11 +246,62 @@ class ChatMessage {
     required this.text,
     this.isLoading = false,
     this.modeLabel,
+    this.proposalIds = const [],
   });
   final String role; // 'user' | 'model'
   final String text;
   final bool isLoading;
   final String? modeLabel;
+  final List<String> proposalIds;
+}
+
+enum AiActionProposalStatus { pending, applying, applied, cancelled, failed }
+
+class AiActionProposal {
+  AiActionProposal({
+    required this.id,
+    required this.toolName,
+    required this.arguments,
+  });
+
+  final String id;
+  final String toolName;
+  final Map<String, dynamic> arguments;
+  String? activityTitle;
+  DateTime? activityDate;
+  AiActionProposalStatus status = AiActionProposalStatus.pending;
+  String? error;
+
+  String get summary {
+    final args = arguments;
+    return switch (toolName) {
+      'create_activity' =>
+        'Tambah "${args['title'] ?? 'aktivitas'}" • ${args['date'] ?? 'tanggal belum ada'} • ${_time(args)} • ${args['duration_minutes'] ?? 60} menit',
+      'update_activity' =>
+        'Ubah "${activityTitle ?? 'aktivitas #${args['id'] ?? '?'}'}"${activityDate == null ? '' : ' • ${_date(activityDate!)}'}: ${args.entries.where((entry) => entry.key != 'id').map((entry) => '${entry.key} → ${entry.value}').join(', ')}',
+      'delete_activity' =>
+        'Hapus "${activityTitle ?? 'aktivitas #${args['id'] ?? '?'}'}"${activityDate == null ? '' : ' • ${_date(activityDate!)}'}',
+      'set_priority' =>
+        'Ubah prioritas "${activityTitle ?? 'aktivitas #${args['id'] ?? '?'}'}"${args['importance'] == null ? '' : ' • tingkat ${args['importance']}'}${args['deadline'] == null ? '' : ' • tenggat ${args['deadline']}'}',
+      'generate_blueprint' =>
+        'Buat blueprint ${args['date'] ?? 'untuk hari yang dipilih'} • bangun ${args['wake_hour'] ?? '?'}:00 • tidur ${args['sleep_hour'] ?? '?'}:00${args['goals'] == null ? '' : ' • ${args['goals']}'}',
+      'schedule_adaptive_goal' =>
+        'Jadwalkan latihan "${args['goal_title'] ?? 'tujuan'}" • ${args['daily_hours'] ?? '?'} jam per sesi • ${args['preferred_time'] ?? 'waktu belum dipilih'} • ${args['days_per_week'] ?? '?'} hari per minggu • target ${args['target_date'] ?? '?'}',
+      _ => 'Tinjau tindakan ${toolName.replaceAll('_', ' ')}',
+    };
+  }
+
+  static String _time(Map<String, dynamic> args) {
+    final hour = args['start_hour'];
+    if (hour is! num) return 'waktu belum dipilih';
+    final minute = args['start_minute'] is num
+        ? (args['start_minute'] as num).toInt()
+        : 0;
+    return '${hour.toInt().toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  }
+
+  static String _date(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 }
 
 // ── AiService ─────────────────────────────────────────────────────────────────
@@ -289,10 +340,20 @@ class AiService {
 
   // History for OpenAI format requests
   final List<Map<String, dynamic>> _history = [];
+  final Map<String, AiActionProposal> _proposals = {};
+  final List<String> _lastTurnProposalIds = [];
   bool _initialized = false;
   AiExecutionMode _activeMode = AiExecutionMode.demoFallback;
 
   AiExecutionMode get activeMode => _activeMode;
+  List<AiActionProposal> get pendingProposals => _proposals.values
+      .where((proposal) => proposal.status == AiActionProposalStatus.pending)
+      .toList(growable: false);
+  List<AiActionProposal> get lastTurnProposals => _lastTurnProposalIds
+      .map((id) => _proposals[id])
+      .whereType<AiActionProposal>()
+      .toList(growable: false);
+  AiActionProposal? proposalById(String id) => _proposals[id];
 
   /// Format system prompt for Persona "Aura"
   String _buildAuraSystemPrompt(
@@ -333,6 +394,8 @@ PANGGILAN TOOL AUTOMATION:
 - set_priority: untuk mengatur Eisenhower Matrix.
 - generate_blueprint: untuk membuat rencana Fitrah Blueprint seharian penuh.
 - schedule_adaptive_goal: untuk menganalisis & menanamkan blok latihan target jangka panjang (lomba/identitas).
+- Semua tool yang mengubah jadwal adalah draf. Jangan pernah mengatakan aktivitas sudah dibuat, diubah, atau dihapus sampai pengguna menekan tombol konfirmasi di aplikasi.
+- Setelah tool mengembalikan `awaiting_confirmation`, jelaskan singkat bahwa draf menunggu tinjauan pengguna.
 ''';
   }
 
@@ -367,32 +430,131 @@ PANGGILAN TOOL AUTOMATION:
   /// Send message via Hybrid Architecture (BYOK Gemini SDK or Server-Side Fallback)
   Future<String> send(String userMessage) async {
     await _ensureInit();
+    _lastTurnProposalIds.clear();
     _history.add({'role': 'user', 'content': userMessage});
 
     final userGeminiKey = (await _secureStorage.getGeminiApiKey()) ?? apiKey;
 
     // Determine Mode
-    if (userGeminiKey.isNotEmpty && userGeminiKey.startsWith('AIza')) {
-      _activeMode = AiExecutionMode.byokGeminiDirect;
-      try {
-        return await _sendGeminiDirect(userMessage, userGeminiKey);
-      } catch (e) {
-        // Fallback to server side if BYOK fails
+    try {
+      if (userGeminiKey.isNotEmpty && userGeminiKey.startsWith('AIza')) {
+        _activeMode = AiExecutionMode.byokGeminiDirect;
+        try {
+          return _addDraftNotice(
+            await _sendGeminiDirect(userMessage, userGeminiKey),
+          );
+        } catch (e) {
+          // Fallback to server side if BYOK fails
+          _activeMode = AiExecutionMode.serverOpenRouter;
+          return _addDraftNotice(await _sendServerFallback(userMessage));
+        }
+      } else if (userGeminiKey.isNotEmpty || _isLoopbackProvider(baseUrl)) {
+        _activeMode = AiExecutionMode.byokOpenAiCompatibleDirect;
+        return _addDraftNotice(
+          await _callOpenAiCompatibleDirect(
+            key: userGeminiKey,
+            url: baseUrl,
+            modelName: model,
+          ),
+        );
+      } else {
         _activeMode = AiExecutionMode.serverOpenRouter;
-        return await _sendServerFallback(userMessage);
+        return _addDraftNotice(await _sendServerFallback(userMessage));
       }
-    } else if (userGeminiKey.isNotEmpty || _isLoopbackProvider(baseUrl)) {
-      _activeMode = AiExecutionMode.byokOpenAiCompatibleDirect;
-      return await _callOpenAiCompatibleDirect(
-        key: userGeminiKey,
-        url: baseUrl,
-        modelName: model,
-      );
-    } else {
-      _activeMode = AiExecutionMode.serverOpenRouter;
-      return await _sendServerFallback(userMessage);
+    } catch (_) {
+      if (_lastTurnProposalIds.isNotEmpty) return _addDraftNotice('');
+      rethrow;
     }
   }
+
+  String _addDraftNotice(String reply) => _lastTurnProposalIds.isEmpty
+      ? reply
+      : 'Draf tindakan siap ditinjau. Belum ada perubahan di clock; pilih Terapkan atau Batal di bawah.';
+
+  Future<Map<String, dynamic>> _stageTool(
+    String name,
+    Map<String, dynamic> args,
+  ) async {
+    if (!_mutatingTools.contains(name)) return _executeTool(name, args);
+
+    final encodedArgs = jsonEncode(args);
+    final existing = _proposals.values.cast<AiActionProposal?>().firstWhere(
+      (proposal) =>
+          proposal?.status == AiActionProposalStatus.pending &&
+          proposal?.toolName == name &&
+          jsonEncode(proposal?.arguments) == encodedArgs,
+      orElse: () => null,
+    );
+    final proposal =
+        existing ??
+        AiActionProposal(
+          id: const Uuid().v4(),
+          toolName: name,
+          arguments: Map<String, dynamic>.from(
+            jsonDecode(encodedArgs) as Map<String, dynamic>,
+          ),
+        );
+    final activityId = args['id'];
+    if (activityId is num &&
+        {'update_activity', 'delete_activity', 'set_priority'}.contains(name)) {
+      final activity = await _activityRepo.get(activityId.toInt());
+      proposal.activityTitle = activity?.title;
+      proposal.activityDate = activity?.date;
+    }
+    _proposals[proposal.id] = proposal;
+    if (!_lastTurnProposalIds.contains(proposal.id)) {
+      _lastTurnProposalIds.add(proposal.id);
+    }
+    return {
+      'status': 'awaiting_confirmation',
+      'proposal_id': proposal.id,
+      'preview': proposal.summary,
+    };
+  }
+
+  Future<Map<String, dynamic>> confirmProposal(String id) async {
+    final proposal = _proposals[id];
+    if (proposal == null) return {'error': 'Draft not found.'};
+    if (proposal.status != AiActionProposalStatus.pending) {
+      return {'error': 'Draft is no longer waiting for confirmation.'};
+    }
+
+    proposal.status = AiActionProposalStatus.applying;
+    final result = await _executeTool(proposal.toolName, proposal.arguments);
+    if (result.containsKey('error') || result['success'] == false) {
+      proposal.status = AiActionProposalStatus.failed;
+      proposal.error = result['error']?.toString() ?? 'Action failed.';
+    } else {
+      proposal.status = AiActionProposalStatus.applied;
+      _history.add({
+        'role': 'assistant',
+        'content': 'Pengguna menyetujui dan menerapkan: ${proposal.summary}.',
+      });
+    }
+    return result;
+  }
+
+  bool cancelProposal(String id) {
+    final proposal = _proposals[id];
+    if (proposal == null || proposal.status != AiActionProposalStatus.pending) {
+      return false;
+    }
+    proposal.status = AiActionProposalStatus.cancelled;
+    _history.add({
+      'role': 'assistant',
+      'content': 'Pengguna membatalkan draf: ${proposal.summary}.',
+    });
+    return true;
+  }
+
+  static const _mutatingTools = {
+    'create_activity',
+    'update_activity',
+    'delete_activity',
+    'set_priority',
+    'generate_blueprint',
+    'schedule_adaptive_goal',
+  };
 
   bool _isLoopbackProvider(String url) {
     final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
@@ -435,7 +597,7 @@ PANGGILAN TOOL AUTOMATION:
         final results = <FunctionResponse>[];
         for (final call in calls) {
           toolWasCalled = true;
-          final result = await _executeTool(
+          final result = await _stageTool(
             call.name,
             Map<String, dynamic>.from(call.args),
           );
@@ -551,7 +713,7 @@ PANGGILAN TOOL AUTOMATION:
         final args =
             jsonDecode(tc['function']['arguments'] as String)
                 as Map<String, dynamic>;
-        final result = await _executeTool(name, args);
+        final result = await _stageTool(name, args);
         _history.add({
           'role': 'tool',
           'tool_call_id': tc['id'],
@@ -721,9 +883,7 @@ PANGGILAN TOOL AUTOMATION:
     final duration = (args['duration_minutes'] as num?)?.toInt() ?? 60;
     final description = args['description'] as String? ?? '';
     final requestedGoalLink = args['focus_goal_link'] as String? ?? '';
-    final focusGoalLink = requestedGoalLink == focusGoal
-        ? focusGoal
-        : '';
+    final focusGoalLink = requestedGoalLink == focusGoal ? focusGoal : '';
     final recurrence = args['recurrence'] as String? ?? 'none';
 
     final id = await _createSpan(
@@ -752,9 +912,7 @@ PANGGILAN TOOL AUTOMATION:
     }
     if (args['focus_goal_link'] is String) {
       final requestedGoalLink = args['focus_goal_link'] as String;
-      existing.focusGoalLink = requestedGoalLink == focusGoal
-          ? focusGoal
-          : '';
+      existing.focusGoalLink = requestedGoalLink == focusGoal ? focusGoal : '';
     }
     if (args['recurrence'] != null) {
       existing.recurrence = args['recurrence'] as String;
@@ -1095,6 +1253,8 @@ PANGGILAN TOOL AUTOMATION:
 
   void reset() {
     _history.clear();
+    _proposals.clear();
+    _lastTurnProposalIds.clear();
     _initialized = false;
   }
 }

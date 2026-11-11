@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
 import 'core/time_math.dart';
+import 'core/platform_support.dart';
 import 'features/focusclock/widgets/focus_session_view.dart';
 import 'features/shell/home_shell.dart';
 import 'models/activity.dart';
@@ -27,11 +29,13 @@ class _FocusClockAppState extends ConsumerState<FocusClockApp> {
   @override
   void initState() {
     super.initState();
-    _linkSubscription = AppLinks().uriLinkStream.listen(
-      _handleIncomingLink,
-      onError: (Object error) =>
-          debugPrint('Focus Clock deep link error: $error'),
-    );
+    if (shouldSubscribeToAppLinks(isWeb: kIsWeb)) {
+      _linkSubscription = AppLinks().uriLinkStream.listen(
+        _handleIncomingLink,
+        onError: (Object error) =>
+            debugPrint('Focus Clock deep link error: $error'),
+      );
+    }
   }
 
   @override
