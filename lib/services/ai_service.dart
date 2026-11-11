@@ -8,6 +8,7 @@ import '../data/repositories/activity_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../models/activity.dart';
 import 'goal_schedule_planner.dart';
+import 'gemini_tool_adapter.dart';
 import 'secure_storage_service.dart';
 
 /// Enum representing the active AI execution mode
@@ -360,6 +361,7 @@ PANGGILAN TOOL AUTOMATION:
 
   // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
   Future<String> _sendGeminiDirect(String userMessage, String geminiKey) async {
+    var toolWasCalled = false;
     try {
       final systemPromptObj =
           _history.firstWhere(
@@ -367,22 +369,54 @@ PANGGILAN TOOL AUTOMATION:
                 orElse: () => {'content': ''},
               )['content']
               as String;
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
+      final directModelName = this.model.startsWith('gemini-')
+          ? this.model
+          : 'gemini-2.5-flash';
+      final geminiModel = GenerativeModel(
+        model: directModelName,
         apiKey: geminiKey,
         systemInstruction: Content.system(systemPromptObj),
+        tools: convertOpenAiToolsToGemini(
+          _tools.map((tool) => Map<String, dynamic>.from(tool)),
+        ),
       );
       final priorMessages = _history.take(_history.length - 1);
-      final chat = model.startChat(
+      final chat = geminiModel.startChat(
         history: openAiMessagesToGeminiHistory(priorMessages),
       );
-      final response = await chat.sendMessage(Content.text(userMessage));
+      var response = await chat.sendMessage(Content.text(userMessage));
+      for (var loop = 0; loop < 5; loop++) {
+        final calls = response.functionCalls.toList();
+        if (calls.isEmpty) break;
+
+        final results = <FunctionResponse>[];
+        for (final call in calls) {
+          toolWasCalled = true;
+          final result = await _executeTool(
+            call.name,
+            Map<String, dynamic>.from(call.args),
+          );
+          results.add(
+            FunctionResponse(call.name, Map<String, Object?>.from(result)),
+          );
+        }
+        response = await chat.sendMessage(Content.functionResponses(results));
+      }
+      if (response.functionCalls.isNotEmpty) {
+        throw StateError('Gemini exceeded the tool-call limit.');
+      }
       final reply =
           response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
 
       _history.add({'role': 'assistant', 'content': reply});
       return reply;
-    } catch (e) {
+    } catch (_) {
+      if (toolWasCalled) {
+        const reply =
+            'Sambungan terputus setelah Aura meminta tindakan ke Focus Clock. Periksa jadwal sebelum mencoba lagi.';
+        _history.add({'role': 'assistant', 'content': reply});
+        return reply;
+      }
       // Fall back to HTTP endpoint if SDK fails
       return await _sendServerFallback(userMessage);
     }
