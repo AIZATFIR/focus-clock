@@ -369,8 +369,8 @@ PANGGILAN TOOL AUTOMATION:
                 orElse: () => {'content': ''},
               )['content']
               as String;
-      final directModelName = this.model.startsWith('gemini-')
-          ? this.model
+      final directModelName = model.startsWith('gemini-')
+          ? model
           : 'gemini-2.5-flash';
       final geminiModel = GenerativeModel(
         model: directModelName,
