@@ -14,6 +14,7 @@ import 'secure_storage_service.dart';
 /// Enum representing the active AI execution mode
 enum AiExecutionMode {
   byokGeminiDirect('BYOK (Gemini Direct)'),
+  byokOpenAiCompatibleDirect('BYOK (Direct)'),
   serverOpenRouter('Server-Side (OpenRouter)'),
   demoFallback('Demo Mode');
 
@@ -251,17 +252,28 @@ class AiService {
     required this.model,
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
-    SecureStorageService? secureStorage,
+    AiServiceStorage? secureStorage,
+    http.Client? httpClient,
   }) : _activityRepo = activityRepo,
        _presetRepo = presetRepo,
-       _secureStorage = secureStorage ?? SecureStorageService();
+       _secureStorage = secureStorage ?? SecureStorageService(),
+       _httpClient = httpClient;
 
   final String baseUrl;
   final String apiKey;
   final String model;
   final ActivityRepository _activityRepo;
   final PresetRepository _presetRepo;
-  final SecureStorageService _secureStorage;
+  final AiServiceStorage _secureStorage;
+  final http.Client? _httpClient;
+
+  Future<http.Response> _post(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String body,
+  }) => _httpClient == null
+      ? http.post(uri, headers: headers, body: body)
+      : _httpClient.post(uri, headers: headers, body: body);
 
   // History for OpenAI format requests
   final List<Map<String, dynamic>> _history = [];
@@ -353,10 +365,25 @@ PANGGILAN TOOL AUTOMATION:
         _activeMode = AiExecutionMode.serverOpenRouter;
         return await _sendServerFallback(userMessage);
       }
+    } else if (userGeminiKey.isNotEmpty || _isLoopbackProvider(baseUrl)) {
+      _activeMode = AiExecutionMode.byokOpenAiCompatibleDirect;
+      return await _callOpenAiCompatibleDirect(
+        key: userGeminiKey,
+        url: baseUrl,
+        modelName: model,
+      );
     } else {
       _activeMode = AiExecutionMode.serverOpenRouter;
       return await _sendServerFallback(userMessage);
     }
+  }
+
+  bool _isLoopbackProvider(String url) {
+    final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+    return host == 'localhost' ||
+        host.endsWith('.localhost') ||
+        host == '::1' ||
+        RegExp(r'^127(?:\.\d{1,3}){3}$').hasMatch(host);
   }
 
   // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
@@ -430,16 +457,11 @@ PANGGILAN TOOL AUTOMATION:
     // 1. Try local/custom server endpoint `/api/chat/secretary`
     try {
       final uri = Uri.parse('$serverUrl/api/chat/secretary');
-      final resp = await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'messages': _history,
-              'userMessage': userMessage,
-            }),
-          )
-          .timeout(const Duration(seconds: 8));
+      final resp = await _post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'messages': _history, 'userMessage': userMessage}),
+      ).timeout(const Duration(seconds: 8));
 
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -482,13 +504,21 @@ PANGGILAN TOOL AUTOMATION:
       return 'Halo! Aura siap membantu. Silakan masukkan GEMINI_API_KEY Anda di Settings untuk mode BYOK, atau nyalakan Server Backend OpenRouter.';
     }
 
+    return _callOpenAiCompatibleDirect(
+      key: effectiveKey,
+      url: effectiveUrl,
+      modelName: effectiveModel,
+    );
+  }
+
+  Future<String> _callOpenAiCompatibleDirect({
+    required String key,
+    required String url,
+    required String modelName,
+  }) async {
     // Agentic loop
     for (int loop = 0; loop < 5; loop++) {
-      final response = await _callOpenAiFormatApi(
-        effectiveUrl,
-        effectiveKey,
-        effectiveModel,
-      );
+      final response = await _callOpenAiFormatApi(url, key, modelName);
       final choice = response['choices'][0];
       final msg = choice['message'] as Map<String, dynamic>;
 
@@ -522,7 +552,13 @@ PANGGILAN TOOL AUTOMATION:
     String key,
     String modelName,
   ) async {
-    final uri = Uri.parse('$url/chat/completions');
+    final baseUri = Uri.parse(url);
+    final uri = baseUri.path.endsWith('/chat/completions')
+        ? baseUri
+        : baseUri.replace(
+            path:
+                '${baseUri.path.replaceFirst(RegExp(r'/+$'), '')}/chat/completions',
+          );
     final body = jsonEncode({
       'model': modelName,
       'messages': _history,
@@ -530,11 +566,11 @@ PANGGILAN TOOL AUTOMATION:
       'tool_choice': 'auto',
     });
 
-    final resp = await http.post(
+    final resp = await _post(
       uri,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $key',
+        if (key.isNotEmpty) 'Authorization': 'Bearer $key',
         if (url.contains('openrouter'))
           'HTTP-Referer': 'https://focusclock.app',
       },

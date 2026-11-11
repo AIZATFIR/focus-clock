@@ -1,8 +1,126 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:focus_clock/data/repositories/activity_repository.dart';
+import 'package:focus_clock/data/repositories/preset_repository.dart';
 import 'package:focus_clock/services/ai_service.dart';
 import 'package:focus_clock/services/gemini_tool_adapter.dart';
+import 'package:focus_clock/services/notification_service.dart';
+import 'package:focus_clock/services/secure_storage_service.dart';
+
+class _FakeAiStorage implements AiServiceStorage {
+  _FakeAiStorage({this.apiKey = 'sk-user-key'});
+
+  final String? apiKey;
+
+  @override
+  Future<String?> getGeminiApiKey() async => apiKey;
+
+  @override
+  Future<String?> getOpenRouterKey() async => null;
+
+  @override
+  Future<String> getBackendServerUrl() async => 'https://backend.example';
+}
 
 void main() {
+  test('sends a configured non-Gemini key directly to its provider', () async {
+    final requests = <http.Request>[];
+    final service = AiService(
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'sk-user-key',
+      model: 'provider-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository(null),
+      secureStorage: _FakeAiStorage(),
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'Got it.'},
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+
+    expect(await service.send('I want to win LKS'), 'Got it.');
+    expect(requests, hasLength(1));
+    expect(
+      requests.single.url,
+      Uri.parse('https://provider.example/v1/chat/completions'),
+    );
+    expect(requests.single.headers['authorization'], 'Bearer sk-user-key');
+    expect(jsonDecode(requests.single.body)['model'], 'provider-model');
+    expect(service.activeMode, AiExecutionMode.byokOpenAiCompatibleDirect);
+  });
+
+  test(
+    'keeps backend routing when no direct provider key is configured',
+    () async {
+      final requests = <http.Request>[];
+      final service = AiService(
+        baseUrl: 'https://provider.example/v1',
+        apiKey: '',
+        model: 'provider-model',
+        activityRepo: ActivityRepository(null, NotificationService()),
+        presetRepo: PresetRepository(null),
+        secureStorage: _FakeAiStorage(apiKey: null),
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return http.Response(jsonEncode({'reply': 'Backend reply.'}), 200);
+        }),
+      );
+
+      expect(await service.send('Help me plan today'), 'Backend reply.');
+      expect(requests, hasLength(1));
+      expect(
+        requests.single.url,
+        Uri.parse('https://backend.example/api/chat/secretary'),
+      );
+      expect(service.activeMode, AiExecutionMode.serverOpenRouter);
+    },
+  );
+
+  test('connects to a loopback provider without an API key', () async {
+    final requests = <http.Request>[];
+    final service = AiService(
+      baseUrl: 'http://localhost:11434/v1',
+      apiKey: '',
+      model: 'llama3.2:latest',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository(null),
+      secureStorage: _FakeAiStorage(apiKey: null),
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {'role': 'assistant', 'content': 'Local reply.'},
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+
+    expect(await service.send('Help me focus'), 'Local reply.');
+    expect(
+      requests.single.url,
+      Uri.parse('http://localhost:11434/v1/chat/completions'),
+    );
+    expect(requests.single.headers, isNot(contains('authorization')));
+    expect(service.activeMode, AiExecutionMode.byokOpenAiCompatibleDirect);
+  });
+
   test('converts earlier plain chat turns into Gemini roles', () {
     final history = openAiMessagesToGeminiHistory([
       {'role': 'system', 'content': 'system prompt'},
@@ -10,23 +128,20 @@ void main() {
       {'role': 'assistant', 'content': 'When is the competition?'},
     ]);
 
-    expect(
-      history.map((message) => message.toJson()).toList(),
-      [
-        {
-          'role': 'user',
-          'parts': [
-            {'text': 'I want to win the national LKS'},
-          ],
-        },
-        {
-          'role': 'model',
-          'parts': [
-            {'text': 'When is the competition?'},
-          ],
-        },
-      ],
-    );
+    expect(history.map((message) => message.toJson()).toList(), [
+      {
+        'role': 'user',
+        'parts': [
+          {'text': 'I want to win the national LKS'},
+        ],
+      },
+      {
+        'role': 'model',
+        'parts': [
+          {'text': 'When is the competition?'},
+        ],
+      },
+    ]);
   });
 
   test('skips tool messages and entries without text', () {

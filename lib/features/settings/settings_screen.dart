@@ -974,17 +974,13 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
   Future<void> _loadSecureStorage() async {
     final storage = SecureStorageService();
-    final geminiKey = await storage.getGeminiApiKey();
-    final serverUrl = await storage.getBackendServerUrl();
+    final storedApiKey = await storage.getGeminiApiKey();
     final vEnabled = await storage.isVoiceEnabled();
 
     if (mounted) {
       setState(() {
-        if (geminiKey != null && geminiKey.isNotEmpty) {
-          _keyCtrl.text = geminiKey;
-        }
-        if (serverUrl.isNotEmpty) {
-          _urlCtrl.text = serverUrl;
+        if (storedApiKey != null && storedApiKey.isNotEmpty) {
+          _keyCtrl.text = storedApiKey;
         }
         _voiceEnabled = vEnabled;
       });
@@ -1257,7 +1253,6 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
                   final storage = SecureStorageService();
                   await storage.setGeminiApiKey(key);
-                  await storage.setBackendServerUrl(url);
                   await storage.setVoiceEnabled(_voiceEnabled);
 
                   widget.onSave(url, key, model);

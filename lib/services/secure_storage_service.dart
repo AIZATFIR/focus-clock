@@ -1,13 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+abstract interface class AiServiceStorage {
+  Future<String?> getGeminiApiKey();
+  Future<String?> getOpenRouterKey();
+  Future<String> getBackendServerUrl();
+}
+
 final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
   return SecureStorageService();
 });
 
-class SecureStorageService {
+class SecureStorageService implements AiServiceStorage {
   SecureStorageService({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -20,6 +26,7 @@ class SecureStorageService {
   static const defaultBackendUrl = 'http://localhost:3000';
 
   // ── Gemini API Key (BYOK) ──────────────────────────────────────────────────
+  @override
   Future<String?> getGeminiApiKey() async {
     return await _storage.read(key: _keyGeminiApiKey);
   }
@@ -33,6 +40,7 @@ class SecureStorageService {
   }
 
   // ── OpenRouter Key (Optional fallback) ────────────────────────────────────
+  @override
   Future<String?> getOpenRouterKey() async {
     return await _storage.read(key: _keyOpenRouterKey);
   }
@@ -46,9 +54,12 @@ class SecureStorageService {
   }
 
   // ── Backend Server URL ─────────────────────────────────────────────────────
+  @override
   Future<String> getBackendServerUrl() async {
     final url = await _storage.read(key: _keyBackendUrl);
-    return (url != null && url.trim().isNotEmpty) ? url.trim() : defaultBackendUrl;
+    return (url != null && url.trim().isNotEmpty)
+        ? url.trim()
+        : defaultBackendUrl;
   }
 
   Future<void> setBackendServerUrl(String? url) async {
