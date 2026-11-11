@@ -29,6 +29,48 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
+  <style>
+    #focus-clock-loading {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 14px;
+      background: #17171c;
+      color: #e8dfcf;
+      font: 500 13px/1.4 system-ui, sans-serif;
+    }
+
+    #focus-clock-loading-mark {
+      width: 24px;
+      height: 24px;
+      border: 1.5px solid #ffffff30;
+      border-top-color: #e7c27d;
+      border-radius: 50%;
+      animation: focus-clock-turn 1.2s linear infinite;
+    }
+
+    #focus-clock-retry {
+      padding: 8px 14px;
+      border: 1px solid #e7c27d80;
+      border-radius: 999px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    @keyframes focus-clock-turn {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #focus-clock-loading-mark { animation: none; }
+    }
+  </style>
+
   <!-- Google Sign In Web Client ID -->
   <meta name="google-signin-client_id" content="607666586504-2somn7b2p1mrfbflls09st7ovh1hi9r8.apps.googleusercontent.com">
 
@@ -36,6 +78,30 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <div id="focus-clock-loading" role="status" aria-live="polite">
+    <span id="focus-clock-loading-mark" aria-hidden="true"></span>
+    <span id="focus-clock-loading-copy">Membuka Focus Clock…</span>
+    <button id="focus-clock-retry" type="button" hidden>Coba lagi</button>
+  </div>
+  <script>
+    (() => {
+      const loading = document.getElementById('focus-clock-loading');
+      const copy = document.getElementById('focus-clock-loading-copy');
+      const mark = document.getElementById('focus-clock-loading-mark');
+      const retry = document.getElementById('focus-clock-retry');
+      const timeout = window.setTimeout(() => {
+        copy.textContent = 'Focus Clock belum berhasil dibuka.';
+        mark.hidden = true;
+        retry.hidden = false;
+      }, 15000);
+
+      retry.addEventListener('click', () => window.location.reload());
+      window.addEventListener('flutter-first-frame', () => {
+        window.clearTimeout(timeout);
+        loading.remove();
+      }, { once: true });
+    })();
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
