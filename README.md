@@ -22,7 +22,7 @@ Get the latest published builds from [GitHub Releases](https://github.com/AIZATF
 
 Focus Clock exists to keep a meaningful intention in view and make the next action easier to begin. It is part of a wider ecosystem with Sadar and Fitrah Launcher; each app should remain useful on its own while sharing a clear path into the others.
 
-Read the [manifesto](MANIFESTO.md) and [product documents](docs/product/) for the principles and current specifications.
+Read the [manifesto](MANIFESTO.md) and the [unclogged canvas build direction](docs/product/FOCUS-CLOCK-UNCLOGGED-CANVAS.md).
 
 ## Build from source
 
