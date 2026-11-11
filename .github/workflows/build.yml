@@ -24,6 +24,7 @@ jobs:
 
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter test
       - run: flutter build apk --release --android-skip-build-dependency-validation
 
       - uses: actions/upload-artifact@v4
