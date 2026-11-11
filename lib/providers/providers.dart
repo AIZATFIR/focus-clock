@@ -29,7 +29,10 @@ final fallbackStorageProvider = Provider<FallbackStorage>(
 );
 
 final presetRepoProvider = Provider<PresetRepository>(
-  (ref) => PresetRepository(ref.watch(isarProvider)),
+  (ref) => PresetRepository(
+    ref.watch(isarProvider),
+    fallbackStorage: ref.watch(fallbackStorageProvider),
+  ),
 );
 
 final blueprintRepoProvider = Provider<BlueprintRepository>((_) => BlueprintRepository());
@@ -51,7 +54,10 @@ final activityRepoProvider = Provider<ActivityRepository>(
 );
 
 final taskRepoProvider = Provider<TaskRepository>(
-  (ref) => TaskRepository(ref.watch(isarProvider)),
+  (ref) => TaskRepository(
+    ref.watch(isarProvider),
+    fallbackStorage: ref.watch(fallbackStorageProvider),
+  ),
 );
 
 final settingsRepoProvider = Provider<SettingsRepository>(
