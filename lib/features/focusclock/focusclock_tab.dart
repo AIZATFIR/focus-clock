@@ -16,10 +16,12 @@ import '../../widgets/command_palette.dart';
 import '../../widgets/hotkeys_modal.dart';
 import '../../services/firebase_sync_service.dart';
 import 'analog_clock_face.dart';
+import 'quick_activity_factory.dart';
 import 'widgets/now_next_card.dart';
+import 'widgets/quick_activity_sheet.dart';
 
 /// Returns a Preset if user picked one, null if user chose "Custom".
-/// Returns false (via pop with no result) if user dismissed.
+/// Returns null if the user dismissed.
 Future<Object?> _showPresetPicker(BuildContext context) async {
   return showModalBottomSheet<Object>(
     context: context,
@@ -1211,29 +1213,16 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         ..colorValue = presetColors.first;
       if (!mounted) return;
       await showActivityDetailSheet(context, activity: activity, mode: DetailMode.create);
-    } else {
-      final duration = end24 - start24;
-      if (duration >= 5) {
-        final activity = Activity()
-          ..title = 'Fokus ${duration}m'
-          ..date = dateOnly(date)
-          ..ampmHalf = dbHalf
-          ..startMinute = dbStart
-          ..endMinute = dbEnd
-          ..colorValue = presetColors.first;
-        final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
-        await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
-        try {
-          ref.read(firebaseSyncServiceProvider).syncActivity(activity);
-        } catch (_) {}
-      }
     }
   }
 
   Future<void> _onTapUp(Offset p, Size size, List<Activity> activities, int leadMinutes) async {
     if (_draggingActivity != null) return;
     final hit = _hitActivity(p, size, activities);
-    if (hit == null) return;
+    if (hit == null) {
+      await _addActivityAt(p, size);
+      return;
+    }
 
     final a = activities.firstWhere((x) => x.id == hit);
     if (ref.read(schedulingTaskProvider) != null) {
@@ -1250,6 +1239,53 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
     }
 
     await showActivityDetailSheet(context, activity: a, mode: DetailMode.view);
+  }
+
+  Future<void> _addActivityAt(Offset p, Size size) async {
+    if (ref.read(schedulingTaskProvider) != null) return;
+
+    final centered = _toCenter(p, size);
+    final radius = centered.distance;
+    final outer = size.shortestSide / 2 * 0.85 * _grow;
+    final inner = size.shortestSide / 2 * 0.55 * _grow;
+    if (radius < inner || radius > outer) return;
+
+    final is24h = _is24h;
+    final scale = is24h ? 1440 : 720;
+    final start = _snap(offsetToMinute(centered, is24h: is24h)).clamp(0, scale - 5);
+    final maxDuration = scale - start;
+    final durationOptions = [15, 30, 45, 60]
+        .where((minutes) => minutes <= maxDuration)
+        .toList();
+    if (durationOptions.isEmpty) durationOptions.add(maxDuration);
+
+    final selectedHalf = is24h
+        ? (start < 720 ? AmPmHalf.am : AmPmHalf.pm)
+        : ref.read(ampmHalfProvider);
+    final initialDuration = durationOptions.contains(30) ? 30 : durationOptions.last;
+    final draft = await showQuickActivitySheet(
+      context,
+      startLabel: formatMinute(start, selectedHalf, is24h: is24h),
+      durationOptions: durationOptions,
+      initialDuration: initialDuration,
+    );
+    if (draft == null || !mounted) return;
+
+    final activity = createActivityFromQuickDraft(
+      draft,
+      startMinute: start,
+      is24h: is24h,
+      selectedHalf: selectedHalf,
+      date: ref.read(currentDateProvider),
+      colorValue: presetColors.first,
+    );
+
+    final lead = ref.read(settingsProvider).valueOrNull?.notifLeadMinutes ?? 1;
+    await ref.read(activityRepoProvider).upsert(activity, notifLeadMinutes: lead);
+    try {
+      ref.read(firebaseSyncServiceProvider).syncActivity(activity);
+    } catch (_) {}
+    HapticFeedback.lightImpact();
   }
 
   void _onLongPressStart(Offset p, Size size, List<Activity> activities) {
