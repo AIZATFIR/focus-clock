@@ -1,6 +1,6 @@
 /// Focus Session Contract (v1)
 /// As specified in PRD 3 Section 2, Section 35, and Section 84.
-/// 
+///
 /// Provides a versioned, decoupled integration boundary between
 /// Sadar and Focus Clock without circular or tightly coupled imports.
 library;
@@ -10,12 +10,14 @@ class FocusSessionRequest {
   final String title;
   final int targetMinutes;
   final DateTime requestedAt;
+  final String? callbackUrl;
 
   const FocusSessionRequest({
     required this.habitId,
     required this.title,
     required this.targetMinutes,
     required this.requestedAt,
+    this.callbackUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -24,6 +26,7 @@ class FocusSessionRequest {
     'title': title,
     'targetMinutes': targetMinutes,
     'requestedAt': requestedAt.toIso8601String(),
+    'callbackUrl': callbackUrl,
   };
 
   factory FocusSessionRequest.fromJson(Map<String, dynamic> json) {
@@ -31,7 +34,10 @@ class FocusSessionRequest {
       habitId: json['habitId'] as int? ?? 0,
       title: json['title'] as String? ?? '',
       targetMinutes: json['targetMinutes'] as int? ?? 20,
-      requestedAt: DateTime.tryParse(json['requestedAt'] as String? ?? '') ?? DateTime.now(),
+      requestedAt:
+          DateTime.tryParse(json['requestedAt'] as String? ?? '') ??
+          DateTime.now(),
+      callbackUrl: json['callbackUrl'] as String?,
     );
   }
 }
@@ -94,6 +100,7 @@ class FocusSessionContract {
         'title': request.title,
         'minutes': request.targetMinutes.toString(),
         'timestamp': request.requestedAt.millisecondsSinceEpoch.toString(),
+        'callback': request.callbackUrl ?? 'sadar://completed',
       },
     );
   }
@@ -101,17 +108,34 @@ class FocusSessionContract {
   /// Parses an incoming Focus Clock URI
   static FocusSessionRequest? parseFocusClockUri(Uri uri) {
     if (uri.scheme != schemeFocusClock || uri.host != 'timer') return null;
-    final habitId = int.tryParse(uri.queryParameters['habitId'] ?? '') ?? 0;
+    if (uri.queryParameters['version'] != version) return null;
+    final habitId = int.tryParse(uri.queryParameters['habitId'] ?? '');
     final title = uri.queryParameters['title'] ?? '';
-    final minutes = int.tryParse(uri.queryParameters['minutes'] ?? '') ?? 20;
+    final minutes = int.tryParse(
+      uri.queryParameters['minutes'] ?? uri.queryParameters['duration'] ?? '',
+    );
     final ts = int.tryParse(uri.queryParameters['timestamp'] ?? '');
-    final requestedAt = ts != null ? DateTime.fromMillisecondsSinceEpoch(ts) : DateTime.now();
+    final callback = uri.queryParameters['callback'];
+    final callbackUri = callback == null ? null : Uri.tryParse(callback);
+
+    if (habitId == null || habitId <= 0 || title.trim().isEmpty) {
+      return null;
+    }
+    if (minutes == null || minutes < 1 || minutes > 720 || ts == null) {
+      return null;
+    }
+    if (callbackUri == null ||
+        callbackUri.scheme != schemeSadar ||
+        callbackUri.host != 'completed') {
+      return null;
+    }
 
     return FocusSessionRequest(
       habitId: habitId,
       title: title,
       targetMinutes: minutes,
-      requestedAt: requestedAt,
+      requestedAt: DateTime.fromMillisecondsSinceEpoch(ts),
+      callbackUrl: callbackUri.toString(),
     );
   }
 
@@ -135,21 +159,30 @@ class FocusSessionContract {
   /// Parses an incoming Sadar completion URI
   static FocusSessionResult? parseSadarCompletedUri(Uri uri) {
     if (uri.scheme != schemeSadar || uri.host != 'completed') return null;
-    final habitId = int.tryParse(uri.queryParameters['habitId'] ?? '') ?? 0;
+    if (uri.queryParameters['version'] != version) return null;
+    final habitId = int.tryParse(uri.queryParameters['habitId'] ?? '');
     final sessionId = uri.queryParameters['sessionId'] ?? '';
     final startTs = int.tryParse(uri.queryParameters['startedAt'] ?? '');
     final endTs = int.tryParse(uri.queryParameters['endedAt'] ?? '');
-    final duration = int.tryParse(uri.queryParameters['duration'] ?? '') ?? 0;
-    final status = uri.queryParameters['status'] ?? 'completed';
+    final duration = int.tryParse(uri.queryParameters['duration'] ?? '');
+    final status = uri.queryParameters['status'];
 
-    final now = DateTime.now();
+    if (habitId == null || habitId <= 0 || sessionId.isEmpty) return null;
+    if (startTs == null || endTs == null || endTs < startTs) return null;
+    if (duration == null || duration < 0 || duration > 720) return null;
+    if (status != 'completed' &&
+        status != 'cancelled' &&
+        status != 'interrupted') {
+      return null;
+    }
+
     return FocusSessionResult(
       sessionId: sessionId,
       habitId: habitId,
-      startedAt: startTs != null ? DateTime.fromMillisecondsSinceEpoch(startTs) : now,
-      endedAt: endTs != null ? DateTime.fromMillisecondsSinceEpoch(endTs) : now,
+      startedAt: DateTime.fromMillisecondsSinceEpoch(startTs),
+      endedAt: DateTime.fromMillisecondsSinceEpoch(endTs),
       actualDurationMinutes: duration,
-      status: status,
+      status: status!,
     );
   }
 }

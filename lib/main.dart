@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  AppLinks();
 
   // Initialize Firebase (Web, Mobile, Desktop)
   try {
@@ -75,14 +77,18 @@ class FocusClockDesktopWrapper extends ConsumerStatefulWidget {
   final Widget child;
 
   @override
-  ConsumerState<FocusClockDesktopWrapper> createState() => _FocusClockDesktopWrapperState();
+  ConsumerState<FocusClockDesktopWrapper> createState() =>
+      _FocusClockDesktopWrapperState();
 }
 
-class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrapper> with WindowListener, TrayListener {
+class _FocusClockDesktopWrapperState
+    extends ConsumerState<FocusClockDesktopWrapper>
+    with WindowListener, TrayListener {
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
       windowManager.addListener(this);
       trayManager.addListener(this);
       _initTray();
@@ -91,7 +97,8 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
 
   @override
   void dispose() {
-    if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
+    if (!kIsWeb &&
+        (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
       windowManager.removeListener(this);
       trayManager.removeListener(this);
     }
@@ -118,31 +125,16 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
           label: '📍 BERLANGSUNG: $title',
           disabled: true,
         ),
-        MenuItem(
-          key: 'stop_timer',
-          label: '⏹️ Stop / Selesai Sesi Ini',
-        ),
-        MenuItem(
-          key: 'reschedule_15',
-          label: '⏩ Reschedule (+15 Menit)',
-        ),
+        MenuItem(key: 'stop_timer', label: '⏹️ Stop / Selesai Sesi Ini'),
+        MenuItem(key: 'reschedule_15', label: '⏩ Reschedule (+15 Menit)'),
         MenuItem.separator(),
       ] else ...[
-        MenuItem(
-          key: 'start_25m',
-          label: '⚡ Mulai Fokus 25m Sekarang',
-        ),
+        MenuItem(key: 'start_25m', label: '⚡ Mulai Fokus 25m Sekarang'),
         MenuItem.separator(),
       ],
-      MenuItem(
-        key: 'show_window',
-        label: 'Tampilkan Focus Clock',
-      ),
+      MenuItem(key: 'show_window', label: 'Tampilkan Focus Clock'),
       MenuItem.separator(),
-      MenuItem(
-        key: 'exit_app',
-        label: 'Keluar',
-      ),
+      MenuItem(key: 'exit_app', label: 'Keluar'),
     ];
 
     await trayManager.setContextMenu(Menu(items: items));
@@ -169,7 +161,9 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
       ref.read(activeTimerTitleProvider.notifier).state = 'Focus Session 25m';
       ref.read(activeTimerTotalSecondsProvider.notifier).state = 1500;
       ref.read(activeTimerIsPausedProvider.notifier).state = false;
-      ref.read(activeTimerEndTimeProvider.notifier).state = now.add(const Duration(minutes: 25));
+      ref.read(activeTimerEndTimeProvider.notifier).state = now.add(
+        const Duration(minutes: 25),
+      );
       _updateTrayMenu();
     } else if (menuItem.key == 'stop_timer') {
       ref.read(activeTimerEndTimeProvider.notifier).state = null;
@@ -178,8 +172,12 @@ class _FocusClockDesktopWrapperState extends ConsumerState<FocusClockDesktopWrap
     } else if (menuItem.key == 'reschedule_15') {
       final cur = ref.read(activeTimerEndTimeProvider);
       if (cur != null) {
-        ref.read(activeTimerEndTimeProvider.notifier).state = cur.add(const Duration(minutes: 15));
-        ref.read(activeTimerTotalSecondsProvider.notifier).update((t) => t + 900);
+        ref.read(activeTimerEndTimeProvider.notifier).state = cur.add(
+          const Duration(minutes: 15),
+        );
+        ref
+            .read(activeTimerTotalSecondsProvider.notifier)
+            .update((t) => t + 900);
       }
       _updateTrayMenu();
     } else if (menuItem.key == 'exit_app') {

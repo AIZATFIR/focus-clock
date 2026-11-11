@@ -62,12 +62,40 @@ void main() {
       expect(uri.queryParameters['habitId'], '55');
       expect(uri.queryParameters['title'], 'French Conversation');
       expect(uri.queryParameters['minutes'], '20');
+      expect(uri.queryParameters['callback'], 'sadar://completed');
 
       final parsed = FocusSessionContract.parseFocusClockUri(uri);
       expect(parsed, isNotNull);
       expect(parsed!.habitId, 55);
       expect(parsed.title, 'French Conversation');
       expect(parsed.targetMinutes, 20);
+    });
+
+    test('rejects unsupported versions and malformed sessions', () {
+      expect(
+        FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'focusclock://timer?version=v2&habitId=55&title=Study&minutes=20',
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'focusclock://timer?version=v1&habitId=-1&title=Study&minutes=20',
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'focusclock://timer?version=v1&habitId=55&title=Study&duration=45&timestamp=1791734400000&callback=sadar%3A%2F%2Fcompleted',
+          ),
+        )?.targetMinutes,
+        45,
+      );
     });
 
     test('buildSadarCompletedUri and parseSadarCompletedUri roundtrip', () {

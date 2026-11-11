@@ -2,22 +2,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme.dart';
 import '../../../core/time_math.dart';
 import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
 import '../../../services/pip_timer_bridge.dart';
+import '../../../services/focus_session_contract.dart';
 
 class FocusSessionView extends ConsumerStatefulWidget {
   const FocusSessionView({
     super.key,
     required this.activity,
     required this.onClose,
+    this.externalRequest,
   });
 
   final Activity activity;
   final VoidCallback onClose;
+  final FocusSessionRequest? externalRequest;
 
   @override
   ConsumerState<FocusSessionView> createState() => _FocusSessionViewState();
@@ -33,6 +38,8 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
   Timer? _timer;
   late int _remainingSeconds;
   late int _totalSeconds;
+  late final DateTime _sessionStartedAt;
+  bool _externalResultSent = false;
 
   @override
   void initState() {
@@ -42,15 +49,21 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
 
-    final durationMinutes = (widget.activity.endMinute - widget.activity.startMinute).clamp(1, 720);
+    final durationMinutes =
+        widget.externalRequest?.targetMinutes ??
+        (widget.activity.endMinute - widget.activity.startMinute).clamp(1, 720);
     _totalSeconds = durationMinutes * 60;
-    
+    _sessionStartedAt = DateTime.now();
+
     final now = DateTime.now();
     final nowMinOfHalf = minuteOfHalf(now);
-    if (widget.activity.ampmHalf == halfOfNow(now) &&
+    if (widget.externalRequest != null) {
+      _remainingSeconds = _totalSeconds;
+    } else if (widget.activity.ampmHalf == halfOfNow(now) &&
         nowMinOfHalf >= widget.activity.startMinute &&
         nowMinOfHalf < widget.activity.endMinute) {
-      final elapsed = (nowMinOfHalf - widget.activity.startMinute) * 60 + now.second;
+      final elapsed =
+          (nowMinOfHalf - widget.activity.startMinute) * 60 + now.second;
       _remainingSeconds = (_totalSeconds - elapsed).clamp(0, _totalSeconds);
     } else {
       _remainingSeconds = _totalSeconds;
@@ -108,53 +121,106 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
   Widget build(BuildContext context) {
     final color = Color(widget.activity.colorValue);
 
-    return Scaffold(
-      backgroundColor: AppPalette.bg,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Top minimal exit button
-            Positioned(
-              top: 16,
-              left: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppPalette.textDim, size: 24),
-                tooltip: 'Tutup Fokus',
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                  widget.onClose();
-                },
+    return PopScope<void>(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) unawaited(_sendExternalResult());
+      },
+      child: Scaffold(
+        backgroundColor: AppPalette.bg,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Top minimal exit button
+              Positioned(
+                top: 16,
+                left: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: AppPalette.textDim,
+                    size: 24,
+                  ),
+                  tooltip: 'Tutup Fokus',
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    _closeSession();
+                  },
+                ),
               ),
-            ),
 
-            // Top Picture-in-Picture floating button
-            Positioned(
-              top: 16,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.picture_in_picture_alt_rounded, color: AppPalette.accent, size: 22),
-                tooltip: 'Picture-in-Picture (Melayang)',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  PipTimerBridge.enterPip();
-                },
+              // Top Picture-in-Picture floating button
+              Positioned(
+                top: 16,
+                right: 20,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.picture_in_picture_alt_rounded,
+                    color: AppPalette.accent,
+                    size: 22,
+                  ),
+                  tooltip: 'Picture-in-Picture (Melayang)',
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    PipTimerBridge.enterPip();
+                  },
+                ),
               ),
-            ),
 
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _isCompleted ? _buildReflectionCard(color) : _buildActiveTimer(color),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _isCompleted
+                      ? _buildReflectionCard(color)
+                      : _buildActiveTimer(color),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  void _closeSession() {
+    unawaited(_sendExternalResult());
+    widget.onClose();
+  }
+
+  Future<void> _sendExternalResult() async {
+    final request = widget.externalRequest;
+    if (request == null || _externalResultSent) return;
+    _externalResultSent = true;
+
+    final endedAt = DateTime.now();
+    final elapsedMinutes =
+        ((_totalSeconds - _remainingSeconds).clamp(0, _totalSeconds)) ~/ 60;
+    final resultUri = FocusSessionContract.buildSadarCompletedUri(
+      FocusSessionResult(
+        sessionId: const Uuid().v4(),
+        habitId: request.habitId,
+        startedAt: _sessionStartedAt,
+        endedAt: endedAt,
+        actualDurationMinutes: _isCompleted
+            ? request.targetMinutes
+            : elapsedMinutes,
+        status: _isCompleted ? 'completed' : 'cancelled',
+      ),
+    );
+    final callback = Uri.parse(request.callbackUrl ?? 'sadar://completed');
+    try {
+      await launchUrl(
+        callback.replace(queryParameters: resultUri.queryParameters),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (error) {
+      debugPrint('Could not return focus result to Sadar: $error');
+    }
+  }
+
   Widget _buildActiveTimer(Color color) {
-    final progress = _totalSeconds > 0 ? (1.0 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0) : 0.0;
+    final progress = _totalSeconds > 0
+        ? (1.0 - (_remainingSeconds / _totalSeconds)).clamp(0.0, 1.0)
+        : 0.0;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -171,7 +237,9 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                widget.activity.iconKey?.isNotEmpty == true ? widget.activity.iconKey! : '🎯',
+                widget.activity.iconKey?.isNotEmpty == true
+                    ? widget.activity.iconKey!
+                    : '🎯',
                 style: const TextStyle(fontSize: 18),
               ),
               const SizedBox(width: 8),
@@ -207,7 +275,9 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
                       child: CircularProgressIndicator(
                         value: 1.0,
                         strokeWidth: 5,
-                        valueColor: AlwaysStoppedAnimation(AppPalette.stroke.withValues(alpha: 0.3)),
+                        valueColor: AlwaysStoppedAnimation(
+                          AppPalette.stroke.withValues(alpha: 0.3),
+                        ),
                       ),
                     ),
                     // Progress arc
@@ -260,12 +330,24 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
             // Pause / Resume
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 side: const BorderSide(color: AppPalette.stroke),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
-              icon: Icon(_isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded, size: 20, color: AppPalette.text),
-              label: Text(_isPaused ? 'Lanjutkan' : 'Jeda', style: const TextStyle(color: AppPalette.text)),
+              icon: Icon(
+                _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                size: 20,
+                color: AppPalette.text,
+              ),
+              label: Text(
+                _isPaused ? 'Lanjutkan' : 'Jeda',
+                style: const TextStyle(color: AppPalette.text),
+              ),
               onPressed: () {
                 HapticFeedback.selectionClick();
                 setState(() => _isPaused = !_isPaused);
@@ -277,14 +359,20 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
               style: FilledButton.styleFrom(
                 backgroundColor: color.withValues(alpha: 0.2),
                 foregroundColor: color,
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: color.withValues(alpha: 0.5)),
                 ),
               ),
               icon: const Icon(Icons.check_rounded, size: 20),
-              label: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Selesai',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               onPressed: () {
                 HapticFeedback.mediumImpact();
                 setState(() => _isCompleted = true);
@@ -319,13 +407,21 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           const SizedBox(height: 18),
           const Text(
             'Sesi Selesai',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             '${widget.activity.title} telah selesai. Bagaimana sesinya terasa?',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppPalette.textDim, height: 1.4),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppPalette.textDim,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -342,10 +438,17 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           const SizedBox(height: 28),
           TextButton(
             onPressed: () {
-              ref.read(activityRepoProvider).markComplete(widget.activity, true);
-              widget.onClose();
+              if (widget.externalRequest == null) {
+                ref
+                    .read(activityRepoProvider)
+                    .markComplete(widget.activity, true);
+              }
+              _closeSession();
             },
-            child: const Text('Tutup', style: TextStyle(color: AppPalette.textDim)),
+            child: const Text(
+              'Tutup',
+              style: TextStyle(color: AppPalette.textDim),
+            ),
           ),
         ],
       ),
@@ -358,15 +461,19 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       onTap: () {
         HapticFeedback.lightImpact();
         setState(() => _selectedReflection = value);
-        ref.read(activityRepoProvider).markComplete(widget.activity, true);
-        Future.delayed(const Duration(milliseconds: 300), widget.onClose);
+        if (widget.externalRequest == null) {
+          ref.read(activityRepoProvider).markComplete(widget.activity, true);
+        }
+        Future.delayed(const Duration(milliseconds: 300), _closeSession);
       },
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppPalette.accent.withValues(alpha: 0.2) : AppPalette.bg,
+          color: selected
+              ? AppPalette.accent.withValues(alpha: 0.2)
+              : AppPalette.bg,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? AppPalette.accent : AppPalette.stroke,
