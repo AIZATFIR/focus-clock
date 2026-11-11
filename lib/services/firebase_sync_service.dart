@@ -114,6 +114,7 @@ class FirebaseSyncService {
         'id': activity.id,
         'title': activity.title,
         'description': activity.description,
+        'focusGoalLink': activity.focusGoalLink,
         'startMinute': activity.startMinute,
         'endMinute': activity.endMinute,
         'ampmHalf': activity.ampmHalf.index,

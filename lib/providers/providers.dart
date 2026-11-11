@@ -239,6 +239,7 @@ final aiServiceProvider = Provider<AiService>((ref) {
     baseUrl: settings?.aiBaseUrl ?? 'https://openrouter.ai/api/v1',
     apiKey: settings?.aiApiKey ?? '',
     model: settings?.aiModel ?? 'google/gemini-2.0-flash-exp:free',
+    focusGoal: settings?.focusGoal ?? '',
     activityRepo: ref.watch(activityRepoProvider),
     presetRepo: ref.watch(presetRepoProvider),
     secureStorage: ref.watch(secureStorageServiceProvider),

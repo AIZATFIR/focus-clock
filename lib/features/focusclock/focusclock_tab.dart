@@ -1263,11 +1263,13 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
         ? (start < 720 ? AmPmHalf.am : AmPmHalf.pm)
         : ref.read(ampmHalfProvider);
     final initialDuration = durationOptions.contains(30) ? 30 : durationOptions.last;
+    final focusGoal = ref.read(settingsProvider).valueOrNull?.focusGoal ?? '';
     final draft = await showQuickActivitySheet(
       context,
       startLabel: formatMinute(start, selectedHalf, is24h: is24h),
       durationOptions: durationOptions,
       initialDuration: initialDuration,
+      focusGoal: focusGoal,
     );
     if (draft == null || !mounted) return;
 
@@ -1413,6 +1415,7 @@ class _FocusClockTabState extends ConsumerState<FocusClockTab>
           ..ampmHalf = sa.ampmHalf
           ..date = targetDate
           ..description = sa.description
+          ..focusGoalLink = sa.focusGoalLink
           ..colorValue = sa.colorValue
           ..recurrence = 'none'
           ..createdAt = DateTime.now()

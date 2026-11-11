@@ -121,6 +121,74 @@ void main() {
     expect(service.activeMode, AiExecutionMode.byokOpenAiCompatibleDirect);
   });
 
+  test('links AI-created activities to the exact current focus goal', () async {
+    final repository = ActivityRepository(null, NotificationService());
+    var requestCount = 0;
+    final service = AiService(
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'sk-user-key',
+      model: 'provider-model',
+      focusGoal: 'Menang LKS nasional',
+      activityRepo: repository,
+      presetRepo: PresetRepository(null),
+      secureStorage: _FakeAiStorage(),
+      httpClient: MockClient((request) async {
+        requestCount++;
+        if (requestCount == 1) {
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'role': 'assistant',
+                    'tool_calls': [
+                      {
+                        'id': 'call-create',
+                        'type': 'function',
+                        'function': {
+                          'name': 'create_activity',
+                          'arguments': jsonEncode({
+                            'title': 'Latihan LKS',
+                            'date': '2026-11-12',
+                            'start_hour': 10,
+                            'duration_minutes': 60,
+                            'focus_goal_link': 'Menang LKS nasional',
+                          }),
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'choices': [
+              {
+                'message': {
+                  'role': 'assistant',
+                  'content': 'Sudah dijadwalkan.',
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+
+    expect(
+      await service.send('Jadwalkan latihan LKS besok'),
+      'Sudah dijadwalkan.',
+    );
+    final activities = await repository.getByDate(DateTime(2026, 11, 12));
+    expect(activities, hasLength(1));
+    expect(activities.single.focusGoalLink, 'Menang LKS nasional');
+  });
+
   test('converts earlier plain chat turns into Gemini roles', () {
     final history = openAiMessagesToGeminiHistory([
       {'role': 'system', 'content': 'system prompt'},

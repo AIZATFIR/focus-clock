@@ -25,6 +25,7 @@ Activity createActivityFromQuickDraft(
     ..date = dateOnly(date)
     ..colorValue = colorValue
     ..description = ''
+    ..focusGoalLink = draft.focusGoalLink
     ..recurrence = 'none'
     ..createdAt = now
     ..updatedAt = now;

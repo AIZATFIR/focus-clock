@@ -6,10 +6,12 @@ class QuickActivityDraft {
   const QuickActivityDraft({
     required this.title,
     required this.durationMinutes,
+    this.focusGoalLink = '',
   });
 
   final String title;
   final int durationMinutes;
+  final String focusGoalLink;
 }
 
 Future<QuickActivityDraft?> showQuickActivitySheet(
@@ -17,6 +19,7 @@ Future<QuickActivityDraft?> showQuickActivitySheet(
   required String startLabel,
   required List<int> durationOptions,
   required int initialDuration,
+  String focusGoal = '',
 }) {
   return showModalBottomSheet<QuickActivityDraft>(
     context: context,
@@ -26,6 +29,7 @@ Future<QuickActivityDraft?> showQuickActivitySheet(
       startLabel: startLabel,
       durationOptions: durationOptions,
       initialDuration: initialDuration,
+      focusGoal: focusGoal,
     ),
   );
 }
@@ -35,11 +39,13 @@ class _QuickActivitySheet extends StatefulWidget {
     required this.startLabel,
     required this.durationOptions,
     required this.initialDuration,
+    required this.focusGoal,
   });
 
   final String startLabel;
   final List<int> durationOptions;
   final int initialDuration;
+  final String focusGoal;
 
   @override
   State<_QuickActivitySheet> createState() => _QuickActivitySheetState();
@@ -48,6 +54,7 @@ class _QuickActivitySheet extends StatefulWidget {
 class _QuickActivitySheetState extends State<_QuickActivitySheet> {
   late final TextEditingController _titleController;
   late int _duration;
+  bool _supportsGoal = false;
 
   @override
   void initState() {
@@ -67,7 +74,13 @@ class _QuickActivitySheetState extends State<_QuickActivitySheet> {
     if (title.isEmpty) return;
     Navigator.of(
       context,
-    ).pop(QuickActivityDraft(title: title, durationMinutes: _duration));
+    ).pop(
+      QuickActivityDraft(
+        title: title,
+        durationMinutes: _duration,
+        focusGoalLink: _supportsGoal ? widget.focusGoal : '',
+      ),
+    );
   }
 
   @override
@@ -157,6 +170,24 @@ class _QuickActivitySheetState extends State<_QuickActivitySheet> {
                     );
                   }).toList(),
                 ),
+                if (widget.focusGoal.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    value: _supportsGoal,
+                    onChanged: (value) => setState(
+                      () => _supportsGoal = value ?? false,
+                    ),
+                    title: const Text('Langkah menuju tujuan utama'),
+                    subtitle: Text(
+                      widget.focusGoal,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
                 const SizedBox(height: 18),
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _titleController,

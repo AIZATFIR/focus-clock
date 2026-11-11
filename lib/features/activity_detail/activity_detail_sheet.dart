@@ -67,6 +67,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
   DateTime? _recurrenceEndDate;
   late int _importance;
   late bool _isLocked;
+  late String _focusGoalLink;
   DateTime? _deadline;
   final _focusNode = FocusNode();
 
@@ -119,6 +120,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     _recurrenceEndDate = a.recurrenceEndDate;
     _importance = a.importance;
     _isLocked = a.isLocked;
+    _focusGoalLink = a.focusGoalLink;
     _deadline = a.deadline;
     if (a.groupId != null) _loadGroupSpan(a.groupId!);
     WidgetsBinding.instance.addPostFrameCallback(
@@ -173,6 +175,9 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
     final pad = MediaQuery.of(context).viewInsets.bottom;
     final is24h = ref.watch(
       settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false),
+    );
+    final focusGoal = ref.watch(
+      settingsProvider.select((s) => s.valueOrNull?.focusGoal ?? ''),
     );
     final readOnly = _mode == DetailMode.view;
     return KeyboardListener(
@@ -601,7 +606,49 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
                 border: OutlineInputBorder(),
               ),
             ),
+            if (readOnly && _focusGoalLink.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.flag_outlined,
+                    size: 16,
+                    color: AppPalette.accent,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _focusGoalLink == focusGoal
+                          ? 'Langkah menuju tujuan utama'
+                          : 'Tertaut ke tujuan sebelumnya: $_focusGoalLink',
+                      style: const TextStyle(
+                        color: AppPalette.textDim,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (!readOnly) ...[
+              if (focusGoal.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: _focusGoalLink == focusGoal,
+                  onChanged: (value) => setState(
+                    () => _focusGoalLink = value == true ? focusGoal : '',
+                  ),
+                  title: const Text('Langkah menuju tujuan utama'),
+                  subtitle: Text(
+                    focusGoal,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+              ],
               const SizedBox(height: 12),
               const Text(
                 'Icon',
@@ -776,6 +823,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       ..ampmHalf = seg.half
       ..date = seg.date
       ..description = _descCtrl.text.trim()
+      ..focusGoalLink = _focusGoalLink
       ..colorValue = _color
       ..recurrence = _recurrence
       ..recurrenceEndDate = _recurrence == 'none' ? null : _recurrenceEndDate
@@ -862,6 +910,7 @@ class _DetailSheetState extends ConsumerState<_DetailSheet> {
       a.title = title;
       a.iconKey = _iconKey;
       a.description = _descCtrl.text.trim();
+      a.focusGoalLink = _focusGoalLink;
       a.date = seg.date;
       a.ampmHalf = seg.half;
       a.startMinute = seg.start;

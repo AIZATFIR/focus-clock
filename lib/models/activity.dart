@@ -25,6 +25,9 @@ class Activity {
   late DateTime date;
 
   String description = '';
+  /// Goal title this activity was explicitly linked to. Kept as a snapshot so
+  /// changing the current goal does not relabel old activities.
+  String focusGoalLink = '';
   late int colorValue;
 
   /// Recurrence: 'none' | 'daily' | 'weekly'

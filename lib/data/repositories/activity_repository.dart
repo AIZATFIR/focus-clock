@@ -73,6 +73,7 @@ class ActivityRepository {
     'ampmHalf': a.ampmHalf.index,
     'date': a.date.toIso8601String(),
     'description': a.description,
+    'focusGoalLink': a.focusGoalLink,
     'colorValue': a.colorValue,
     'recurrence': a.recurrence,
     'recurrenceEndDate': a.recurrenceEndDate?.toIso8601String(),
@@ -103,6 +104,7 @@ class ActivityRepository {
       ..ampmHalf = AmPmHalf.values[half]
       ..date = DateTime.parse(value['date'] as String)
       ..description = value['description'] as String? ?? ''
+      ..focusGoalLink = value['focusGoalLink'] as String? ?? ''
       ..colorValue = value['colorValue'] as int
       ..recurrence = value['recurrence'] as String? ?? 'none'
       ..recurrenceEndDate = date('recurrenceEndDate')
@@ -253,6 +255,7 @@ class ActivityRepository {
             ..ampmHalf = a.ampmHalf
             ..date = target
             ..description = a.description
+            ..focusGoalLink = a.focusGoalLink
             ..colorValue = a.colorValue
             ..recurrence = a.recurrence
             ..recurrenceEndDate = a.recurrenceEndDate
@@ -325,6 +328,7 @@ class ActivityRepository {
       ..ampmHalf = a.ampmHalf
       ..date = dateOnly(targetDate)
       ..description = a.description
+      ..focusGoalLink = a.focusGoalLink
       ..colorValue = a.colorValue
       ..recurrence = 'none'
       ..recurrenceEndDate = null
@@ -605,6 +609,7 @@ class ActivityRepository {
       ..ampmHalf = dbActivity.ampmHalf
       ..date = dateOnly(targetDate)
       ..description = dbActivity.description
+      ..focusGoalLink = dbActivity.focusGoalLink
       ..colorValue = dbActivity.colorValue
       ..recurrence = 'none'
       ..importance = dbActivity.importance

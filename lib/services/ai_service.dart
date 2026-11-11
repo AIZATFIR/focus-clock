@@ -135,6 +135,11 @@ const _tools = [
             'description': 'Duration minutes. Default 60.',
           },
           'description': {'type': 'string'},
+          'focus_goal_link': {
+            'type': 'string',
+            'description':
+                'Exact current focus goal title, only when the user clearly connects this activity to it.',
+          },
           'recurrence': {
             'type': 'string',
             'enum': ['none', 'daily', 'weekly'],
@@ -160,6 +165,11 @@ const _tools = [
           'start_minute': {'type': 'integer'},
           'duration_minutes': {'type': 'integer'},
           'description': {'type': 'string'},
+          'focus_goal_link': {
+            'type': 'string',
+            'description':
+                'Exact current focus goal title to link this activity to; empty string to clear.',
+          },
           'recurrence': {
             'type': 'string',
             'enum': ['none', 'daily', 'weekly'],
@@ -252,6 +262,7 @@ class AiService {
     required this.model,
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
+    this.focusGoal = '',
     AiServiceStorage? secureStorage,
     http.Client? httpClient,
   }) : _activityRepo = activityRepo,
@@ -262,6 +273,7 @@ class AiService {
   final String baseUrl;
   final String apiKey;
   final String model;
+  final String focusGoal;
   final ActivityRepository _activityRepo;
   final PresetRepository _presetRepo;
   final AiServiceStorage _secureStorage;
@@ -288,6 +300,7 @@ class AiService {
     String timeStr,
     String timezone,
     String presetList,
+    String focusGoal,
   ) {
     return '''Kamu adalah Aura, pendamping tujuan dan waktu yang hangat, jujur, dan tidak menghakimi.
 
@@ -304,6 +317,8 @@ ARAH FOCUS CLOCK:
 - Seimbangkan belajar/kerja, istirahat, tidur, ibadah, keluarga, dan tanggung jawab sesuai kondisi serta pilihan pengguna.
 - Jam analog adalah visual peta hari; bantu pengguna melihat sekarang, berikutnya, dan ruang yang masih tersedia.
 - Presets pengguna saat ini: $presetList.
+- Tujuan utama pengguna saat ini: ${focusGoal.isEmpty ? 'belum ditetapkan' : focusGoal}.
+- Saat membuat aktivitas yang jelas mendukung tujuan utama, isi `focus_goal_link` dengan judul tujuan di atas. Jangan menautkan aktivitas yang tidak berhubungan atau menebak hubungan.
 
 IDENTITAS & ADAPTIVE GOAL SCHEDULING:
 - Jika pengguna menyampaikan tujuan jangka panjang, pahami dulu arti tujuan itu bagi mereka dan apa langkah yang sudah pernah dicoba.
@@ -342,6 +357,7 @@ PANGGILAN TOOL AUTOMATION:
       timeStr,
       timezone,
       presetList,
+      focusGoal,
     );
 
     _history.add({'role': 'system', 'content': systemPrompt});
@@ -621,6 +637,7 @@ PANGGILAN TOOL AUTOMATION:
               'start': _fmtTime(a.ampmHalf, a.startMinute),
               'end': _fmtTime(a.ampmHalf, a.endMinute),
               'description': a.description,
+              'focus_goal_link': a.focusGoalLink,
               'recurrence': a.recurrence,
             },
           )
@@ -635,6 +652,7 @@ PANGGILAN TOOL AUTOMATION:
     required int startMin,
     required int durationMinutes,
     String description = '',
+    String focusGoalLink = '',
     String recurrence = 'none',
     DateTime? recurrenceEndDate,
     int colorValue = 0xFFFFD700,
@@ -678,6 +696,7 @@ PANGGILAN TOOL AUTOMATION:
           ..date = s.date
           ..groupId = groupId
           ..description = description
+          ..focusGoalLink = focusGoalLink
           ..recurrence = recurrence
           ..recurrenceEndDate = recurrenceEndDate
           ..colorValue = colorValue
@@ -701,6 +720,10 @@ PANGGILAN TOOL AUTOMATION:
     final startMin = (args['start_minute'] as num?)?.toInt() ?? 0;
     final duration = (args['duration_minutes'] as num?)?.toInt() ?? 60;
     final description = args['description'] as String? ?? '';
+    final requestedGoalLink = args['focus_goal_link'] as String? ?? '';
+    final focusGoalLink = requestedGoalLink == focusGoal
+        ? focusGoal
+        : '';
     final recurrence = args['recurrence'] as String? ?? 'none';
 
     final id = await _createSpan(
@@ -710,6 +733,7 @@ PANGGILAN TOOL AUTOMATION:
       startMin: startMin,
       durationMinutes: duration,
       description: description,
+      focusGoalLink: focusGoalLink,
       recurrence: recurrence,
     );
     return {'success': true, 'id': id, 'title': title};
@@ -725,6 +749,12 @@ PANGGILAN TOOL AUTOMATION:
     if (args['title'] != null) existing.title = args['title'] as String;
     if (args['description'] != null) {
       existing.description = args['description'] as String;
+    }
+    if (args['focus_goal_link'] is String) {
+      final requestedGoalLink = args['focus_goal_link'] as String;
+      existing.focusGoalLink = requestedGoalLink == focusGoal
+          ? focusGoal
+          : '';
     }
     if (args['recurrence'] != null) {
       existing.recurrence = args['recurrence'] as String;
@@ -805,6 +835,7 @@ PANGGILAN TOOL AUTOMATION:
             ..date = s.date
             ..groupId = groupId
             ..description = existing.description
+            ..focusGoalLink = existing.focusGoalLink
             ..recurrence = existing.recurrence
             ..colorValue = existing.colorValue
             ..importance = existing.importance
@@ -1034,6 +1065,7 @@ PANGGILAN TOOL AUTOMATION:
           'Latihan untuk $goalTitle. Total rencana $totalTargetHours jam sebelum ${_fmtDate(targetDate)}.',
       recurrence: daysPerWeek == 7 ? 'daily' : 'weekday',
       recurrenceEndDate: practiceDates.last,
+      focusGoalLink: goalTitle == focusGoal ? focusGoal : '',
       colorValue: 0xFF4A9EFF,
     );
 

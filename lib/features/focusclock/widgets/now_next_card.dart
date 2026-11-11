@@ -105,6 +105,15 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
   Widget build(BuildContext context) {
     final is24h = ref.watch(settingsProvider.select((s) => s.valueOrNull?.is24hTime ?? false));
     final focusGoal = ref.watch(settingsProvider.select((s) => s.valueOrNull?.focusGoal ?? ''));
+    final goalStepCount = focusGoal.isEmpty
+        ? 0
+        : widget.activities
+              .where((activity) => activity.focusGoalLink == focusGoal)
+              .map((activity) => activity.groupId == null
+                  ? 'activity:${activity.id}'
+                  : 'group:${activity.groupId}')
+              .toSet()
+              .length;
     final half = halfOfNow(widget.now);
     final nowMinOfHalf = minuteOfHalf(widget.now);
     final isToday = dateOnly(widget.date) == dateOnly(widget.now);
@@ -158,7 +167,11 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _GoalCue(goal: focusGoal, onEdit: () => _editGoal(focusGoal)),
+          _GoalCue(
+            goal: focusGoal,
+            stepCount: goalStepCount,
+            onEdit: () => _editGoal(focusGoal),
+          ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: AppPalette.stroke),
           const SizedBox(height: 10),
@@ -170,8 +183,17 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               // Left: Current State
               Expanded(
                 child: currentActivity != null
-                    ? _buildCurrentFocusPill(currentActivity, nowMinOfHalf)
-                    : _buildFreeTimePill(nextActivity),
+                    ? _buildCurrentFocusPill(
+                        currentActivity,
+                        nowMinOfHalf,
+                        isGoalStep: focusGoal.isNotEmpty &&
+                            currentActivity.focusGoalLink == focusGoal,
+                      )
+                    : _buildFreeTimePill(
+                        nextActivity,
+                        isGoalStep: focusGoal.isNotEmpty &&
+                            nextActivity?.focusGoalLink == focusGoal,
+                      ),
               ),
 
               const SizedBox(width: 12),
@@ -295,7 +317,11 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
     );
   }
 
-  Widget _buildCurrentFocusPill(Activity a, int nowMin) {
+  Widget _buildCurrentFocusPill(
+    Activity a,
+    int nowMin, {
+    required bool isGoalStep,
+  }) {
     final remainingMins = (a.endMinute - nowMin).clamp(0, 720);
     final color = Color(a.colorValue);
 
@@ -326,7 +352,7 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               ),
               const SizedBox(height: 2),
               Text(
-                'Fokus Sekarang • ${remainingMins}m tersisa',
+                '${isGoalStep ? 'Langkah tujuan • ' : ''}Fokus Sekarang • ${remainingMins}m tersisa',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
               ),
             ],
@@ -336,7 +362,10 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
     );
   }
 
-  Widget _buildFreeTimePill(Activity? next) {
+  Widget _buildFreeTimePill(
+    Activity? next, {
+    required bool isGoalStep,
+  }) {
     return Row(
       children: [
         Container(
@@ -362,7 +391,9 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
               ),
               const SizedBox(height: 2),
               Text(
-                next != null ? 'Berikutnya: ${next.title}' : 'Tidak ada jadwal tersisa',
+                next == null
+                    ? 'Tidak ada jadwal tersisa'
+                    : '${isGoalStep ? 'Tujuan • ' : 'Berikutnya: '}${next.title}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 11, color: AppPalette.textDim),
@@ -377,9 +408,14 @@ class _NowNextCardState extends ConsumerState<NowNextCard> {
 }
 
 class _GoalCue extends StatelessWidget {
-  const _GoalCue({required this.goal, required this.onEdit});
+  const _GoalCue({
+    required this.goal,
+    required this.stepCount,
+    required this.onEdit,
+  });
 
   final String goal;
+  final int stepCount;
   final VoidCallback onEdit;
 
   @override
@@ -421,6 +457,18 @@ class _GoalCue extends StatelessWidget {
                         color: hasGoal ? AppPalette.text : AppPalette.textDim,
                       ),
                     ),
+                    if (hasGoal) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        stepCount == 0
+                            ? 'Belum ada langkah terhubung di jadwal ini'
+                            : '$stepCount langkah terhubung di jadwal ini',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppPalette.textDim,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -4,7 +4,11 @@ import 'package:focus_clock/features/focusclock/quick_activity_factory.dart';
 import 'package:focus_clock/features/focusclock/widgets/quick_activity_sheet.dart';
 
 void main() {
-  const draft = QuickActivityDraft(title: 'Study LKS', durationMinutes: 60);
+  const draft = QuickActivityDraft(
+    title: 'Study LKS',
+    durationMinutes: 60,
+    focusGoalLink: 'Menang LKS nasional',
+  );
   final date = DateTime(2026, 11, 10, 18);
   final createdAt = DateTime(2026, 11, 10, 9);
 
@@ -25,6 +29,7 @@ void main() {
     expect(activity.endMinute, 690);
     expect(activity.date, DateTime(2026, 11, 10));
     expect(activity.createdAt, createdAt);
+    expect(activity.focusGoalLink, 'Menang LKS nasional');
   });
 
   test('stores absolute 24-hour time in its half-day partition', () {

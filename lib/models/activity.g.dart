@@ -63,63 +63,68 @@ const ActivitySchema = CollectionSchema(
       name: r'excludedDates',
       type: IsarType.dateTimeList,
     ),
-    r'groupId': PropertySchema(
+    r'focusGoalLink': PropertySchema(
       id: 9,
+      name: r'focusGoalLink',
+      type: IsarType.string,
+    ),
+    r'groupId': PropertySchema(
+      id: 10,
       name: r'groupId',
       type: IsarType.string,
     ),
     r'iconKey': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'iconKey',
       type: IsarType.string,
     ),
     r'importance': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'importance',
       type: IsarType.long,
     ),
     r'isCompleted': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'isCompleted',
       type: IsarType.bool,
     ),
     r'isLocked': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'isLocked',
       type: IsarType.bool,
     ),
     r'isUrgent': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'isUrgent',
       type: IsarType.bool,
     ),
     r'presetId': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'presetId',
       type: IsarType.long,
     ),
     r'recurrence': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'recurrence',
       type: IsarType.string,
     ),
     r'recurrenceEndDate': PropertySchema(
-      id: 20,
+      id: 18,
       name: r'recurrenceEndDate',
       type: IsarType.dateTime,
     ),
     r'startMinute': PropertySchema(
-      id: 17,
+      id: 19,
       name: r'startMinute',
       type: IsarType.long,
     ),
     r'title': PropertySchema(
-      id: 18,
+      id: 20,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 19,
+      id: 21,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -173,6 +178,7 @@ int _activityEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.description.length * 3;
   bytesCount += 3 + object.excludedDates.length * 8;
+  bytesCount += 3 + object.focusGoalLink.length * 3;
   {
     final value = object.groupId;
     if (value != null) {
@@ -205,18 +211,19 @@ void _activitySerialize(
   writer.writeLong(offsets[6], object.eisenhowerQuadrant);
   writer.writeLong(offsets[7], object.endMinute);
   writer.writeDateTimeList(offsets[8], object.excludedDates);
-  writer.writeString(offsets[9], object.groupId);
-  writer.writeString(offsets[10], object.iconKey);
-  writer.writeLong(offsets[11], object.importance);
-  writer.writeBool(offsets[12], object.isCompleted);
-  writer.writeBool(offsets[13], object.isLocked);
-  writer.writeBool(offsets[14], object.isUrgent);
-  writer.writeLong(offsets[15], object.presetId);
-  writer.writeString(offsets[16], object.recurrence);
-  writer.writeLong(offsets[17], object.startMinute);
-  writer.writeString(offsets[18], object.title);
-  writer.writeDateTime(offsets[19], object.updatedAt);
-  writer.writeDateTime(offsets[20], object.recurrenceEndDate);
+  writer.writeString(offsets[9], object.focusGoalLink);
+  writer.writeString(offsets[10], object.groupId);
+  writer.writeString(offsets[11], object.iconKey);
+  writer.writeLong(offsets[12], object.importance);
+  writer.writeBool(offsets[13], object.isCompleted);
+  writer.writeBool(offsets[14], object.isLocked);
+  writer.writeBool(offsets[15], object.isUrgent);
+  writer.writeLong(offsets[16], object.presetId);
+  writer.writeString(offsets[17], object.recurrence);
+  writer.writeDateTime(offsets[18], object.recurrenceEndDate);
+  writer.writeLong(offsets[19], object.startMinute);
+  writer.writeString(offsets[20], object.title);
+  writer.writeDateTime(offsets[21], object.updatedAt);
 }
 
 Activity _activityDeserialize(
@@ -236,18 +243,19 @@ Activity _activityDeserialize(
   object.description = reader.readString(offsets[5]);
   object.endMinute = reader.readLong(offsets[7]);
   object.excludedDates = reader.readDateTimeList(offsets[8]) ?? [];
-  object.groupId = reader.readStringOrNull(offsets[9]);
-  object.iconKey = reader.readStringOrNull(offsets[10]);
+  object.focusGoalLink = reader.readString(offsets[9]);
+  object.groupId = reader.readStringOrNull(offsets[10]);
+  object.iconKey = reader.readStringOrNull(offsets[11]);
   object.id = id;
-  object.importance = reader.readLong(offsets[11]);
-  object.isCompleted = reader.readBool(offsets[12]);
-  object.isLocked = reader.readBool(offsets[13]);
-  object.presetId = reader.readLongOrNull(offsets[15]);
-  object.recurrence = reader.readString(offsets[16]);
-  object.startMinute = reader.readLong(offsets[17]);
-  object.title = reader.readString(offsets[18]);
-  object.updatedAt = reader.readDateTime(offsets[19]);
-  object.recurrenceEndDate = reader.readDateTimeOrNull(offsets[20]);
+  object.importance = reader.readLong(offsets[12]);
+  object.isCompleted = reader.readBool(offsets[13]);
+  object.isLocked = reader.readBool(offsets[14]);
+  object.presetId = reader.readLongOrNull(offsets[16]);
+  object.recurrence = reader.readString(offsets[17]);
+  object.recurrenceEndDate = reader.readDateTimeOrNull(offsets[18]);
+  object.startMinute = reader.readLong(offsets[19]);
+  object.title = reader.readString(offsets[20]);
+  object.updatedAt = reader.readDateTime(offsets[21]);
   return object;
 }
 
@@ -278,29 +286,31 @@ P _activityDeserializeProp<P>(
     case 8:
       return (reader.readDateTimeList(offset) ?? []) as P;
     case 9:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 10:
       return (reader.readStringOrNull(offset)) as P;
     case 11:
-      return (reader.readLong(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 12:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 13:
       return (reader.readBool(offset)) as P;
     case 14:
       return (reader.readBool(offset)) as P;
     case 15:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 16:
-      return (reader.readString(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 17:
-      return (reader.readLong(offset)) as P;
-    case 18:
       return (reader.readString(offset)) as P;
-    case 19:
-      return (reader.readDateTime(offset)) as P;
-    case 20:
+    case 18:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 19:
+      return (reader.readLong(offset)) as P;
+    case 20:
+      return (reader.readString(offset)) as P;
+    case 21:
+      return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -1234,6 +1244,140 @@ extension ActivityQueryFilter
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      focusGoalLinkGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'focusGoalLink',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      focusGoalLinkStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'focusGoalLink',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition> focusGoalLinkMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'focusGoalLink',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      focusGoalLinkIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'focusGoalLink',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      focusGoalLinkIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'focusGoalLink',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> groupIdIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -1861,6 +2005,80 @@ extension ActivityQueryFilter
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'recurrenceEndDate',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'recurrenceEndDate',
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'recurrenceEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'recurrenceEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'recurrenceEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterFilterCondition>
+      recurrenceEndDateBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'recurrenceEndDate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterFilterCondition> startMinuteEqualTo(
       int value) {
     return QueryBuilder.apply(this, (query) {
@@ -2203,6 +2421,18 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByFocusGoalLink() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'focusGoalLink', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByFocusGoalLinkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'focusGoalLink', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByGroupId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'groupId', Sort.asc);
@@ -2296,6 +2526,18 @@ extension ActivityQuerySortBy on QueryBuilder<Activity, Activity, QSortBy> {
   QueryBuilder<Activity, Activity, QAfterSortBy> sortByRecurrenceDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'recurrence', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByRecurrenceEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurrenceEndDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> sortByRecurrenceEndDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurrenceEndDate', Sort.desc);
     });
   }
 
@@ -2435,6 +2677,18 @@ extension ActivityQuerySortThenBy
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByFocusGoalLink() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'focusGoalLink', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByFocusGoalLinkDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'focusGoalLink', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByGroupId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'groupId', Sort.asc);
@@ -2543,6 +2797,18 @@ extension ActivityQuerySortThenBy
     });
   }
 
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByRecurrenceEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurrenceEndDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QAfterSortBy> thenByRecurrenceEndDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'recurrenceEndDate', Sort.desc);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QAfterSortBy> thenByStartMinute() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'startMinute', Sort.asc);
@@ -2637,6 +2903,14 @@ extension ActivityQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Activity, Activity, QDistinct> distinctByFocusGoalLink(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'focusGoalLink',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Activity, Activity, QDistinct> distinctByGroupId(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2685,6 +2959,12 @@ extension ActivityQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'recurrence', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Activity, Activity, QDistinct> distinctByRecurrenceEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'recurrenceEndDate');
     });
   }
 
@@ -2771,6 +3051,12 @@ extension ActivityQueryProperty
     });
   }
 
+  QueryBuilder<Activity, String, QQueryOperations> focusGoalLinkProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'focusGoalLink');
+    });
+  }
+
   QueryBuilder<Activity, String?, QQueryOperations> groupIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'groupId');
@@ -2816,6 +3102,13 @@ extension ActivityQueryProperty
   QueryBuilder<Activity, String, QQueryOperations> recurrenceProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'recurrence');
+    });
+  }
+
+  QueryBuilder<Activity, DateTime?, QQueryOperations>
+      recurrenceEndDateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'recurrenceEndDate');
     });
   }
 

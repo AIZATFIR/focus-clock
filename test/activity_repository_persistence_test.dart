@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:focus_clock/core/time_math.dart';
 import 'package:focus_clock/data/repositories/activity_repository.dart';
@@ -31,6 +33,7 @@ void main() {
       ..ampmHalf = AmPmHalf.am
       ..date = DateTime(2026, 11, 11)
       ..colorValue = 0xff123456
+      ..focusGoalLink = 'Menang LKS nasional'
       ..recurrence = 'weekly'
       ..recurrenceEndDate = DateTime(2026, 12, 30)
       ..createdAt = DateTime(2026, 11, 10)
@@ -49,7 +52,48 @@ void main() {
 
     expect(restored, hasLength(1));
     expect(restored.single.title, 'Study LKS');
+    expect(restored.single.focusGoalLink, 'Menang LKS nasional');
     expect(restored.single.recurrenceEndDate, DateTime(2026, 12, 30));
+  });
+
+  test('old saved activities load with no goal link', () async {
+    final storage = MemoryFallbackStorage();
+    storage.values['focus_clock.activities.v1'] = jsonEncode({
+      'version': 1,
+      'nextId': 2,
+      'activities': [
+        {
+          'id': 1,
+          'presetId': null,
+          'iconKey': null,
+          'title': 'Old activity',
+          'startMinute': 60,
+          'endMinute': 120,
+          'ampmHalf': 0,
+          'date': '2026-11-11T00:00:00.000',
+          'description': '',
+          'colorValue': 0xff123456,
+          'recurrence': 'none',
+          'recurrenceEndDate': null,
+          'groupId': null,
+          'importance': 0,
+          'deadline': null,
+          'isCompleted': false,
+          'isLocked': false,
+          'excludedDates': [],
+          'createdAt': '2026-11-10T00:00:00.000',
+          'updatedAt': '2026-11-10T00:00:00.000',
+        },
+      ],
+    });
+
+    final restored = await ActivityRepository(
+      null,
+      NotificationService(),
+      fallbackStorage: storage,
+    ).getByDate(DateTime(2026, 11, 11));
+
+    expect(restored.single.focusGoalLink, isEmpty);
   });
 
   test('focus goal survives settings repository recreation', () async {
