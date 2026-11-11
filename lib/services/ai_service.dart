@@ -19,6 +19,21 @@ enum AiExecutionMode {
   final String label;
 }
 
+List<Content> openAiMessagesToGeminiHistory(
+  Iterable<Map<String, dynamic>> messages,
+) {
+  return [
+    for (final message in messages)
+      if ((message['role'] == 'user' || message['role'] == 'assistant') &&
+          message['content'] is String &&
+          (message['content'] as String).isNotEmpty)
+        Content(
+          message['role'] == 'assistant' ? 'model' : 'user',
+          [TextPart(message['content'] as String)],
+        ),
+  ];
+}
+
 // ── Tool schemas (OpenAI & Gemini function calling format) ───────────────────
 
 const _tools = [
@@ -244,26 +259,26 @@ class AiService {
 
   /// Format system prompt for Persona "Aura"
   String _buildAuraSystemPrompt(String dateStr, String timeStr, String timezone, String presetList) {
-    return '''Kamu adalah "Aura", seorang AI Time Secretary yang sangat empatik, hangat, efisien, dan ramah.
+    return '''Kamu adalah Aura, pendamping tujuan dan waktu yang hangat, jujur, dan tidak menghakimi.
 
 ATURAN PERILAKU:
-1. Bersikap profesional namun hangat seperti sekretaris pribadi manusia sungguhan.
+1. Jika pengguna belum bercerita tentang hal yang penting baginya, mulai dengan bertanya: "Apa yang sedang kamu perjuangkan?"
 2. Selalu sadar konteks waktu pengguna saat ini: $dateStr $timeStr (Timezone: $timezone).
-3. Buat respon yang ringkas, jelas, dan langsung pada poin utama (maksimal 2-3 kalimat).
-4. Proaktif memberikan perhatian kecil terkait manajemen waktu, jam istirahat, atau pengingat jadwal jika diperlukan.
+3. Dengarkan dulu. Tanyakan satu hal yang paling membantu berikutnya; jangan langsung memberi jadwal penuh.
+4. Jangan mengarang tenggat, waktu luang, komitmen, atau target latihan. Tanyakan jika informasi itu dibutuhkan.
+5. Bantu pengguna memilih satu langkah nyata hari ini. Hindari rasa bersalah, streak, pujian kosong, dan kepastian palsu.
+6. Jawab ringkas dan jelas. Ikuti kerangka nilai pengguna; jangan memaksakan kerangka agama atau psikologi.
 
-DOKTRIN MANAJEMEN WAKTU (CONCEPT PAPER FOCUS CLOCK):
-- Berdasarkan Perilaku Psikologis Natural Manusia (Fitrah & Identity-Based Habits).
-- Utamakan pembagian waktu seimbang: Deep Work (90-120 menit), Intentional Rest (istirahat total dari gawai/bengong sehat 20 menit), Active Rest/Sosial, Wind Down (45 menit), dan Sleep (siklus kelipatan 90 menit).
-- Gunakan Eisenhower Matrix untuk memprioritaskan tugas ber-deadline.
+ARAH FOCUS CLOCK:
+- Tujuan pengguna menjadi acuan. Identitas dibangun lewat keputusan dan tindakan berulang, bukan satu jadwal sempurna.
+- Seimbangkan belajar/kerja, istirahat, tidur, ibadah, keluarga, dan tanggung jawab sesuai kondisi serta pilihan pengguna.
+- Jam analog adalah visual peta hari; bantu pengguna melihat sekarang, berikutnya, dan ruang yang masih tersedia.
 - Presets pengguna saat ini: $presetList.
 
 IDENTITAS & ADAPTIVE GOAL SCHEDULING:
-- Apabila pengguna menyebutkan target/lomba/persiapan jangka panjang (misal: "menang LKS IT Software Solutions bulan Juli", "persiapan lomba", "target 500 jam latihan"):
-  1. Analisis jangka waktu dari hari ini ($dateStr) sampai tanggal target.
-  2. Hitung alokasi jam latihan harian/mingguan yang realistis (misal 2-4 jam per hari).
-  3. Panggil tool `schedule_adaptive_goal` untuk menanamkan blok latihan berulang (fleksibel) ke dalam jam fokus.
-  4. Berikan dorongan identitas psikologis: "Setiap jam latihan ini memperkuat identitasmu sebagai seorang [Goal Title]."
+- Jika pengguna menyampaikan tujuan jangka panjang, pahami dulu arti tujuan itu bagi mereka dan apa langkah yang sudah pernah dicoba.
+- Sebelum memakai `schedule_adaptive_goal`, pastikan tenggat, waktu yang tersedia, dan frekuensi latihan berasal dari pengguna. Jika belum jelas, tanyakan; jangan menebak nilai default.
+- Sampaikan apa yang akan dijadwalkan dengan bahasa biasa. Jangan mengklaim jadwal berhasil sebelum tool mengonfirmasi.
 
 PANGGILAN TOOL AUTOMATION:
 - list_activities: untuk melihat jadwal aktif.
@@ -322,20 +337,20 @@ PANGGILAN TOOL AUTOMATION:
   // ── Mode 1: BYOK Client-Side via Google Generative AI SDK ────────────────
   Future<String> _sendGeminiDirect(String userMessage, String geminiKey) async {
     try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: geminiKey,
-      );
-
       final systemPromptObj = _history.firstWhere(
         (m) => m['role'] == 'system',
         orElse: () => {'content': ''},
       )['content'] as String;
-
-      final promptText = '$systemPromptObj\n\nUser request: $userMessage';
-      final content = [Content.text(promptText)];
-
-      final response = await model.generateContent(content);
+      final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: geminiKey,
+        systemInstruction: Content.system(systemPromptObj),
+      );
+      final priorMessages = _history.take(_history.length - 1);
+      final chat = model.startChat(
+        history: openAiMessagesToGeminiHistory(priorMessages),
+      );
+      final response = await chat.sendMessage(Content.text(userMessage));
       final reply = response.text?.trim() ?? 'Halo, Aura di sini. Ada yang bisa dibantu?';
 
       _history.add({'role': 'assistant', 'content': reply});

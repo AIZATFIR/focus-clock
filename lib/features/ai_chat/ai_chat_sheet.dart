@@ -331,7 +331,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
                   onSubmitted: (_) => _send(),
                   maxLines: null,
                   decoration: InputDecoration(
-                    hintText: 'Tanya Aura atau jadwalkan sesuatu...',
+                    hintText: 'Ceritakan tujuanmu atau apa yang sedang terasa berat...',
                     hintStyle: const TextStyle(
                         color: AppPalette.textDim, fontSize: 14),
                     filled: true,
@@ -515,30 +515,26 @@ class _EmptyState extends StatelessWidget {
             const Icon(Icons.auto_awesome, size: 48, color: AppPalette.accent),
             const SizedBox(height: 12),
             const Text(
-              'Aura - AI Time Secretary',
+              'Apa yang sedang kamu perjuangkan?',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Empati, Efisien, & Berbasis Psikologis Manusia',
+              'Ceritakan dengan bahasamu sendiri. Kita cari langkah nyata yang cocok untuk hari ini.',
+              textAlign: TextAlign.center,
               style: TextStyle(color: AppPalette.textDim, fontSize: 13),
             ),
             const SizedBox(height: 16),
-            ...const [
-              '"Aura, buatkan Fitrah Blueprint untuk hari ini"',
-              '"Tambah gym jam 6 pagi besok"',
-              '"Geser jadwal meeting ke jam 3 sore"',
-              '"Apa kegiatan utama saya hari ini?"',
-            ].map((s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Text(
-                    s,
-                    style: const TextStyle(
-                        color: AppPalette.accent,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic),
-                  ),
-                )),
+            const Text(
+              'Contoh: “Aku ingin menang LKS nasional IT Software Solution.”',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: AppPalette.accent,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ],
         ),
       ),
