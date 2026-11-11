@@ -8,6 +8,7 @@ import '../data/repositories/blueprint_repository.dart';
 import '../data/repositories/preset_repository.dart';
 import '../data/repositories/settings_repository.dart';
 import '../data/repositories/task_repository.dart';
+import '../data/storage/fallback_storage.dart';
 import '../models/activity.dart';
 import '../models/app_settings.dart';
 import '../models/preset.dart';
@@ -23,6 +24,9 @@ import '../services/secure_storage_service.dart';
 final isarProvider = Provider<Isar?>((_) => null);
 final notificationServiceProvider =
     Provider<NotificationService>((_) => throw UnimplementedError());
+final fallbackStorageProvider = Provider<FallbackStorage>(
+  (_) => SharedPreferencesFallbackStorage(),
+);
 
 final presetRepoProvider = Provider<PresetRepository>(
   (ref) => PresetRepository(ref.watch(isarProvider)),
@@ -42,6 +46,7 @@ final activityRepoProvider = Provider<ActivityRepository>(
   (ref) => ActivityRepository(
     ref.watch(isarProvider),
     ref.watch(notificationServiceProvider),
+    fallbackStorage: ref.watch(fallbackStorageProvider),
   ),
 );
 
@@ -50,7 +55,10 @@ final taskRepoProvider = Provider<TaskRepository>(
 );
 
 final settingsRepoProvider = Provider<SettingsRepository>(
-  (ref) => SettingsRepository(ref.watch(isarProvider)),
+  (ref) => SettingsRepository(
+    ref.watch(isarProvider),
+    fallbackStorage: ref.watch(fallbackStorageProvider),
+  ),
 );
 
 final settingsProvider = StreamProvider<AppSettings>(

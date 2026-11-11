@@ -1,21 +1,123 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:isar/isar.dart';
 
 import '../../core/time_math.dart';
 import '../../models/activity.dart';
 import '../../services/notification_service.dart';
+import '../storage/fallback_storage.dart';
 
 class ActivityRepository {
-  ActivityRepository(this._isar, this._notifier);
+  ActivityRepository(
+    this._isar,
+    this._notifier, {
+    FallbackStorage? fallbackStorage,
+  }) : _fallbackStorage = fallbackStorage;
+  static const _storageKey = 'focus_clock.activities.v1';
   final Isar? _isar;
   final NotificationService _notifier;
+  final FallbackStorage? _fallbackStorage;
 
   // In-Memory Fallback when Isar is unavailable (Web without IndexedDB/WASM or test runner)
   final Map<int, Activity> _memStore = {};
   int _memIdCounter = 1;
   final StreamController<void> _memController =
       StreamController<void>.broadcast();
+  bool _memoryLoaded = false;
+  Future<void>? _memoryLoad;
+  Future<void> _memoryWriteQueue = Future<void>.value();
+
+  Future<void> _ensureMemoryLoaded() async {
+    if (_memoryLoaded || _fallbackStorage == null) return;
+    _memoryLoad ??= () async {
+      final raw = await _fallbackStorage.read(_storageKey);
+      if (raw != null) {
+        final envelope = jsonDecode(raw);
+        if (envelope is! Map<String, dynamic> ||
+            envelope['version'] != 1 ||
+            envelope['activities'] is! List) {
+          throw const FormatException('Unsupported saved activities format.');
+        }
+        for (final item in envelope['activities'] as List) {
+          final activity = _activityFromJson(item);
+          _memStore[activity.id] = activity;
+        }
+        _memIdCounter = envelope['nextId'] as int? ?? 1;
+      }
+      _memoryLoaded = true;
+    }();
+    await _memoryLoad;
+  }
+
+  Future<void> _persistMemory() {
+    if (_fallbackStorage == null) return Future<void>.value();
+    final snapshot = jsonEncode({
+      'version': 1,
+      'nextId': _memIdCounter,
+      'activities': _memStore.values.map(_activityToJson).toList(),
+    });
+    _memoryWriteQueue = _memoryWriteQueue.then(
+      (_) => _fallbackStorage.write(_storageKey, snapshot),
+    );
+    return _memoryWriteQueue;
+  }
+
+  Map<String, Object?> _activityToJson(Activity a) => {
+    'id': a.id,
+    'presetId': a.presetId,
+    'iconKey': a.iconKey,
+    'title': a.title,
+    'startMinute': a.startMinute,
+    'endMinute': a.endMinute,
+    'ampmHalf': a.ampmHalf.index,
+    'date': a.date.toIso8601String(),
+    'description': a.description,
+    'colorValue': a.colorValue,
+    'recurrence': a.recurrence,
+    'recurrenceEndDate': a.recurrenceEndDate?.toIso8601String(),
+    'groupId': a.groupId,
+    'importance': a.importance,
+    'deadline': a.deadline?.toIso8601String(),
+    'isCompleted': a.isCompleted,
+    'isLocked': a.isLocked,
+    'excludedDates': a.excludedDates.map((d) => d.toIso8601String()).toList(),
+    'createdAt': a.createdAt.toIso8601String(),
+    'updatedAt': a.updatedAt.toIso8601String(),
+  };
+
+  Activity _activityFromJson(Object? value) {
+    if (value is! Map<String, dynamic>) {
+      throw const FormatException('Saved activity is malformed.');
+    }
+    DateTime? date(String key) =>
+        value[key] == null ? null : DateTime.parse(value[key] as String);
+    final half = value['ampmHalf'] as int? ?? 0;
+    return Activity()
+      ..id = value['id'] as int
+      ..presetId = value['presetId'] as int?
+      ..iconKey = value['iconKey'] as String?
+      ..title = value['title'] as String
+      ..startMinute = value['startMinute'] as int
+      ..endMinute = value['endMinute'] as int
+      ..ampmHalf = AmPmHalf.values[half]
+      ..date = DateTime.parse(value['date'] as String)
+      ..description = value['description'] as String? ?? ''
+      ..colorValue = value['colorValue'] as int
+      ..recurrence = value['recurrence'] as String? ?? 'none'
+      ..recurrenceEndDate = date('recurrenceEndDate')
+      ..groupId = value['groupId'] as String?
+      ..importance = value['importance'] as int? ?? 0
+      ..deadline = date('deadline')
+      ..isCompleted = value['isCompleted'] as bool? ?? false
+      ..isLocked = value['isLocked'] as bool? ?? false
+      ..excludedDates = (value['excludedDates'] as List? ?? const [])
+          .cast<String>()
+          .map(DateTime.parse)
+          .toList()
+      ..createdAt = DateTime.parse(value['createdAt'] as String)
+      ..updatedAt = DateTime.parse(value['updatedAt'] as String);
+  }
 
   Stream<List<Activity>> watchByDateAndHalf(DateTime date, AmPmHalf half) {
     final d = dateOnly(date);
@@ -53,6 +155,7 @@ class ActivityRepository {
     DateTime targetDate, {
     AmPmHalf? half,
   }) async* {
+    await _ensureMemoryLoaded();
     Future<List<Activity>> query() async {
       final list = _memStore.values.where((a) {
         if (dateOnly(a.date) != targetDate) return false;
@@ -84,6 +187,7 @@ class ActivityRepository {
     DateTime targetDate, {
     AmPmHalf? half,
   }) async {
+    if (_isar == null) await _ensureMemoryLoaded();
     final recurring = await _getRecurring(targetDate, half: half);
     final existingTitles = direct
         .map((a) => '${a.title}_${a.startMinute}')
@@ -165,10 +269,12 @@ class ActivityRepository {
     a.date = dateOnly(a.date);
     a.updatedAt = DateTime.now();
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       if (a.id == Isar.autoIncrement || a.id <= 0) {
         a.id = _memIdCounter++;
       }
       _memStore[a.id] = a;
+      await _persistMemory();
       _memController.add(null);
       return a.id;
     }
@@ -181,7 +287,16 @@ class ActivityRepository {
   Future<void> deleteSingleInstance(Activity a, DateTime targetDate) async {
     final target = dateOnly(targetDate);
     if (_isar == null) {
-      _memStore.remove(a.id);
+      await _ensureMemoryLoaded();
+      final stored = _memStore[a.id];
+      if (stored != null && stored.recurrence != 'none') {
+        if (!stored.excludedDates.any((d) => dateOnly(d) == target)) {
+          stored.excludedDates = [...stored.excludedDates, target];
+        }
+      } else {
+        _memStore.remove(a.id);
+      }
+      await _persistMemory();
       _memController.add(null);
       return;
     }
@@ -226,9 +341,11 @@ class ActivityRepository {
   /// Toggle lock status of [a].
   Future<void> toggleLock(Activity a, bool locked) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       final memAct = _memStore[a.id];
       if (memAct != null) {
         memAct.isLocked = locked;
+        await _persistMemory();
         _memController.add(null);
       }
       return;
@@ -242,6 +359,7 @@ class ActivityRepository {
 
   Future<List<Activity>> getGroup(String groupId) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       return _memStore.values.where((a) => a.groupId == groupId).toList();
     }
     return _isar.activitys
@@ -264,6 +382,7 @@ class ActivityRepository {
       s.updatedAt = now;
     }
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       if (original.groupId != null) {
         _memStore.removeWhere((_, a) => a.groupId == original.groupId);
       } else {
@@ -275,6 +394,7 @@ class ActivityRepository {
         }
         _memStore[s.id] = s;
       }
+      await _persistMemory();
       _memController.add(null);
       return;
     }
@@ -306,11 +426,13 @@ class ActivityRepository {
   /// Delete activity; if it belongs to a group, delete every segment.
   Future<void> deleteGroupOf(Activity a) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       if (a.groupId == null) {
         _memStore.remove(a.id);
       } else {
         _memStore.removeWhere((_, act) => act.groupId == a.groupId);
       }
+      await _persistMemory();
       _memController.add(null);
       return;
     }
@@ -329,7 +451,9 @@ class ActivityRepository {
 
   Future<bool> delete(int id) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       _memStore.remove(id);
+      await _persistMemory();
       _memController.add(null);
       return true;
     }
@@ -339,7 +463,10 @@ class ActivityRepository {
   }
 
   Future<Activity?> get(int id) async {
-    if (_isar == null) return _memStore[id];
+    if (_isar == null) {
+      await _ensureMemoryLoaded();
+      return _memStore[id];
+    }
     return _isar.activitys.get(id);
   }
 
@@ -349,11 +476,13 @@ class ActivityRepository {
     final monday = d.subtract(Duration(days: d.weekday - 1));
     final sunday = monday.add(const Duration(days: 6));
     if (_isar == null) {
-      return Stream.value(
-        _memStore.values.where((a) {
-          final ad = dateOnly(a.date);
-          return !ad.isBefore(monday) && !ad.isAfter(sunday);
-        }).toList(),
+      return Stream.fromFuture(
+        _ensureMemoryLoaded().then(
+          (_) => _memStore.values.where((a) {
+            final ad = dateOnly(a.date);
+            return !ad.isBefore(monday) && !ad.isAfter(sunday);
+          }).toList(),
+        ),
       );
     }
     return _isar.activitys
@@ -370,11 +499,13 @@ class ActivityRepository {
     final today = dateOnly(DateTime.now());
     final end = today.add(Duration(days: days));
     if (_isar == null) {
-      return Stream.value(
-        _memStore.values.where((a) {
-          final ad = dateOnly(a.date);
-          return !ad.isBefore(today) && !ad.isAfter(end);
-        }).toList(),
+      return Stream.fromFuture(
+        _ensureMemoryLoaded().then(
+          (_) => _memStore.values.where((a) {
+            final ad = dateOnly(a.date);
+            return !ad.isBefore(today) && !ad.isAfter(end);
+          }).toList(),
+        ),
       );
     }
     return _isar.activitys
@@ -388,9 +519,11 @@ class ActivityRepository {
 
   Future<void> markComplete(Activity activity, bool done) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       final act = _memStore[activity.id];
       if (act != null) {
         act.isCompleted = done;
+        await _persistMemory();
         _memController.add(null);
       }
       return;
@@ -412,9 +545,11 @@ class ActivityRepository {
 
   Future<void> setImportance(Activity activity, int importance) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       final act = _memStore[activity.id];
       if (act != null) {
         act.importance = importance;
+        await _persistMemory();
         _memController.add(null);
       }
       return;
@@ -436,9 +571,11 @@ class ActivityRepository {
 
   Future<void> setDeadline(Activity activity, DateTime? deadline) async {
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       final act = _memStore[activity.id];
       if (act != null) {
         act.deadline = deadline;
+        await _persistMemory();
         _memController.add(null);
       }
       return;
@@ -480,6 +617,7 @@ class ActivityRepository {
   Future<List<Activity>> getByDate(DateTime date) async {
     final d = dateOnly(date);
     if (_isar == null) {
+      await _ensureMemoryLoaded();
       final list = _memStore.values
           .where((a) => dateOnly(a.date) == d)
           .toList();
