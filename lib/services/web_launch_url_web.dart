@@ -39,6 +39,7 @@ void writeWebFocusSessionState(String sessionId, String state) {
     queryParameters: {
       ...current.queryParameters,
       'startedAt': progress['startedAt'].toString(),
+      'savedAt': progress['savedAt'].toString(),
       'remaining': progress['remainingSeconds'].toString(),
       'paused': progress['isPaused'].toString(),
     },
@@ -57,6 +58,7 @@ void clearWebFocusSessionState(String sessionId) {
   if (current.queryParameters['sessionId'] != sessionId) return;
   final params = {...current.queryParameters}
     ..remove('startedAt')
+    ..remove('savedAt')
     ..remove('remaining')
     ..remove('paused');
   web.window.history.replaceState(

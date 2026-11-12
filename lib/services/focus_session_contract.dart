@@ -14,6 +14,7 @@ class FocusSessionRequest {
   final String? sourceHabitKey;
   final String? sourceSessionId;
   final int? sourceRemainingSeconds;
+  final DateTime? sourceRemainingAt;
   final DateTime? sourceStartedAt;
   final bool? sourcePaused;
 
@@ -26,6 +27,7 @@ class FocusSessionRequest {
     this.sourceHabitKey,
     this.sourceSessionId,
     this.sourceRemainingSeconds,
+    this.sourceRemainingAt,
     this.sourceStartedAt,
     this.sourcePaused,
   });
@@ -40,6 +42,7 @@ class FocusSessionRequest {
     'sourceHabitKey': sourceHabitKey,
     'sourceSessionId': sourceSessionId,
     'sourceRemainingSeconds': sourceRemainingSeconds,
+    'sourceRemainingAt': sourceRemainingAt?.toIso8601String(),
     'sourceStartedAt': sourceStartedAt?.toIso8601String(),
     'sourcePaused': sourcePaused,
   };
@@ -56,6 +59,9 @@ class FocusSessionRequest {
       sourceHabitKey: json['sourceHabitKey'] as String?,
       sourceSessionId: json['sourceSessionId'] as String?,
       sourceRemainingSeconds: json['sourceRemainingSeconds'] as int?,
+      sourceRemainingAt: DateTime.tryParse(
+        json['sourceRemainingAt'] as String? ?? '',
+      ),
       sourceStartedAt: DateTime.tryParse(
         json['sourceStartedAt'] as String? ?? '',
       ),
@@ -110,6 +116,18 @@ class FocusSessionContract {
   static const String version = 'v1';
   static const String schemeFocusClock = 'focusclock';
   static const String schemeSadar = 'sadar';
+
+  static int restoreRemainingSeconds({
+    required int remainingSeconds,
+    required DateTime savedAt,
+    required DateTime now,
+    required int maxSeconds,
+    required bool isPaused,
+  }) {
+    if (isPaused) return remainingSeconds.clamp(0, maxSeconds);
+    final elapsed = now.difference(savedAt).inSeconds.clamp(0, maxSeconds);
+    return (remainingSeconds - elapsed).clamp(0, maxSeconds);
+  }
 
   /// Generates URI for launching a Focus Clock session from Sadar
   static Uri buildFocusClockUri(FocusSessionRequest request) {
@@ -180,6 +198,8 @@ class FocusSessionContract {
     final sourceRemainingSeconds = remainingValue == null
         ? null
         : int.tryParse(remainingValue);
+    final remainingAtValue = uri.queryParameters['savedAt'];
+    final remainingAtTimestamp = int.tryParse(remainingAtValue ?? '');
     final pausedValue = uri.queryParameters['paused'];
     final sourcePaused = pausedValue == null
         ? null
@@ -200,6 +220,12 @@ class FocusSessionContract {
       return null;
     }
     if ((remainingValue != null && sourceRemainingSeconds == null) ||
+        (remainingAtValue != null && remainingAtTimestamp == null) ||
+        (remainingAtTimestamp != null &&
+            remainingAtTimestamp >
+                DateTime.now()
+                    .add(const Duration(minutes: 5))
+                    .millisecondsSinceEpoch) ||
         (sourceRemainingSeconds != null &&
             (sourceRemainingSeconds < 0 ||
                 sourceRemainingSeconds > minutes * 60)) ||
@@ -241,6 +267,9 @@ class FocusSessionContract {
       sourceHabitKey: sourceHabitKey,
       sourceSessionId: sourceSessionId,
       sourceRemainingSeconds: sourceRemainingSeconds,
+      sourceRemainingAt: remainingAtTimestamp == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(remainingAtTimestamp),
       sourceStartedAt: startedAtTimestamp == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(startedAtTimestamp),

@@ -9,6 +9,7 @@ void main() {
         title: 'Deep Coding',
         targetMinutes: 45,
         requestedAt: DateTime(2026, 9, 11, 10, 30),
+        sourceRemainingAt: DateTime(2026, 9, 11, 10, 29),
       );
 
       final json = req.toJson();
@@ -22,6 +23,7 @@ void main() {
       expect(restored.title, req.title);
       expect(restored.targetMinutes, req.targetMinutes);
       expect(restored.requestedAt, req.requestedAt);
+      expect(restored.sourceRemainingAt, req.sourceRemainingAt);
     });
 
     test('FocusSessionResult JSON roundtrip', () {
@@ -104,7 +106,7 @@ void main() {
           'https://focus-clock-web.vercel.app/?task=Belajar%20LKS'
           '&duration=45&autoStart=true&habitKey=habit-8'
           '&sessionId=fc-abc123&timestamp=1794441600000'
-          '&remaining=92&paused=true'
+          '&remaining=92&paused=true&savedAt=1794441601000'
           '&callback=https%3A%2F%2Fsadar-web.vercel.app%2F',
         ),
       );
@@ -117,6 +119,10 @@ void main() {
       expect(request.sourceHabitKey, 'habit-8');
       expect(request.sourceSessionId, 'fc-abc123');
       expect(request.sourceRemainingSeconds, 92);
+      expect(
+        request.sourceRemainingAt,
+        DateTime.fromMillisecondsSinceEpoch(1794441601000),
+      );
       expect(request.sourcePaused, isTrue);
       expect(
         request.sourceStartedAt,
@@ -198,6 +204,45 @@ void main() {
         isNull,
       );
     });
+
+    test(
+      'restores running timer from saved time and keeps paused time fixed',
+      () {
+        final savedAt = DateTime(2026, 11, 12, 9);
+        final now = savedAt.add(const Duration(seconds: 17));
+
+        expect(
+          FocusSessionContract.restoreRemainingSeconds(
+            remainingSeconds: 90,
+            savedAt: savedAt,
+            now: now,
+            maxSeconds: 120,
+            isPaused: false,
+          ),
+          73,
+        );
+        expect(
+          FocusSessionContract.restoreRemainingSeconds(
+            remainingSeconds: 90,
+            savedAt: savedAt,
+            now: now,
+            maxSeconds: 120,
+            isPaused: true,
+          ),
+          90,
+        );
+        expect(
+          FocusSessionContract.restoreRemainingSeconds(
+            remainingSeconds: 10,
+            savedAt: savedAt,
+            now: now,
+            maxSeconds: 120,
+            isPaused: false,
+          ),
+          0,
+        );
+      },
+    );
 
     test('buildSadarCompletedUri and parseSadarCompletedUri roundtrip', () {
       final res = FocusSessionResult(

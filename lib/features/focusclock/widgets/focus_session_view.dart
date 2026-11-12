@@ -141,18 +141,35 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       if (encoded != null) {
         final state = jsonDecode(encoded) as Map<String, dynamic>;
         final startedAt = state['startedAt'];
+        final savedAt = state['savedAt'];
         final remainingSeconds = state['remainingSeconds'];
         if (state['totalSeconds'] != _totalSeconds ||
             startedAt is! int ||
             startedAt <= 0 ||
             startedAt > DateTime.now().millisecondsSinceEpoch ||
+            (savedAt != null &&
+                (savedAt is! int ||
+                    savedAt <= 0 ||
+                    savedAt >
+                        DateTime.now()
+                            .add(const Duration(minutes: 5))
+                            .millisecondsSinceEpoch)) ||
             remainingSeconds is! int ||
             remainingSeconds < 0 ||
             remainingSeconds > _totalSeconds ||
             state['isPaused'] is! bool) {
           throw const FormatException('Invalid saved focus session.');
         }
-        return state;
+        final remainingNow = savedAt == null
+            ? remainingSeconds
+            : FocusSessionContract.restoreRemainingSeconds(
+                remainingSeconds: remainingSeconds,
+                savedAt: DateTime.fromMillisecondsSinceEpoch(savedAt as int),
+                now: DateTime.now(),
+                maxSeconds: _totalSeconds,
+                isPaused: state['isPaused'] as bool,
+              );
+        return {...state, 'remainingSeconds': remainingNow};
       }
     } catch (error) {
       _clearWebSessionState();
@@ -172,11 +189,15 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
           request.requestedAt.millisecondsSinceEpoch,
       'remainingSeconds': remainingSeconds == null
           ? _totalSeconds
-          : (request.sourcePaused == true || sourceStartedAt == null
+          : (request.sourceRemainingAt == null
                 ? remainingSeconds
-                : (remainingSeconds -
-                          DateTime.now().difference(sourceStartedAt).inSeconds)
-                      .clamp(0, _totalSeconds)),
+                : FocusSessionContract.restoreRemainingSeconds(
+                    remainingSeconds: remainingSeconds,
+                    savedAt: request.sourceRemainingAt!,
+                    now: DateTime.now(),
+                    maxSeconds: _totalSeconds,
+                    isPaused: request.sourcePaused ?? false,
+                  )),
       'totalSeconds': _totalSeconds,
       'isPaused': request.sourcePaused ?? false,
     };
@@ -190,6 +211,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
         sessionId,
         jsonEncode({
           'startedAt': _sessionStartedAt.millisecondsSinceEpoch,
+          'savedAt': DateTime.now().millisecondsSinceEpoch,
           'remainingSeconds': _remainingSeconds,
           'totalSeconds': _totalSeconds,
           'isPaused': _isPaused,
