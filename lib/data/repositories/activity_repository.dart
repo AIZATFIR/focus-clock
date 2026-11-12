@@ -286,6 +286,50 @@ class ActivityRepository {
     return id;
   }
 
+  /// Insert a set of new activities together so callers cannot leave a partial
+  /// schedule behind when one database write fails.
+  Future<List<int>> insertAll(List<Activity> activities) async {
+    if (activities.isEmpty) return const [];
+    final now = DateTime.now();
+    for (final activity in activities) {
+      if (activity.id != Isar.autoIncrement && activity.id > 0) {
+        throw ArgumentError('insertAll only accepts new activities.');
+      }
+      activity.date = dateOnly(activity.date);
+      activity.updatedAt = now;
+    }
+
+    if (_isar == null) {
+      await _ensureMemoryLoaded();
+      final firstId = _memIdCounter;
+      for (final activity in activities) {
+        activity.id = _memIdCounter++;
+        _memStore[activity.id] = activity;
+      }
+      try {
+        await _persistMemory();
+      } catch (_) {
+        for (var i = 0; i < activities.length; i++) {
+          _memStore.remove(firstId + i);
+          activities[i].id = Isar.autoIncrement;
+        }
+        _memIdCounter = firstId;
+        rethrow;
+      }
+      _memController.add(null);
+      return activities.map((activity) => activity.id).toList();
+    }
+
+    final ids = await _isar.writeTxn(() => _isar.activitys.putAll(activities));
+    final scheduledGroups = <String>{};
+    for (final activity in activities) {
+      final groupId = activity.groupId;
+      if (groupId != null && !scheduledGroups.add(groupId)) continue;
+      await _notifier.scheduleForActivity(activity, leadMinutes: 1);
+    }
+    return ids;
+  }
+
   /// Delete only a single instance of a recurring activity for [targetDate].
   Future<void> deleteSingleInstance(Activity a, DateTime targetDate) async {
     final target = dateOnly(targetDate);

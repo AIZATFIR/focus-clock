@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:focus_clock/data/repositories/activity_repository.dart';
 import 'package:focus_clock/data/repositories/preset_repository.dart';
+import 'package:focus_clock/core/time_math.dart';
+import 'package:focus_clock/models/activity.dart';
 import 'package:focus_clock/services/ai_service.dart';
 import 'package:focus_clock/services/gemini_tool_adapter.dart';
 import 'package:focus_clock/services/notification_service.dart';
@@ -201,6 +203,84 @@ void main() {
     expect(activities, hasLength(1));
     expect(activities.single.focusGoalLink, 'Menang LKS nasional');
   });
+
+  test(
+    'does not partially apply a blueprint when a later block conflicts',
+    () async {
+      final repository = ActivityRepository(null, NotificationService());
+      final occupied = Activity()
+        ..title = 'Class'
+        ..startMinute = 7 * 60
+        ..endMinute = 8 * 60
+        ..ampmHalf = AmPmHalf.am
+        ..date = DateTime(2026, 11, 13)
+        ..colorValue = 0xFF000000
+        ..createdAt = DateTime(2026, 11, 12)
+        ..updatedAt = DateTime(2026, 11, 12);
+      await repository.upsert(occupied);
+
+      var requestCount = 0;
+      final service = AiService(
+        baseUrl: 'https://provider.example/v1',
+        apiKey: 'sk-user-key',
+        model: 'provider-model',
+        activityRepo: repository,
+        presetRepo: PresetRepository(null),
+        secureStorage: _FakeAiStorage(),
+        httpClient: MockClient((request) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return http.Response(
+              jsonEncode({
+                'choices': [
+                  {
+                    'message': {
+                      'role': 'assistant',
+                      'tool_calls': [
+                        {
+                          'id': 'call-blueprint',
+                          'type': 'function',
+                          'function': {
+                            'name': 'generate_blueprint',
+                            'arguments': jsonEncode({
+                              'date': '2026-11-13',
+                              'wake_hour': 6,
+                              'sleep_hour': 22,
+                              'goals': ['Menang LKS nasional'],
+                            }),
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'Tinjau draf.'},
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      await service.send('Buat blueprint untuk besok.');
+      final proposal = service.pendingProposals.single;
+      expect(proposal.toolName, 'generate_blueprint');
+      await service.confirmProposal(proposal.id);
+
+      final activities = await repository.getByDate(DateTime(2026, 11, 13));
+      expect(activities, hasLength(1));
+      expect(activities.single.title, 'Class');
+    },
+  );
 
   test(
     'adaptive goal schedule stays a draft until user confirmation',

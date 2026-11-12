@@ -847,15 +847,43 @@ PANGGILAN TOOL AUTOMATION:
       }
     }
 
+    final acts = _buildSpanActivities(
+      title: title,
+      segments: segments,
+      groupId: groupId,
+      description: description,
+      focusGoalLink: focusGoalLink,
+      recurrence: recurrence,
+      recurrenceEndDate: recurrenceEndDate,
+      colorValue: colorValue,
+    );
+    if (acts.length == 1) return _activityRepo.upsert(acts.first);
+    await _activityRepo.replaceSpan(
+      original: Activity()..title = title,
+      segments: acts,
+    );
+    return acts.first.id;
+  }
+
+  List<Activity> _buildSpanActivities({
+    required String title,
+    required List<SpanSegment> segments,
+    required String? groupId,
+    required String description,
+    required String focusGoalLink,
+    required String recurrence,
+    required DateTime? recurrenceEndDate,
+    required int colorValue,
+  }) {
     final now = DateTime.now();
-    final acts = [
-      for (final s in segments)
+    return [
+      for (final segment in segments)
         Activity()
           ..title = title
-          ..startMinute = s.start
-          ..endMinute = s.end
-          ..ampmHalf = s.half
-          ..date = s.date
+          ..startMinute = segment.start
+          ..endMinute = segment.end
+          ..ampmHalf = segment.half
+          ..date = segment.date
           ..groupId = groupId
           ..description = description
           ..focusGoalLink = focusGoalLink
@@ -865,12 +893,6 @@ PANGGILAN TOOL AUTOMATION:
           ..createdAt = now
           ..updatedAt = now,
     ];
-    if (acts.length == 1) return _activityRepo.upsert(acts.first);
-    await _activityRepo.replaceSpan(
-      original: Activity()..title = title,
-      segments: acts,
-    );
-    return acts.first.id;
   }
 
   Future<Map<String, dynamic>> _createActivity(
@@ -1118,19 +1140,73 @@ PANGGILAN TOOL AUTOMATION:
       'color': 0xFF2E2E4E,
     });
 
-    final created = <int>[];
+    final planned = <Activity>[];
     for (final b in blocks) {
-      final id = await _createSpan(
+      final title = b['title'] as String;
+      final startHour = b['start_hour'] as int;
+      final startMin = b['start_minute'] as int;
+      final durationMinutes = b['duration_minutes'] as int;
+      final start = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        startHour,
+        startMin,
+      );
+      final segments = splitSpan(
+        start,
+        start.add(Duration(minutes: durationMinutes)),
+      );
+      final groupId = segments.length > 1 ? const Uuid().v4() : null;
+      final activities = _buildSpanActivities(
         title: b['title'] as String,
-        date: date,
-        startHour: b['start_hour'] as int,
-        startMin: b['start_minute'] as int,
-        durationMinutes: b['duration_minutes'] as int,
+        segments: segments,
+        groupId: groupId,
         description: b['description'] as String,
+        focusGoalLink: '',
+        recurrence: 'none',
+        recurrenceEndDate: null,
         colorValue: b['color'] as int,
       );
-      created.add(id);
+      for (final activity in activities) {
+        final conflicts = await _activityRepo.getConflicting(
+          activity.date,
+          activity.ampmHalf,
+          activity.startMinute,
+          activity.endMinute,
+        );
+        if (conflicts.isNotEmpty) {
+          final conflict = conflicts.first;
+          final conflictStart = _fmtTime(
+            conflict.ampmHalf,
+            conflict.startMinute,
+          );
+          final conflictEnd = _fmtTime(conflict.ampmHalf, conflict.endMinute);
+          throw Exception(
+            'Waktu blueprint "$title" bentrok dengan "${conflict.title}" '
+            '($conflictStart–$conflictEnd). Tidak ada blok yang disimpan.',
+          );
+        }
+        for (final prior in planned) {
+          if (prior.date == activity.date &&
+              prior.ampmHalf == activity.ampmHalf &&
+              rangesOverlap(
+                prior.startMinute,
+                prior.endMinute,
+                activity.startMinute,
+                activity.endMinute,
+              )) {
+            throw Exception(
+              'Blok blueprint "$title" bertabrakan dengan '
+              '"${prior.title}". Tidak ada blok yang disimpan.',
+            );
+          }
+        }
+        planned.add(activity);
+      }
     }
+
+    final created = await _activityRepo.insertAll(planned);
 
     return {
       'success': true,
