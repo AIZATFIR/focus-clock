@@ -7,6 +7,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../core/time_math.dart';
 import '../models/activity.dart';
 import '../providers/providers.dart';
+import 'ai_service.dart';
 import 'secure_storage_service.dart';
 
 final voiceAssistantServiceProvider = Provider<VoiceAssistantService>((ref) {
@@ -190,7 +191,7 @@ class VoiceAssistantService {
       await speak(response);
       return response;
     } catch (e) {
-      final err = 'Aura mengalami masalah: ${e.toString()}';
+      final err = aiUserFacingError(e);
       statusMessage.value = err;
       return err;
     }

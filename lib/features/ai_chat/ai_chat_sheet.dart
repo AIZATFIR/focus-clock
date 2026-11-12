@@ -73,8 +73,7 @@ class _AiChatPanelState extends ConsumerState<AiChatPanel> {
       // Aura Voice Output (TTS)
       ref.read(voiceAssistantServiceProvider).speak(reply);
     } catch (e) {
-      _replaceLast(
-          ChatMessage(role: 'model', text: '❌ Aura error: ${e.toString()}'));
+      _replaceLast(ChatMessage(role: 'model', text: aiUserFacingError(e)));
     } finally {
       if (mounted) setState(() => _sending = false);
       _scrollToBottom();

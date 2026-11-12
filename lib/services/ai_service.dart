@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:http/http.dart' as http;
@@ -21,6 +22,10 @@ enum AiExecutionMode {
   const AiExecutionMode(this.label);
   final String label;
 }
+
+String aiUserFacingError(Object error) => error is TimeoutException
+    ? 'Aura belum mendapat respons dari model. Periksa koneksi atau provider, lalu coba lagi.'
+    : 'Aura belum bisa merespons. Periksa koneksi dan pengaturan AI, lalu coba lagi.';
 
 List<Content> openAiMessagesToGeminiHistory(
   Iterable<Map<String, dynamic>> messages,
@@ -314,6 +319,7 @@ class AiService {
     required ActivityRepository activityRepo,
     required PresetRepository presetRepo,
     this.focusGoal = '',
+    this.requestTimeout = const Duration(seconds: 30),
     AiServiceStorage? secureStorage,
     http.Client? httpClient,
   }) : _activityRepo = activityRepo,
@@ -325,6 +331,7 @@ class AiService {
   final String apiKey;
   final String model;
   final String focusGoal;
+  final Duration requestTimeout;
   final ActivityRepository _activityRepo;
   final PresetRepository _presetRepo;
   final AiServiceStorage _secureStorage;
@@ -334,9 +341,12 @@ class AiService {
     Uri uri, {
     required Map<String, String> headers,
     required String body,
-  }) => _httpClient == null
-      ? http.post(uri, headers: headers, body: body)
-      : _httpClient.post(uri, headers: headers, body: body);
+  }) async {
+    final request = _httpClient == null
+        ? http.post(uri, headers: headers, body: body)
+        : _httpClient.post(uri, headers: headers, body: body);
+    return request.timeout(requestTimeout);
+  }
 
   // History for OpenAI format requests
   final List<Map<String, dynamic>> _history = [];
@@ -589,7 +599,9 @@ PANGGILAN TOOL AUTOMATION:
       final chat = geminiModel.startChat(
         history: openAiMessagesToGeminiHistory(priorMessages),
       );
-      var response = await chat.sendMessage(Content.text(userMessage));
+      var response = await chat
+          .sendMessage(Content.text(userMessage))
+          .timeout(requestTimeout);
       for (var loop = 0; loop < 5; loop++) {
         final calls = response.functionCalls.toList();
         if (calls.isEmpty) break;
@@ -605,7 +617,9 @@ PANGGILAN TOOL AUTOMATION:
             FunctionResponse(call.name, Map<String, Object?>.from(result)),
           );
         }
-        response = await chat.sendMessage(Content.functionResponses(results));
+        response = await chat
+            .sendMessage(Content.functionResponses(results))
+            .timeout(requestTimeout);
       }
       if (response.functionCalls.isNotEmpty) {
         throw StateError('Gemini exceeded the tool-call limit.');

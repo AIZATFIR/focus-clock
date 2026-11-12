@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -28,6 +29,24 @@ class _FakeAiStorage implements AiServiceStorage {
 }
 
 void main() {
+  test('ends a stalled provider request with a timeout', () async {
+    final service = AiService(
+      baseUrl: 'https://provider.example/v1',
+      apiKey: 'sk-user-key',
+      model: 'provider-model',
+      activityRepo: ActivityRepository(null, NotificationService()),
+      presetRepo: PresetRepository(null),
+      secureStorage: _FakeAiStorage(),
+      requestTimeout: const Duration(milliseconds: 10),
+      httpClient: MockClient((_) => Completer<http.Response>().future),
+    );
+
+    await expectLater(
+      service.send('Help me focus'),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
+
   test('sends a configured non-Gemini key directly to its provider', () async {
     final requests = <http.Request>[];
     final service = AiService(
