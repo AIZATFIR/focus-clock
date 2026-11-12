@@ -44,6 +44,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
   late int _remainingSeconds;
   late int _totalSeconds;
   late final DateTime _sessionStartedAt;
+  DateTime? _runningUntil;
   bool _externalResultSent = false;
 
   @override
@@ -83,6 +84,13 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
       _remainingSeconds = _totalSeconds;
     }
 
+    if (!_isPaused && _remainingSeconds > 0) {
+      _runningUntil = now.add(Duration(seconds: _remainingSeconds));
+    }
+    if (_remainingSeconds == 0 && !_isPaused) {
+      _isCompleted = true;
+    }
+
     PipTimerBridge.setTimerActive(true);
     _syncNotification();
     _startCountdown();
@@ -100,20 +108,26 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     _timer?.cancel();
     _persistWebSessionState();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!_isPaused && mounted) {
+      if (!_isPaused && !_isCompleted && mounted) {
+        final secondsLeft = _runningUntil == null
+            ? 0
+            : _runningUntil!.difference(DateTime.now()).inSeconds;
         setState(() {
-          if (_remainingSeconds > 0) {
-            _remainingSeconds--;
+          if (secondsLeft > 0) {
+            _remainingSeconds = secondsLeft;
             _syncNotification();
           } else {
+            _remainingSeconds = 0;
             _timer?.cancel();
             _isCompleted = true;
+            _runningUntil = null;
             PipTimerBridge.setTimerActive(false);
             PipTimerBridge.cancelLiveNotification();
             HapticFeedback.heavyImpact();
           }
         });
         _persistWebSessionState();
+        if (_isCompleted) unawaited(_sendExternalResult());
       }
     });
   }
@@ -146,6 +160,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     }
 
     final remainingSeconds = request.sourceRemainingSeconds;
+    final sourceStartedAt = request.sourceStartedAt;
     if (remainingSeconds == null &&
         request.sourcePaused == null &&
         request.sourceStartedAt == null) {
@@ -153,9 +168,15 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     }
     return {
       'startedAt':
-          request.sourceStartedAt?.millisecondsSinceEpoch ??
+          sourceStartedAt?.millisecondsSinceEpoch ??
           request.requestedAt.millisecondsSinceEpoch,
-      'remainingSeconds': remainingSeconds ?? _totalSeconds,
+      'remainingSeconds': remainingSeconds == null
+          ? _totalSeconds
+          : (request.sourcePaused == true || sourceStartedAt == null
+                ? remainingSeconds
+                : (remainingSeconds -
+                          DateTime.now().difference(sourceStartedAt).inSeconds)
+                      .clamp(0, _totalSeconds)),
       'totalSeconds': _totalSeconds,
       'isPaused': request.sourcePaused ?? false,
     };
@@ -177,6 +198,28 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
     } catch (error) {
       debugPrint('Could not persist web focus session: $error');
     }
+  }
+
+  void _finishSession() {
+    if (_isCompleted) return;
+    _timer?.cancel();
+    _remainingSeconds = _remainingNow;
+    _isCompleted = true;
+    setState(() {
+      _isPaused = true;
+      _runningUntil = null;
+    });
+    PipTimerBridge.setTimerActive(false);
+    PipTimerBridge.cancelLiveNotification();
+    _persistWebSessionState();
+  }
+
+  int get _remainingNow {
+    if (_isPaused || _runningUntil == null) return _remainingSeconds;
+    return _runningUntil!
+        .difference(DateTime.now())
+        .inSeconds
+        .clamp(0, _totalSeconds);
   }
 
   void _clearWebSessionState() {
@@ -459,7 +502,21 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
               ),
               onPressed: () {
                 HapticFeedback.selectionClick();
-                setState(() => _isPaused = !_isPaused);
+                setState(() {
+                  if (_isPaused) {
+                    _isPaused = false;
+                    _runningUntil = DateTime.now().add(
+                      Duration(seconds: _remainingSeconds),
+                    );
+                  } else {
+                    _remainingSeconds = _remainingNow;
+                    _isPaused = true;
+                    _runningUntil = null;
+                  }
+                });
+                if (_remainingSeconds == 0 && !_isPaused) {
+                  _finishSession();
+                }
                 _persistWebSessionState();
               },
             ),
@@ -485,7 +542,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
               ),
               onPressed: () {
                 HapticFeedback.mediumImpact();
-                setState(() => _isCompleted = true);
+                _finishSession();
               },
             ),
           ],
