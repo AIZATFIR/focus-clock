@@ -57,7 +57,7 @@ The separate `web-app/` implementation and its timer persistence changes remain 
 
 ### Design review
 
-Applied Apple Design principles as general design guidance; this web review does not claim Apple-platform compliance. The restored Flutter screen returns to a large analog dial with a “Waktu Luang” / intention-entry cue, matching the selected historical capture. A persistent `focusGoal` now appears in that existing card and can be edited in place; hard-coded suggestion chips were removed. The goal is not yet connected to individual scheduled activities, and there is no launcher/lock-screen surface in this slice. The earlier static implementation still puts task entry first and initializes an ambient canvas (`web-app/components/tasks-view.js`, `web-app/app.js`); it is no longer the default build. Accessibility, reduced motion, keyboard flow, touch sizing, and screen-reader output still need a focused runtime pass before release claims.
+Applied Apple Design principles as general design guidance; this web review does not claim Apple-platform compliance. The restored Flutter screen returns to a large analog dial with a “Waktu Luang” / intention-entry cue, matching the selected historical capture. A persistent `focusGoal` now appears in that existing card and can be edited in place; hard-coded suggestion chips were removed. Goal linking is supported in quick activity creation and activity details; AI-created activities link only when they match the exact current goal; and the home card labels linked current/next activities and counts linked steps (`now_next_card.dart`, `quick_activity_sheet.dart`, `activity_detail_sheet.dart`, `ai_service.dart`). Focused tests cover these paths. There is still no launcher/lock-screen surface in this slice. The earlier static implementation still puts task entry first and initializes an ambient canvas (`web-app/components/tasks-view.js`, `web-app/app.js`); it is no longer the default build. Accessibility, reduced motion, keyboard flow, touch sizing, and screen-reader output still need a focused runtime pass before release claims.
 
 ## Product and code references
 
@@ -71,9 +71,11 @@ Applied Apple Design principles as general design guidance; this web review does
 
 ## Findings
 
-### P0 — Goal-to-activity relationship remains unfinished
+### P0 — Sadar and Fitrah production URLs do not serve their current web bundles
 
-The restored Flutter web experience now stores and displays one overarching life goal in the existing home card. Scheduled activities and current/next context do not yet explain how they support that goal. Keep the goal visible while exploring that relationship; avoid adding competing panels.
+The current Sadar repository bundle reports version 1.5.2/build 19, but `https://sadar-web.vercel.app/version.json` still reports Focus Clock 0.4.0. The current Fitrah bundle reports version 0.5.5/build 9, but `https://fitrah-web.vercel.app/version.json` returns 404 and the domain serves a Next.js page unrelated to the Flutter bundle. GitHub has no Vercel deployment status for the latest Sadar/Fitrah default-branch commits. Their public URLs therefore do not prove that users can reach the released apps.
+
+The Focus Clock goal-to-activity path is implemented: users can link a quick-added activity to the current goal, edit the link in activity details, and see linked current/next steps and a count in the home card. AI links only an exact match to the current goal. Keep this compact cue; do not add a competing goal panel.
 
 ### P1 — Define the source of truth for platform and product scope
 
@@ -128,6 +130,7 @@ At evaluation time, Git reports a pre-existing local modification in the root `R
 - The clock now supports tap-to-add from empty dial time, a 30-minute default, optional focus-goal linking, and cancel-before-save. Seven focused tests passed for tap-to-add, empty-name blocking, duration selection, goal linking, AM/PM and 24-hour conversion, and the midnight boundary. See [the unclogged-canvas status](../product/FOCUS-CLOCK-UNCLOGGED-CANVAS.md).
 - Aura asks what the user is working toward, keeps provider requests within 30 seconds, maps failures to a user-facing message, migrates legacy BYOK keys into secure storage, and keeps new keys out of the Isar settings record. Thirteen focused AI tests passed.
 - Focus sessions now use a deadline instead of counting timer callbacks, and saved browser snapshots include `savedAt`; restored running sessions subtract elapsed time while paused sessions retain their remaining time. The contract suite passes 11 tests, including recovery and pause behavior; targeted analysis of the changed Dart files is clean.
+- Current verification: the persistence, AI, tap-to-add, and timer-contract suites passed 43 tests total; full `flutter analyze --no-pub` reported no issues.
 - Focus Clock `v0.5.2-preview.9` is published with Android, Linux, Web, and Windows assets. The Vercel status is successful and `focus-clock-web.vercel.app/version.json` reports build 9.
 - The combined download package is [r5](https://github.com/AIZATFIR/focus-clock/releases/tag/v0.5.2-preview.9)'s Focus Clock build alongside Sadar `v1.5.2-preview.3` and Fitrah Launcher `v0.5.5-preview.1`. Its 13 internal checksums and ZIP integrity were verified.
 - Sadar and Fitrah source commits and web bundles are on their GitHub default branches, but those commits have no Vercel status. Sadar's public URL still reports `0.4.0`; `fitrah-web.vercel.app/version.json` returns 404 and the domain serves a page unrelated to the Flutter bundle. Their Vercel projects/domains are not demonstrably connected to these repositories, so Git push alone has not updated either site.
@@ -135,4 +138,4 @@ At evaluation time, Git reports a pre-existing local modification in the root `R
 
 ## Limits
 
-At the original 21 October evaluation, this was a source-oriented review with prior static timer checks, a successful Flutter web build, and static analysis of edited Dart files. The goal editor was not exercised through a save/reload browser session; no deployment, mobile device run, remote repository inspection, or runtime performance measurement had been performed by that evaluation. The 12 November update above records later evidence and limits.
+At the original 21 October evaluation, this was a source-oriented review with prior static timer checks, a successful Flutter web build, and static analysis of edited Dart files. The 12 November update adds focused test and repository/deployment checks. No mobile-device run, accessibility runtime pass, or runtime performance measurement has been recorded; Sadar/Fitrah live routing and cross-app synchronization still need working end-to-end verification.
