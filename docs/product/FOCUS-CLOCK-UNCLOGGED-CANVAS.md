@@ -1,6 +1,6 @@
 # Focus Clock Unclogged Canvas
 
-**Status:** Build direction from owner intent, 2026-11-10
+**Status:** Implemented in the Flutter Focus Clock, 2026-11-12
 **Scope:** The Focus Clock day view and its first activity-entry interaction.
 
 ## Product decision
@@ -9,12 +9,13 @@ Focus Clock is a visual map of how a person is spending a day in service of a ch
 
 Keep the current analog dial, its warm bookpaper palette, and its time arcs. Make drawing optional. A person can tap a time on an empty part of the dial, name the activity, accept a sensible 30-minute default, and place it. The existing drag gesture remains for people who prefer to sketch a longer block. A cancelled entry saves nothing.
 
-## Current friction found in code
+## Implementation status
 
-- `FocusClockTab._onTapUp` only opens an activity when the tapped minute already has a block. A tap on empty time returns without action.
-- Creating a block on blank time requires a drag, then the preset/custom sheet. Dragging must estimate both start and end before the user can say what the activity is.
-- Dismissing that picker after a drag can save a generic `Fokus Xm` activity. This makes cancel behave like save.
-- The lower `NowNextCard` already carries the main goal and current/next activity; keep that as the orientation layer and avoid adding more permanent controls over the clock.
+- Tap on an empty dial ring opens the quick activity composer with the tapped start time and a 30-minute default when it fits. The duration choices are clamped to the visible day segment.
+- The composer requires a name, allows an optional link to the current focus goal, and writes exactly one activity only after “Place on clock”. Dismissal returns no draft and writes nothing.
+- Tapping an existing activity still opens its detail view. Drag-to-create remains a separate path through the preset picker and create form.
+- The drag create form clears generic titles and only writes from its explicit Save action; this path is confirmed by source inspection, not by the focused tests listed below.
+- The lower `NowNextCard` still carries the goal and current/next activity. Keep it as the orientation layer without adding more permanent controls over the dial.
 
 ## Interaction contract
 
@@ -37,6 +38,10 @@ Keep the current analog dial, its warm bookpaper palette, and its time arcs. Mak
 3. Tap-to-add respects 12-hour AM/PM and 24-hour dials, and the resulting block stays within the represented day segment.
 4. Existing activity taps, direct drag creation, activity detail editing, and the bookpaper clock theme keep working.
 5. The empty state contains no fabricated activities and no streak or guilt language.
+
+## Verification on 2026-11-12
+
+Seven focused tests passed across `focusclock_tap_to_add_test.dart`, `quick_activity_sheet_test.dart`, and `quick_activity_factory_test.dart`. They cover tap-to-add, cancel-before-save, one saved record, empty-name blocking, duration selection, focus-goal linking, AM/PM and 24-hour mapping, and the midnight boundary. Drag cancellation, existing-activity detail, bookpaper rendering, and the complete empty-state copy were not covered by this focused run.
 
 ## Research notes and design implications
 

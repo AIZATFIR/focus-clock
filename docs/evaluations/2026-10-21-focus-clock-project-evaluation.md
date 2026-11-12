@@ -118,11 +118,19 @@ At evaluation time, Git reports a pre-existing local modification in the root `R
 
 - The separate static timer has timestamp-based recovery work and prior focused store checks (12/12), but that code is not part of the selected Flutter web build. Check Flutter timer behavior independently before relying on those results.
 - Confirmed pre-Simplicity-First fallback: Flutter Focus Clock source from the September-era product, visually corroborated by the Antigravity capture. `build:focus` now targets `lib/main.dart`; the Flutter web build succeeds to `build/web`.
-- First goal-first slice: a user-editable, persisted `focusGoal` is shown in the existing “Waktu Luang” card. Static analysis passed. The schedule is not yet linked to the goal.
-- Sadar web output remains isolated at `build/sadar/web`. No deployment was run.
+- As of this evaluation date, the first goal-first slice was a user-editable, persisted `focusGoal` shown in the existing “Waktu Luang” card. Activity-to-goal linking was not implemented then.
+- As of 21 October, Sadar web output remained isolated at `build/sadar/web` and no deployment had been run.
 - The pre-existing root `README.md` edit remains untouched.
-- No new goal-cue feature was added. Goal-first development should start from the restored Flutter visual base and use screenshot review per small iteration.
+- No new goal-cue feature was added during the 21 October evaluation. Its recommendation was to continue from the restored Flutter visual base and review screenshots in small iterations.
+
+## Verification update — 12 November 2026
+
+- The clock now supports tap-to-add from empty dial time, a 30-minute default, optional focus-goal linking, and cancel-before-save. Seven focused tests passed for tap-to-add, empty-name blocking, duration selection, goal linking, AM/PM and 24-hour conversion, and the midnight boundary. See [the unclogged-canvas status](../product/FOCUS-CLOCK-UNCLOGGED-CANVAS.md).
+- Aura now bounds provider requests to 30 seconds, maps failures to a user-facing message, migrates legacy BYOK keys into secure storage, and avoids writing new keys to the Isar settings record. Thirteen focused AI tests passed and targeted static analysis found no issues.
+- Focus Clock `v0.5.2-preview.7` is published with Android, Linux, Web, and Windows assets. `focus-clock-web.vercel.app/version.json` reports build 7.
+- Sadar and Fitrah repositories have current preview downloads, but their latest Git pushes produced no Vercel deployment status. The observed Sadar host still reports `0.4.0`; `fitrah-web.vercel.app` serves a page unrelated to the Fitrah Flutter build. Connecting those projects to Git deployment remains unresolved.
+- These checks do not establish device-level Android behavior, the full timer/schedule audit, or working cross-app synchronization.
 
 ## Limits
 
-This is a source-oriented evaluation with prior static timer checks, a successful Flutter web build, and static analysis of the edited Dart files. The goal editor was not exercised through a save/reload browser session. No deployment, mobile device run, remote repository inspection, or runtime performance measurement was performed.
+At the original 21 October evaluation, this was a source-oriented review with prior static timer checks, a successful Flutter web build, and static analysis of edited Dart files. The goal editor was not exercised through a save/reload browser session; no deployment, mobile device run, remote repository inspection, or runtime performance measurement had been performed by that evaluation. The 12 November update above records later evidence and limits.
