@@ -13,6 +13,9 @@ import 'features/shell/home_shell.dart';
 import 'models/activity.dart';
 import 'providers/providers.dart';
 import 'services/focus_session_contract.dart';
+import 'services/web_launch_url_stub.dart'
+    if (dart.library.js_interop) 'services/web_launch_url_web.dart'
+    as web_launch_url;
 
 class FocusClockApp extends ConsumerStatefulWidget {
   const FocusClockApp({super.key});
@@ -29,6 +32,7 @@ class _FocusClockAppState extends ConsumerState<FocusClockApp> {
   @override
   void initState() {
     super.initState();
+    if (kIsWeb) _handleIncomingLink(Uri.base);
     if (shouldSubscribeToAppLinks(isWeb: kIsWeb)) {
       _linkSubscription = AppLinks().uriLinkStream.listen(
         _handleIncomingLink,
@@ -47,6 +51,7 @@ class _FocusClockAppState extends ConsumerState<FocusClockApp> {
   void _handleIncomingLink(Uri uri) {
     final request = FocusSessionContract.parseFocusClockUri(uri);
     if (request == null) return;
+    if (kIsWeb) web_launch_url.clearWebLaunchUrlQuery();
     _pendingRequest = request;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

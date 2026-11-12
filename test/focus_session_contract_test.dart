@@ -98,6 +98,40 @@ void main() {
       );
     });
 
+    test('parses the Sadar web auto-start link', () {
+      final request = FocusSessionContract.parseFocusClockUri(
+        Uri.parse(
+          'https://focus-clock-web.vercel.app/?task=Belajar%20LKS'
+          '&duration=45&autoStart=true',
+        ),
+      );
+
+      expect(request, isNotNull);
+      expect(request!.title, 'Belajar LKS');
+      expect(request.targetMinutes, 45);
+      expect(request.habitId, 0);
+      expect(request.callbackUrl, isNull);
+    });
+
+    test('ignores web links that are not valid auto-start sessions', () {
+      expect(
+        FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'https://focus-clock-web.vercel.app/?task=Study&duration=45',
+          ),
+        ),
+        isNull,
+      );
+      expect(
+        FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'https://focus-clock-web.vercel.app/?task=Study&duration=0&autoStart=true',
+          ),
+        ),
+        isNull,
+      );
+    });
+
     test('buildSadarCompletedUri and parseSadarCompletedUri roundtrip', () {
       final res = FocusSessionResult(
         sessionId: 'sess-888',

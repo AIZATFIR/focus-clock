@@ -107,6 +107,9 @@ class FocusSessionContract {
 
   /// Parses an incoming Focus Clock URI
   static FocusSessionRequest? parseFocusClockUri(Uri uri) {
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      return _parseWebFocusClockUri(uri);
+    }
     if (uri.scheme != schemeFocusClock || uri.host != 'timer') return null;
     if (uri.queryParameters['version'] != version) return null;
     final habitId = int.tryParse(uri.queryParameters['habitId'] ?? '');
@@ -136,6 +139,39 @@ class FocusSessionContract {
       targetMinutes: minutes,
       requestedAt: DateTime.fromMillisecondsSinceEpoch(ts),
       callbackUrl: callbackUri.toString(),
+    );
+  }
+
+  static FocusSessionRequest? _parseWebFocusClockUri(Uri uri) {
+    if (uri.queryParameters['autoStart'] != 'true') return null;
+    final title = (uri.queryParameters['task'] ?? '').trim();
+    final minutes = int.tryParse(uri.queryParameters['duration'] ?? '');
+    final habitIdValue = uri.queryParameters['habitId'];
+    final habitId = habitIdValue == null ? 0 : int.tryParse(habitIdValue);
+    final callbackUrl = uri.queryParameters['callback'];
+    final timestamp = int.tryParse(uri.queryParameters['timestamp'] ?? '');
+
+    if (title.isEmpty || minutes == null || minutes < 1 || minutes > 720) {
+      return null;
+    }
+    if (habitId == null || habitId < 0) return null;
+    if (callbackUrl != null) {
+      final callback = Uri.tryParse(callbackUrl);
+      if (callback == null ||
+          callback.scheme != schemeSadar ||
+          callback.host != 'completed') {
+        return null;
+      }
+    }
+
+    return FocusSessionRequest(
+      habitId: habitId,
+      title: title,
+      targetMinutes: minutes,
+      requestedAt: timestamp == null
+          ? DateTime.now()
+          : DateTime.fromMillisecondsSinceEpoch(timestamp),
+      callbackUrl: callbackUrl,
     );
   }
 

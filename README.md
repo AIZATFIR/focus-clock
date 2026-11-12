@@ -16,7 +16,7 @@ There are no streaks to protect. A changed plan is still a useful reflection of 
 
 ## Download
 
-Get the current ecosystem preview for [Android, Linux, Web, and Windows](https://github.com/AIZATFIR/focus-clock/releases/tag/v0.5.2-preview.3). It is a prerelease; review its notes before installing. Other published builds are listed on [GitHub Releases](https://github.com/AIZATFIR/focus-clock/releases).
+Get the current ecosystem preview for [Android, Linux, Web, and Windows](https://github.com/AIZATFIR/focus-clock/releases/tag/v0.5.2-preview.4). It is a prerelease; review its notes before installing. Other published builds are listed on [GitHub Releases](https://github.com/AIZATFIR/focus-clock/releases).
 
 ## Project direction
 

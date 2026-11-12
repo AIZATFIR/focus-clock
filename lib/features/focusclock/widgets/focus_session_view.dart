@@ -188,7 +188,12 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
 
   Future<void> _sendExternalResult() async {
     final request = widget.externalRequest;
-    if (request == null || _externalResultSent) return;
+    if (request == null ||
+        request.habitId <= 0 ||
+        request.callbackUrl == null ||
+        _externalResultSent) {
+      return;
+    }
     _externalResultSent = true;
 
     final endedAt = DateTime.now();
@@ -206,7 +211,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
         status: _isCompleted ? 'completed' : 'cancelled',
       ),
     );
-    final callback = Uri.parse(request.callbackUrl ?? 'sadar://completed');
+    final callback = Uri.parse(request.callbackUrl!);
     try {
       await launchUrl(
         callback.replace(queryParameters: resultUri.queryParameters),
