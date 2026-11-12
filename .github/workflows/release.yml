@@ -89,3 +89,29 @@ jobs:
         with:
           name: Focus-Clock-Web
           path: Focus-Clock-Web.zip
+  publish-release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-android, build-linux, build-windows, build-web]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Create preview release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          mv release-assets/Focus-Clock-Android-APK/app-release.apk release-assets/Focus-Clock-Android-APK.apk
+          mv release-assets/Focus-Clock-Linux-x64/Focus-Clock-Linux-x64.tar.gz release-assets/Focus-Clock-Linux-x64.tar.gz
+          mv release-assets/Focus-Clock-Windows-x64/Focus-Clock-Windows-x64.zip release-assets/Focus-Clock-Windows-x64.zip
+          mv release-assets/Focus-Clock-Web/Focus-Clock-Web.zip release-assets/Focus-Clock-Web.zip
+          gh release create "$TAG_NAME" \
+            release-assets/Focus-Clock-Android-APK.apk \
+            release-assets/Focus-Clock-Linux-x64.tar.gz \
+            release-assets/Focus-Clock-Windows-x64.zip \
+            release-assets/Focus-Clock-Web.zip \
+            --verify-tag --title "Focus Clock $TAG_NAME — Ecosystem Preview" --generate-notes --prerelease
