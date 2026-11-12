@@ -8,13 +8,16 @@ class GoalSchedulePlanner {
     required DateTime targetDate,
     required int daysPerWeek,
     required int startHour,
+    int startMinuteOfHour = 0,
   }) {
     final today = dateOnly(now);
     final target = dateOnly(targetDate);
     if ((daysPerWeek != 5 && daysPerWeek != 7) ||
         !target.isAfter(today) ||
         startHour < 0 ||
-        startHour > 23) {
+        startHour > 23 ||
+        startMinuteOfHour < 0 ||
+        startMinuteOfHour > 59) {
       return const [];
     }
 
@@ -26,7 +29,13 @@ class GoalSchedulePlanner {
     ) {
       if (daysPerWeek == 5 && date.weekday > DateTime.friday) continue;
       if (date == today &&
-          !DateTime(date.year, date.month, date.day, startHour).isAfter(now)) {
+          !DateTime(
+            date.year,
+            date.month,
+            date.day,
+            startHour,
+            startMinuteOfHour,
+          ).isAfter(now)) {
         continue;
       }
       dates.add(date);
@@ -38,10 +47,39 @@ class GoalSchedulePlanner {
     required ActivityRepository repository,
     required List<DateTime> dates,
     required int startHour,
+    int startMinuteOfHour = 0,
     required int durationMinutes,
   }) async {
+    if (startHour < 0 || startHour > 23) {
+      throw ArgumentError.value(
+        startHour,
+        'startHour',
+        'must be between 0 and 23',
+      );
+    }
+    if (startMinuteOfHour < 0 || startMinuteOfHour > 59) {
+      throw ArgumentError.value(
+        startMinuteOfHour,
+        'startMinuteOfHour',
+        'must be between 0 and 59',
+      );
+    }
+    if (durationMinutes <= 0) {
+      throw ArgumentError.value(
+        durationMinutes,
+        'durationMinutes',
+        'must be positive',
+      );
+    }
+
     for (final date in dates) {
-      final start = DateTime(date.year, date.month, date.day, startHour);
+      final start = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        startHour,
+        startMinuteOfHour,
+      );
       final end = start.add(Duration(minutes: durationMinutes));
       for (final segment in splitSpan(start, end)) {
         final conflicts = await repository.getConflicting(

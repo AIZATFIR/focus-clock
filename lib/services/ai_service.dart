@@ -203,14 +203,14 @@ const _tools = [
       'name': 'schedule_adaptive_goal',
       'description':
           'Create a recurring practice block for a long-term goal using schedule details explicitly provided by the user. '
-          'Ask for the target date, practice hours, time window, and 5 weekdays or all 7 days. Do not guess missing details.',
+          'Ask for the target date, practice hours, exact start time in 24-hour HH:mm format, and 5 weekdays or all 7 days. Do not guess missing details.',
       'parameters': {
         'type': 'object',
         'required': [
           'goal_title',
           'target_date',
           'daily_hours',
-          'preferred_time',
+          'start_time',
           'days_per_week',
         ],
         'properties': {
@@ -227,10 +227,10 @@ const _tools = [
             'type': 'number',
             'description': 'Practice hours per session, from 0.5 to 4.0.',
           },
-          'preferred_time': {
+          'start_time': {
             'type': 'string',
-            'enum': ['morning', 'afternoon', 'evening'],
-            'description': 'User-selected practice window.',
+            'description':
+                'User-confirmed local start time in 24-hour HH:mm format, e.g. 16:30.',
           },
           'days_per_week': {
             'type': 'integer',
@@ -291,7 +291,7 @@ class AiActionProposal {
       'generate_blueprint' =>
         'Buat blueprint ${args['date'] ?? 'untuk hari yang dipilih'} • bangun ${args['wake_hour'] ?? '?'}:00 • tidur ${args['sleep_hour'] ?? '?'}:00${args['goals'] == null ? '' : ' • ${args['goals']}'}',
       'schedule_adaptive_goal' =>
-        'Jadwalkan latihan "${args['goal_title'] ?? 'tujuan'}" • ${args['daily_hours'] ?? '?'} jam per sesi • ${args['preferred_time'] ?? 'waktu belum dipilih'} • ${args['days_per_week'] ?? '?'} hari per minggu • target ${args['target_date'] ?? '?'}',
+        'Jadwalkan latihan "${args['goal_title'] ?? 'tujuan'}" • ${args['daily_hours'] ?? '?'} jam per sesi • ${args['start_time'] ?? 'waktu belum dipilih'} • ${args['days_per_week'] ?? '?'} hari per minggu • target ${args['target_date'] ?? '?'}',
       _ => 'Tinjau tindakan ${toolName.replaceAll('_', ' ')}',
     };
   }
@@ -393,7 +393,7 @@ ARAH FOCUS CLOCK:
 
 IDENTITAS & ADAPTIVE GOAL SCHEDULING:
 - Jika pengguna menyampaikan tujuan jangka panjang, pahami dulu arti tujuan itu bagi mereka dan apa langkah yang sudah pernah dicoba.
-- Sebelum memakai `schedule_adaptive_goal`, pastikan tenggat, jam latihan, rentang waktu, dan pilihan 5 hari kerja atau 7 hari berasal dari pengguna. Jika belum jelas, tanyakan; jangan menebak nilai.
+- Sebelum memakai `schedule_adaptive_goal`, pastikan tenggat, durasi latihan, jam mulai tepat dalam format 24 jam `HH:mm`, dan pilihan 5 hari kerja atau 7 hari berasal dari pengguna. Jika belum jelas, tanyakan; jangan menebak nilai.
 - Sampaikan apa yang akan dijadwalkan dengan bahasa biasa. Jangan mengklaim jadwal berhasil sebelum tool mengonfirmasi.
 
 PANGGILAN TOOL AUTOMATION:
@@ -1238,8 +1238,10 @@ PANGGILAN TOOL AUTOMATION:
     final rawTargetDate = args['target_date'];
     final targetDateStr = rawTargetDate is String ? rawTargetDate : '';
     final dailyHoursValue = args['daily_hours'];
-    final rawPreferredTime = args['preferred_time'];
-    final preferredTime = rawPreferredTime is String ? rawPreferredTime : null;
+    final rawStartTime = args['start_time'];
+    final timeMatch = rawStartTime is String
+        ? RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$').firstMatch(rawStartTime)
+        : null;
     final rawDaysPerWeek = args['days_per_week'];
     final daysPerWeek = rawDaysPerWeek is num ? rawDaysPerWeek.toInt() : null;
 
@@ -1251,16 +1253,19 @@ PANGGILAN TOOL AUTOMATION:
     if (!dailyHours.isFinite || dailyHours < 0.5 || dailyHours > 4) {
       return {'error': 'Practice duration must be between 0.5 and 4 hours.'};
     }
+    if (timeMatch == null) {
+      return {
+        'error': 'Jam mulai harus memakai format 24 jam HH:mm, misalnya 16:30.',
+      };
+    }
+    final startHour = int.parse(timeMatch.group(1)!);
+    final startMinute = int.parse(timeMatch.group(2)!);
     if (daysPerWeek != 5 && daysPerWeek != 7) {
       return {
         'error':
             'Choose 5 weekdays or 7 days; other patterns are not supported yet.',
       };
     }
-    if (!['morning', 'afternoon', 'evening'].contains(preferredTime)) {
-      return {'error': 'Choose morning, afternoon, or evening.'};
-    }
-
     final parsedTargetDate = DateTime.tryParse(targetDateStr);
     if (parsedTargetDate == null) {
       return {'error': 'Give me a valid target date in YYYY-MM-DD format.'};
@@ -1271,27 +1276,30 @@ PANGGILAN TOOL AUTOMATION:
       return {'error': 'Target date must be in the future.'};
     }
 
-    final startHour = switch (preferredTime) {
-      'morning' => 8,
-      'afternoon' => 14,
-      'evening' => 19,
-      _ => 14,
-    };
+    final durationMins = (dailyHours * 60).round();
+    if (startHour * 60 + startMinute + durationMins > 24 * 60) {
+      return {
+        'error':
+            'Sesi latihan harus selesai sebelum tengah malam. Pilih jam mulai lebih awal atau durasi lebih singkat.',
+      };
+    }
+
     final practiceDates = GoalSchedulePlanner.practiceDates(
       now: today,
       targetDate: targetDate,
       daysPerWeek: daysPerWeek!,
       startHour: startHour,
+      startMinuteOfHour: startMinute,
     );
     if (practiceDates.isEmpty) {
       return {'error': 'No practice day falls before the target date.'};
     }
     final totalTargetHours = practiceDates.length * dailyHours;
-    final durationMins = (dailyHours * 60).round();
     final conflict = await GoalSchedulePlanner.firstConflict(
       repository: _activityRepo,
       dates: practiceDates,
       startHour: startHour,
+      startMinuteOfHour: startMinute,
       durationMinutes: durationMins,
     );
     if (conflict != null) {
@@ -1307,7 +1315,7 @@ PANGGILAN TOOL AUTOMATION:
       title: '🎯 Latihan $goalTitle',
       date: practiceDates.first,
       startHour: startHour,
-      startMin: 0,
+      startMin: startMinute,
       durationMinutes: durationMins,
       description:
           'Latihan untuk $goalTitle. Total rencana $totalTargetHours jam sebelum ${_fmtDate(targetDate)}.',

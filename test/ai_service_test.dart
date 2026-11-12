@@ -335,6 +335,7 @@ void main() {
     () async {
       final repository = ActivityRepository(null, NotificationService());
       var requestCount = 0;
+      Map<String, dynamic>? firstRequestBody;
       final service = AiService(
         baseUrl: 'https://provider.example/v1',
         apiKey: 'sk-user-key',
@@ -346,6 +347,7 @@ void main() {
         httpClient: MockClient((request) async {
           requestCount++;
           if (requestCount == 1) {
+            firstRequestBody = jsonDecode(request.body) as Map<String, dynamic>;
             return http.Response(
               jsonEncode({
                 'choices': [
@@ -362,7 +364,7 @@ void main() {
                               'goal_title': 'Menang LKS nasional',
                               'target_date': '2026-11-20',
                               'daily_hours': 1,
-                              'preferred_time': 'morning',
+                              'start_time': '16:30',
                               'days_per_week': 5,
                             }),
                           },
@@ -395,12 +397,25 @@ void main() {
       final proposal = service.pendingProposals.single;
       expect(proposal.toolName, 'schedule_adaptive_goal');
       expect(proposal.summary, contains('Menang LKS nasional'));
+      expect(proposal.summary, contains('16:30'));
+      final tools = firstRequestBody!['tools'] as List<dynamic>;
+      final scheduleTool = tools.cast<Map<String, dynamic>>().singleWhere(
+        (tool) =>
+            (tool['function'] as Map<String, dynamic>)['name'] ==
+            'schedule_adaptive_goal',
+      );
+      final function = scheduleTool['function'] as Map<String, dynamic>;
+      final parameters = function['parameters'] as Map<String, dynamic>;
+      final properties = parameters['properties'] as Map<String, dynamic>;
+      expect(properties['start_time'], isNotNull);
       expect(await repository.getByDate(DateTime(2026, 11, 13)), isEmpty);
 
       await service.confirmProposal(proposal.id);
       final activities = await repository.getByDate(DateTime(2026, 11, 13));
       expect(activities, hasLength(1));
       expect(activities.single.recurrence, 'weekday');
+      expect(activities.single.ampmHalf, AmPmHalf.pm);
+      expect(activities.single.startMinute, 270);
     },
   );
 
@@ -456,6 +471,81 @@ void main() {
     },
   );
 
+  test('rejects malformed and overnight recurring goal times', () async {
+    Future<void> expectRejectedTime(
+      String startTime,
+      String expectedError,
+    ) async {
+      final repository = ActivityRepository(null, NotificationService());
+      final targetDate = DateTime.now().add(const Duration(days: 8));
+      final targetDateString =
+          '${targetDate.year}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
+      var requestCount = 0;
+      final service = AiService(
+        baseUrl: 'https://provider.example/v1',
+        apiKey: 'sk-user-key',
+        model: 'provider-model',
+        activityRepo: repository,
+        presetRepo: PresetRepository(null),
+        secureStorage: _FakeAiStorage(),
+        httpClient: MockClient((_) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return http.Response(
+              jsonEncode({
+                'choices': [
+                  {
+                    'message': {
+                      'role': 'assistant',
+                      'tool_calls': [
+                        {
+                          'id': 'call-late-plan',
+                          'type': 'function',
+                          'function': {
+                            'name': 'schedule_adaptive_goal',
+                            'arguments': jsonEncode({
+                              'goal_title': 'Menang LKS nasional',
+                              'target_date': targetDateString,
+                              'daily_hours': 1,
+                              'start_time': startTime,
+                              'days_per_week': 5,
+                            }),
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {'role': 'assistant', 'content': 'Tinjau draf.'},
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+
+      await service.send('Buat jadwal latihan');
+      final proposal = service.pendingProposals.single;
+      final result = await service.confirmProposal(proposal.id);
+
+      expect(result['error'], contains(expectedError));
+      expect(proposal.status, AiActionProposalStatus.failed);
+      expect(await repository.getByDate(dateOnly(DateTime.now())), isEmpty);
+    }
+
+    await expectRejectedTime('25:99', 'HH:mm');
+    await expectRejectedTime('23:30', 'sebelum tengah malam');
+  });
+
   test('converts earlier plain chat turns into Gemini roles', () {
     final history = openAiMessagesToGeminiHistory([
       {'role': 'system', 'content': 'system prompt'},
@@ -498,13 +588,10 @@ void main() {
           'description': 'Plan repeated practice.',
           'parameters': {
             'type': 'object',
-            'required': ['goal_title', 'preferred_time'],
+            'required': ['goal_title', 'start_time'],
             'properties': {
               'goal_title': {'type': 'string'},
-              'preferred_time': {
-                'type': 'string',
-                'enum': ['morning', 'afternoon', 'evening'],
-              },
+              'start_time': {'type': 'string'},
             },
           },
         },
@@ -518,14 +605,10 @@ void main() {
       'description': 'Plan repeated practice.',
       'parameters': {
         'type': 'OBJECT',
-        'required': ['goal_title', 'preferred_time'],
+        'required': ['goal_title', 'start_time'],
         'properties': {
           'goal_title': {'type': 'STRING'},
-          'preferred_time': {
-            'type': 'STRING',
-            'format': 'enum',
-            'enum': ['morning', 'afternoon', 'evening'],
-          },
+          'start_time': {'type': 'STRING'},
         },
       },
     });

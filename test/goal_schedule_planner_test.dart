@@ -24,13 +24,36 @@ void main() {
     },
   );
 
+  test(
+    'uses the exact start minute when deciding whether today is available',
+    () {
+      final beforeStart = GoalSchedulePlanner.practiceDates(
+        now: DateTime(2026, 11, 10, 16, 15),
+        targetDate: DateTime(2026, 11, 14),
+        daysPerWeek: 5,
+        startHour: 16,
+        startMinuteOfHour: 30,
+      );
+      final atStart = GoalSchedulePlanner.practiceDates(
+        now: DateTime(2026, 11, 10, 16, 30),
+        targetDate: DateTime(2026, 11, 14),
+        daysPerWeek: 5,
+        startHour: 16,
+        startMinuteOfHour: 30,
+      );
+
+      expect(beforeStart.first, DateTime(2026, 11, 10));
+      expect(atStart.first, DateTime(2026, 11, 11));
+    },
+  );
+
   test('reports a conflict on a projected recurring activity', () async {
     final repository = ActivityRepository(null, NotificationService());
     final recurring = Activity()
       ..title = 'School'
-      ..startMinute = 480
-      ..endMinute = 540
-      ..ampmHalf = AmPmHalf.am
+      ..startMinute = 300
+      ..endMinute = 330
+      ..ampmHalf = AmPmHalf.pm
       ..date = DateTime(2026, 11, 9)
       ..colorValue = 0xFF4A9EFF
       ..recurrence = 'weekday'
@@ -42,11 +65,36 @@ void main() {
     final conflict = await GoalSchedulePlanner.firstConflict(
       repository: repository,
       dates: [DateTime(2026, 11, 10)],
-      startHour: 8,
-      durationMinutes: 60,
+      startHour: 16,
+      startMinuteOfHour: 30,
+      durationMinutes: 45,
     );
 
     expect(conflict?.date, DateTime(2026, 11, 10));
     expect(conflict?.activity.title, 'School');
+  });
+
+  test('rejects invalid times and durations in conflict checks', () async {
+    final repository = ActivityRepository(null, NotificationService());
+
+    await expectLater(
+      GoalSchedulePlanner.firstConflict(
+        repository: repository,
+        dates: [DateTime(2026, 11, 10)],
+        startHour: 16,
+        startMinuteOfHour: 60,
+        durationMinutes: 30,
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      GoalSchedulePlanner.firstConflict(
+        repository: repository,
+        dates: [DateTime(2026, 11, 10)],
+        startHour: 16,
+        durationMinutes: 0,
+      ),
+      throwsArgumentError,
+    );
   });
 }
