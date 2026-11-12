@@ -126,9 +126,11 @@ At evaluation time, Git reports a pre-existing local modification in the root `R
 ## Verification update — 12 November 2026
 
 - The clock now supports tap-to-add from empty dial time, a 30-minute default, optional focus-goal linking, and cancel-before-save. Seven focused tests passed for tap-to-add, empty-name blocking, duration selection, goal linking, AM/PM and 24-hour conversion, and the midnight boundary. See [the unclogged-canvas status](../product/FOCUS-CLOCK-UNCLOGGED-CANVAS.md).
-- Aura now bounds provider requests to 30 seconds, maps failures to a user-facing message, migrates legacy BYOK keys into secure storage, and avoids writing new keys to the Isar settings record. Thirteen focused AI tests passed and targeted static analysis found no issues.
-- Focus Clock `v0.5.2-preview.7` is published with Android, Linux, Web, and Windows assets. `focus-clock-web.vercel.app/version.json` reports build 7.
-- Sadar and Fitrah repositories have current preview downloads, but their latest Git pushes produced no Vercel deployment status. The observed Sadar host still reports `0.4.0`; `fitrah-web.vercel.app` serves a page unrelated to the Fitrah Flutter build. Connecting those projects to Git deployment remains unresolved.
+- Aura asks what the user is working toward, keeps provider requests within 30 seconds, maps failures to a user-facing message, migrates legacy BYOK keys into secure storage, and keeps new keys out of the Isar settings record. Thirteen focused AI tests passed.
+- Focus sessions now use a deadline instead of counting timer callbacks, and saved browser snapshots include `savedAt`; restored running sessions subtract elapsed time while paused sessions retain their remaining time. The contract suite passes 11 tests, including recovery and pause behavior; targeted analysis of the changed Dart files is clean.
+- Focus Clock `v0.5.2-preview.9` is published with Android, Linux, Web, and Windows assets. The Vercel status is successful and `focus-clock-web.vercel.app/version.json` reports build 9.
+- The combined download package is [r5](https://github.com/AIZATFIR/focus-clock/releases/tag/v0.5.2-preview.9)'s Focus Clock build alongside Sadar `v1.5.2-preview.3` and Fitrah Launcher `v0.5.5-preview.1`. Its 13 internal checksums and ZIP integrity were verified.
+- Sadar and Fitrah source commits and web bundles are on their GitHub default branches, but those commits have no Vercel status. Sadar's public URL still reports `0.4.0`; `fitrah-web.vercel.app/version.json` returns 404 and the domain serves a page unrelated to the Flutter bundle. Their Vercel projects/domains are not demonstrably connected to these repositories, so Git push alone has not updated either site.
 - These checks do not establish device-level Android behavior, the full timer/schedule audit, or working cross-app synchronization.
 
 ## Limits
