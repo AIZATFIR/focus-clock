@@ -102,7 +102,10 @@ void main() {
       final request = FocusSessionContract.parseFocusClockUri(
         Uri.parse(
           'https://focus-clock-web.vercel.app/?task=Belajar%20LKS'
-          '&duration=45&autoStart=true',
+          '&duration=45&autoStart=true&habitKey=habit-8'
+          '&sessionId=fc-abc123&timestamp=1794441600000'
+          '&remaining=92&paused=true'
+          '&callback=https%3A%2F%2Fsadar-web.vercel.app%2F',
         ),
       );
 
@@ -110,7 +113,71 @@ void main() {
       expect(request!.title, 'Belajar LKS');
       expect(request.targetMinutes, 45);
       expect(request.habitId, 0);
-      expect(request.callbackUrl, isNull);
+      expect(request.callbackUrl, 'https://sadar-web.vercel.app/');
+      expect(request.sourceHabitKey, 'habit-8');
+      expect(request.sourceSessionId, 'fc-abc123');
+      expect(request.sourceRemainingSeconds, 92);
+      expect(request.sourcePaused, isTrue);
+      expect(
+        request.sourceStartedAt,
+        DateTime.fromMillisecondsSinceEpoch(1794441600000),
+      );
+    });
+
+    test(
+      'rejects web callbacks outside Sadar and local development origins',
+      () {
+        final request = FocusSessionContract.parseFocusClockUri(
+          Uri.parse(
+            'https://focus-clock-web.vercel.app/?task=Study&duration=25'
+            '&autoStart=true&habitKey=habit-8'
+            '&callback=https%3A%2F%2Fevil.example%2F',
+          ),
+        );
+
+        expect(request, isNull);
+      },
+    );
+
+    test('accepts Flutter Sadar numeric habit callbacks from the web', () {
+      final request = FocusSessionContract.parseFocusClockUri(
+        Uri.parse(
+          'https://focus-clock-web.vercel.app/?task=Study&duration=25'
+          '&autoStart=true&habitId=55&sessionId=fc-native-web-1'
+          '&timestamp=1794441600000'
+          '&callback=https%3A%2F%2Fsadar-web.vercel.app%2F',
+        ),
+      );
+
+      expect(request, isNotNull);
+      expect(request!.habitId, 55);
+      expect(request.sourceHabitKey, isNull);
+      expect(request.sourceSessionId, 'fc-native-web-1');
+    });
+
+    test('builds a versioned web completion return URL', () {
+      final result = FocusSessionResult(
+        sessionId: 'session-web-1',
+        habitId: 0,
+        startedAt: DateTime(2026, 11, 12, 9),
+        endedAt: DateTime(2026, 11, 12, 9, 25),
+        actualDurationMinutes: 25,
+        status: 'completed',
+      );
+
+      final uri = FocusSessionContract.buildSadarWebCompletedUri(
+        callbackUrl: 'https://sadar-web.vercel.app/',
+        habitKey: 'habit-8',
+        result: result,
+      );
+
+      expect(uri.scheme, 'https');
+      expect(uri.host, 'sadar-web.vercel.app');
+      expect(uri.queryParameters['fc_version'], '1');
+      expect(uri.queryParameters['fc_session'], 'session-web-1');
+      expect(uri.queryParameters['fc_habit'], 'habit-8');
+      expect(uri.queryParameters['fc_duration'], '25');
+      expect(uri.queryParameters['fc_status'], 'completed');
     });
 
     test('ignores web links that are not valid auto-start sessions', () {

@@ -51,7 +51,9 @@ class _FocusClockAppState extends ConsumerState<FocusClockApp> {
   void _handleIncomingLink(Uri uri) {
     final request = FocusSessionContract.parseFocusClockUri(uri);
     if (request == null) return;
-    if (kIsWeb) web_launch_url.clearWebLaunchUrlQuery();
+    if (kIsWeb && request.sourceSessionId == null) {
+      web_launch_url.clearWebLaunchUrlQuery();
+    }
     _pendingRequest = request;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

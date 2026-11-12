@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,9 @@ import '../../../models/activity.dart';
 import '../../../providers/providers.dart';
 import '../../../services/pip_timer_bridge.dart';
 import '../../../services/focus_session_contract.dart';
+import '../../../services/web_launch_url_stub.dart'
+    if (dart.library.js_interop) '../../../services/web_launch_url_web.dart'
+    as web_launch_url;
 
 class FocusSessionView extends ConsumerStatefulWidget {
   const FocusSessionView({
@@ -53,11 +58,20 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
         widget.externalRequest?.targetMinutes ??
         (widget.activity.endMinute - widget.activity.startMinute).clamp(1, 720);
     _totalSeconds = durationMinutes * 60;
-    _sessionStartedAt = DateTime.now();
+    final restored = _readWebSessionState();
+    _sessionStartedAt = restored == null
+        ? widget.externalRequest?.sourceStartedAt ?? DateTime.now()
+        : DateTime.fromMillisecondsSinceEpoch(restored['startedAt'] as int);
 
     final now = DateTime.now();
     final nowMinOfHalf = minuteOfHalf(now);
-    if (widget.externalRequest != null) {
+    if (restored != null) {
+      _remainingSeconds = (restored['remainingSeconds'] as int).clamp(
+        0,
+        _totalSeconds,
+      );
+      _isPaused = restored['isPaused'] as bool;
+    } else if (widget.externalRequest != null) {
       _remainingSeconds = _totalSeconds;
     } else if (widget.activity.ampmHalf == halfOfNow(now) &&
         nowMinOfHalf >= widget.activity.startMinute &&
@@ -84,6 +98,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
 
   void _startCountdown() {
     _timer?.cancel();
+    _persistWebSessionState();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!_isPaused && mounted) {
         setState(() {
@@ -98,8 +113,80 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
             HapticFeedback.heavyImpact();
           }
         });
+        _persistWebSessionState();
       }
     });
+  }
+
+  Map<String, dynamic>? _readWebSessionState() {
+    final request = widget.externalRequest;
+    final sessionId = request?.sourceSessionId;
+    if (!kIsWeb || request == null || sessionId == null) return null;
+    try {
+      final encoded = web_launch_url.readWebFocusSessionState(sessionId);
+      if (encoded != null) {
+        final state = jsonDecode(encoded) as Map<String, dynamic>;
+        final startedAt = state['startedAt'];
+        final remainingSeconds = state['remainingSeconds'];
+        if (state['totalSeconds'] != _totalSeconds ||
+            startedAt is! int ||
+            startedAt <= 0 ||
+            startedAt > DateTime.now().millisecondsSinceEpoch ||
+            remainingSeconds is! int ||
+            remainingSeconds < 0 ||
+            remainingSeconds > _totalSeconds ||
+            state['isPaused'] is! bool) {
+          throw const FormatException('Invalid saved focus session.');
+        }
+        return state;
+      }
+    } catch (error) {
+      _clearWebSessionState();
+      debugPrint('Discarding invalid saved focus session: $error');
+    }
+
+    final remainingSeconds = request.sourceRemainingSeconds;
+    if (remainingSeconds == null &&
+        request.sourcePaused == null &&
+        request.sourceStartedAt == null) {
+      return null;
+    }
+    return {
+      'startedAt':
+          request.sourceStartedAt?.millisecondsSinceEpoch ??
+          request.requestedAt.millisecondsSinceEpoch,
+      'remainingSeconds': remainingSeconds ?? _totalSeconds,
+      'totalSeconds': _totalSeconds,
+      'isPaused': request.sourcePaused ?? false,
+    };
+  }
+
+  void _persistWebSessionState() {
+    final sessionId = widget.externalRequest?.sourceSessionId;
+    if (!kIsWeb || sessionId == null) return;
+    try {
+      web_launch_url.writeWebFocusSessionState(
+        sessionId,
+        jsonEncode({
+          'startedAt': _sessionStartedAt.millisecondsSinceEpoch,
+          'remainingSeconds': _remainingSeconds,
+          'totalSeconds': _totalSeconds,
+          'isPaused': _isPaused,
+        }),
+      );
+    } catch (error) {
+      debugPrint('Could not persist web focus session: $error');
+    }
+  }
+
+  void _clearWebSessionState() {
+    final sessionId = widget.externalRequest?.sourceSessionId;
+    if (!kIsWeb || sessionId == null) return;
+    try {
+      web_launch_url.clearWebFocusSessionState(sessionId);
+    } catch (error) {
+      debugPrint('Could not clear web focus session: $error');
+    }
   }
 
   @override
@@ -183,36 +270,53 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
 
   void _closeSession() {
     unawaited(_sendExternalResult());
-    widget.onClose();
+    if (!_hasSadarWebCallback) widget.onClose();
+  }
+
+  bool get _hasSadarWebCallback {
+    final request = widget.externalRequest;
+    final callback = request?.callbackUrl;
+    return kIsWeb &&
+        (request?.sourceHabitKey != null || (request?.habitId ?? 0) > 0) &&
+        callback != null &&
+        FocusSessionContract.isAllowedSadarWebCallback(
+          Uri.tryParse(callback) ?? Uri(),
+        );
   }
 
   Future<void> _sendExternalResult() async {
     final request = widget.externalRequest;
-    if (request == null ||
-        request.habitId <= 0 ||
-        request.callbackUrl == null ||
-        _externalResultSent) {
+    if (request == null || request.callbackUrl == null || _externalResultSent) {
       return;
     }
+    final webCallback = _hasSadarWebCallback;
+    if (!webCallback && request.habitId <= 0) return;
     _externalResultSent = true;
+    _clearWebSessionState();
 
     final endedAt = DateTime.now();
     final elapsedMinutes =
         ((_totalSeconds - _remainingSeconds).clamp(0, _totalSeconds)) ~/ 60;
-    final resultUri = FocusSessionContract.buildSadarCompletedUri(
-      FocusSessionResult(
-        sessionId: const Uuid().v4(),
-        habitId: request.habitId,
-        startedAt: _sessionStartedAt,
-        endedAt: endedAt,
-        actualDurationMinutes: _isCompleted
-            ? request.targetMinutes
-            : elapsedMinutes,
-        status: _isCompleted ? 'completed' : 'cancelled',
-      ),
+    final result = FocusSessionResult(
+      sessionId: request.sourceSessionId ?? const Uuid().v4(),
+      habitId: request.habitId,
+      startedAt: _sessionStartedAt,
+      endedAt: endedAt,
+      actualDurationMinutes: elapsedMinutes,
+      status: _isCompleted ? 'completed' : 'cancelled',
     );
     final callback = Uri.parse(request.callbackUrl!);
     try {
+      if (webCallback) {
+        final returnUri = FocusSessionContract.buildSadarWebCompletedUri(
+          callbackUrl: request.callbackUrl!,
+          habitKey: request.sourceHabitKey ?? request.habitId.toString(),
+          result: result,
+        );
+        web_launch_url.returnToSadar(returnUri.toString());
+        return;
+      }
+      final resultUri = FocusSessionContract.buildSadarCompletedUri(result);
       await launchUrl(
         callback.replace(queryParameters: resultUri.queryParameters),
         mode: LaunchMode.externalApplication,
@@ -356,6 +460,7 @@ class _FocusSessionViewState extends ConsumerState<FocusSessionView>
               onPressed: () {
                 HapticFeedback.selectionClick();
                 setState(() => _isPaused = !_isPaused);
+                _persistWebSessionState();
               },
             ),
             const SizedBox(width: 16),

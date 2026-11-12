@@ -11,6 +11,11 @@ class FocusSessionRequest {
   final int targetMinutes;
   final DateTime requestedAt;
   final String? callbackUrl;
+  final String? sourceHabitKey;
+  final String? sourceSessionId;
+  final int? sourceRemainingSeconds;
+  final DateTime? sourceStartedAt;
+  final bool? sourcePaused;
 
   const FocusSessionRequest({
     required this.habitId,
@@ -18,6 +23,11 @@ class FocusSessionRequest {
     required this.targetMinutes,
     required this.requestedAt,
     this.callbackUrl,
+    this.sourceHabitKey,
+    this.sourceSessionId,
+    this.sourceRemainingSeconds,
+    this.sourceStartedAt,
+    this.sourcePaused,
   });
 
   Map<String, dynamic> toJson() => {
@@ -27,6 +37,11 @@ class FocusSessionRequest {
     'targetMinutes': targetMinutes,
     'requestedAt': requestedAt.toIso8601String(),
     'callbackUrl': callbackUrl,
+    'sourceHabitKey': sourceHabitKey,
+    'sourceSessionId': sourceSessionId,
+    'sourceRemainingSeconds': sourceRemainingSeconds,
+    'sourceStartedAt': sourceStartedAt?.toIso8601String(),
+    'sourcePaused': sourcePaused,
   };
 
   factory FocusSessionRequest.fromJson(Map<String, dynamic> json) {
@@ -38,6 +53,13 @@ class FocusSessionRequest {
           DateTime.tryParse(json['requestedAt'] as String? ?? '') ??
           DateTime.now(),
       callbackUrl: json['callbackUrl'] as String?,
+      sourceHabitKey: json['sourceHabitKey'] as String?,
+      sourceSessionId: json['sourceSessionId'] as String?,
+      sourceRemainingSeconds: json['sourceRemainingSeconds'] as int?,
+      sourceStartedAt: DateTime.tryParse(
+        json['sourceStartedAt'] as String? ?? '',
+      ),
+      sourcePaused: json['sourcePaused'] as bool?,
     );
   }
 }
@@ -149,17 +171,61 @@ class FocusSessionContract {
     final habitIdValue = uri.queryParameters['habitId'];
     final habitId = habitIdValue == null ? 0 : int.tryParse(habitIdValue);
     final callbackUrl = uri.queryParameters['callback'];
-    final timestamp = int.tryParse(uri.queryParameters['timestamp'] ?? '');
+    final sourceHabitKey = uri.queryParameters['habitKey'];
+    final sourceSessionId = uri.queryParameters['sessionId'];
+    final startedAtValue =
+        uri.queryParameters['startedAt'] ?? uri.queryParameters['timestamp'];
+    final startedAtTimestamp = int.tryParse(startedAtValue ?? '');
+    final remainingValue = uri.queryParameters['remaining'];
+    final sourceRemainingSeconds = remainingValue == null
+        ? null
+        : int.tryParse(remainingValue);
+    final pausedValue = uri.queryParameters['paused'];
+    final sourcePaused = pausedValue == null
+        ? null
+        : pausedValue == 'true'
+        ? true
+        : pausedValue == 'false'
+        ? false
+        : null;
 
     if (title.isEmpty || minutes == null || minutes < 1 || minutes > 720) {
+      return null;
+    }
+    if (startedAtTimestamp != null &&
+        startedAtTimestamp >
+            DateTime.now()
+                .add(const Duration(minutes: 5))
+                .millisecondsSinceEpoch) {
+      return null;
+    }
+    if ((remainingValue != null && sourceRemainingSeconds == null) ||
+        (sourceRemainingSeconds != null &&
+            (sourceRemainingSeconds < 0 ||
+                sourceRemainingSeconds > minutes * 60)) ||
+        (pausedValue != null && sourcePaused == null)) {
       return null;
     }
     if (habitId == null || habitId < 0) return null;
     if (callbackUrl != null) {
       final callback = Uri.tryParse(callbackUrl);
-      if (callback == null ||
-          callback.scheme != schemeSadar ||
-          callback.host != 'completed') {
+      final nativeCallback =
+          callback?.scheme == schemeSadar && callback?.host == 'completed';
+      final webCallback =
+          callback != null && isAllowedSadarWebCallback(callback);
+      if (!nativeCallback && !webCallback) {
+        return null;
+      }
+      final sourceHabitKeyIsValid =
+          sourceHabitKey == null ||
+          RegExp(r'^[A-Za-z0-9._:-]{1,160}$').hasMatch(sourceHabitKey);
+      final sourceSessionIdIsValid =
+          sourceSessionId != null &&
+          RegExp(r'^[A-Za-z0-9._:-]{1,128}$').hasMatch(sourceSessionId);
+      if (!sourceHabitKeyIsValid ||
+          (webCallback &&
+              ((sourceHabitKey == null && habitId <= 0) ||
+                  !sourceSessionIdIsValid))) {
         return null;
       }
     }
@@ -168,10 +234,54 @@ class FocusSessionContract {
       habitId: habitId,
       title: title,
       targetMinutes: minutes,
-      requestedAt: timestamp == null
+      requestedAt: startedAtTimestamp == null
           ? DateTime.now()
-          : DateTime.fromMillisecondsSinceEpoch(timestamp),
+          : DateTime.fromMillisecondsSinceEpoch(startedAtTimestamp),
       callbackUrl: callbackUrl,
+      sourceHabitKey: sourceHabitKey,
+      sourceSessionId: sourceSessionId,
+      sourceRemainingSeconds: sourceRemainingSeconds,
+      sourceStartedAt: startedAtTimestamp == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(startedAtTimestamp),
+      sourcePaused: sourcePaused,
+    );
+  }
+
+  static bool isAllowedSadarWebCallback(Uri uri) {
+    final localHost = uri.host == 'localhost' || uri.host == '127.0.0.1';
+    final isLocal = localHost && uri.scheme == 'http';
+    final isProduction =
+        uri.host == 'sadar-web.vercel.app' &&
+        uri.scheme == 'https' &&
+        uri.port == 443;
+    return (isLocal || isProduction) &&
+        uri.userInfo.isEmpty &&
+        (uri.path.isEmpty || uri.path == '/') &&
+        uri.query.isEmpty &&
+        uri.fragment.isEmpty;
+  }
+
+  static Uri buildSadarWebCompletedUri({
+    required String callbackUrl,
+    required String habitKey,
+    required FocusSessionResult result,
+  }) {
+    final callback = Uri.parse(callbackUrl);
+    if (!isAllowedSadarWebCallback(callback) ||
+        !RegExp(r'^[A-Za-z0-9._:-]{1,160}$').hasMatch(habitKey)) {
+      throw ArgumentError('Invalid Sadar web callback.');
+    }
+    return callback.replace(
+      queryParameters: {
+        'fc_version': '1',
+        'fc_session': result.sessionId,
+        'fc_habit': habitKey,
+        'fc_started': result.startedAt.millisecondsSinceEpoch.toString(),
+        'fc_ended': result.endedAt.millisecondsSinceEpoch.toString(),
+        'fc_duration': result.actualDurationMinutes.toString(),
+        'fc_status': result.status,
+      },
     );
   }
 
