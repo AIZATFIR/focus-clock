@@ -14,12 +14,17 @@ import 'package:focus_clock/services/notification_service.dart';
 import 'package:focus_clock/services/secure_storage_service.dart';
 
 class _FakeAiStorage implements AiServiceStorage {
-  _FakeAiStorage({this.apiKey = 'sk-user-key'});
+  _FakeAiStorage({String? apiKey = 'sk-user-key'}) : _apiKey = apiKey;
 
-  final String? apiKey;
+  String? _apiKey;
 
   @override
-  Future<String?> getGeminiApiKey() async => apiKey;
+  Future<String?> getGeminiApiKey() async => _apiKey;
+
+  @override
+  Future<void> setGeminiApiKey(String? key) async {
+    _apiKey = key;
+  }
 
   @override
   Future<String?> getOpenRouterKey() async => null;
@@ -29,6 +34,30 @@ class _FakeAiStorage implements AiServiceStorage {
 }
 
 void main() {
+  test('migrates a legacy API key into secure storage', () async {
+    final storage = _FakeAiStorage(apiKey: null);
+
+    final key = await migrateLegacyApiKeyToSecureStorage(
+      storage: storage,
+      legacyApiKey: '  sk-legacy  ',
+    );
+
+    expect(key, 'sk-legacy');
+    expect(await storage.getGeminiApiKey(), 'sk-legacy');
+  });
+
+  test('keeps an existing secure API key during legacy migration', () async {
+    final storage = _FakeAiStorage(apiKey: 'sk-secure');
+
+    final key = await migrateLegacyApiKeyToSecureStorage(
+      storage: storage,
+      legacyApiKey: 'sk-legacy',
+    );
+
+    expect(key, 'sk-secure');
+    expect(await storage.getGeminiApiKey(), 'sk-secure');
+  });
+
   test('ends a stalled provider request with a timeout', () async {
     final service = AiService(
       baseUrl: 'https://provider.example/v1',

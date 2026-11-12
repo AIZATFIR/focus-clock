@@ -3,8 +3,25 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 abstract interface class AiServiceStorage {
   Future<String?> getGeminiApiKey();
+  Future<void> setGeminiApiKey(String? key);
   Future<String?> getOpenRouterKey();
   Future<String> getBackendServerUrl();
+}
+
+Future<String> migrateLegacyApiKeyToSecureStorage({
+  required AiServiceStorage storage,
+  required String legacyApiKey,
+}) async {
+  final storedKey = await storage.getGeminiApiKey();
+  if (storedKey != null && storedKey.trim().isNotEmpty) {
+    return storedKey.trim();
+  }
+
+  final legacyKey = legacyApiKey.trim();
+  if (legacyKey.isEmpty) return '';
+
+  await storage.setGeminiApiKey(legacyKey);
+  return legacyKey;
 }
 
 final secureStorageServiceProvider = Provider<SecureStorageService>((ref) {
@@ -31,6 +48,7 @@ class SecureStorageService implements AiServiceStorage {
     return await _storage.read(key: _keyGeminiApiKey);
   }
 
+  @override
   Future<void> setGeminiApiKey(String? key) async {
     if (key == null || key.trim().isEmpty) {
       await _storage.delete(key: _keyGeminiApiKey);

@@ -36,6 +36,7 @@ class AppSettings {
   bool enableRightPanel = true;
 
   String aiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta/openai';
+  // Legacy field retained for migration; new API keys belong in secure storage.
   String aiApiKey = '';
   String aiModel = 'gemini-2.5-flash';
   bool hasCompletedOnboarding = false;

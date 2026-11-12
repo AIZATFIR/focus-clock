@@ -957,6 +957,8 @@ class _AiConfigTileState extends State<_AiConfigTile> {
   String _selectedPreset = 'Google AI';
 
   bool _voiceEnabled = true;
+  bool _hasSavedApiKey = false;
+  String? _credentialStorageError;
 
   @override
   void initState() {
@@ -974,16 +976,34 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
   Future<void> _loadSecureStorage() async {
     final storage = SecureStorageService();
-    final storedApiKey = await storage.getGeminiApiKey();
-    final vEnabled = await storage.isVoiceEnabled();
+    try {
+      final legacyApiKey = widget.s.aiApiKey;
+      final storedApiKey = await migrateLegacyApiKeyToSecureStorage(
+        storage: storage,
+        legacyApiKey: legacyApiKey,
+      );
+      final vEnabled = await storage.isVoiceEnabled();
 
-    if (mounted) {
-      setState(() {
-        if (storedApiKey != null && storedApiKey.isNotEmpty) {
+      if (legacyApiKey.isNotEmpty &&
+          storedApiKey.isNotEmpty &&
+          mounted) {
+        widget.onSave(widget.s.aiBaseUrl, '', widget.s.aiModel);
+      }
+
+      if (mounted) {
+        setState(() {
           _keyCtrl.text = storedApiKey;
-        }
-        _voiceEnabled = vEnabled;
-      });
+          _hasSavedApiKey = storedApiKey.isNotEmpty;
+          _voiceEnabled = vEnabled;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _credentialStorageError =
+              'Kunci AI lama belum bisa dipindahkan ke penyimpanan aman.';
+        });
+      }
     }
   }
 
@@ -1020,7 +1040,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
 
   @override
   Widget build(BuildContext context) {
-    final saved = widget.s.aiApiKey.isNotEmpty;
+    final saved = _hasSavedApiKey;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
@@ -1160,6 +1180,15 @@ class _AiConfigTileState extends State<_AiConfigTile> {
             style: const TextStyle(fontSize: 13),
             decoration: InputDecoration(
               hintText: 'sk-or-...',
+              helperText: _credentialStorageError ??
+                  'Saat disimpan, kunci disimpan di penyimpanan aman perangkat ini.',
+              helperMaxLines: 2,
+              helperStyle: TextStyle(
+                color: _credentialStorageError == null
+                    ? AppPalette.textDim
+                    : Colors.orangeAccent,
+                fontSize: 11,
+              ),
               border: const OutlineInputBorder(),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1229,7 +1258,7 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                 const Icon(Icons.check_circle,
                     size: 14, color: Colors.green),
                 const SizedBox(width: 4),
-                const Text('Connected',
+                const Text('Key tersimpan',
                     style: TextStyle(fontSize: 12, color: Colors.green)),
                 const Spacer(),
               ] else if (const String.fromEnvironment('DEMO_AI_KEY').isNotEmpty) ...[
@@ -1252,10 +1281,28 @@ class _AiConfigTileState extends State<_AiConfigTile> {
                   final model = _modelCtrl.text.trim();
 
                   final storage = SecureStorageService();
-                  await storage.setGeminiApiKey(key);
-                  await storage.setVoiceEnabled(_voiceEnabled);
-
-                  widget.onSave(url, key, model);
+                  try {
+                    await storage.setGeminiApiKey(key);
+                    await storage.setVoiceEnabled(_voiceEnabled);
+                    widget.onSave(url, '', model);
+                    if (mounted) {
+                      setState(() {
+                        _credentialStorageError = null;
+                        _hasSavedApiKey = key.isNotEmpty;
+                      });
+                    }
+                  } catch (_) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Kunci belum tersimpan. Periksa penyimpanan perangkat lalu coba lagi.',
+                          ),
+                        ),
+                      );
+                    }
+                    return;
+                  }
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
