@@ -1,4 +1,4 @@
-name: Sadar Multiplatform Release
+name: Focus Clock Multiplatform Release
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Android-APK
+          name: Focus-Clock-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
   build-linux:
@@ -43,12 +43,12 @@ jobs:
         run: |
           flutter build linux --release
           cd build/linux/x64/release/bundle
-          tar -czvf ../../../../../Sadar-Linux-x64.tar.gz .
+          tar -czvf ../../../../../Focus-Clock-Linux-x64.tar.gz .
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Linux-x64
-          path: Sadar-Linux-x64.tar.gz
+          name: Focus-Clock-Linux-x64
+          path: Focus-Clock-Linux-x64.tar.gz
 
   build-windows:
     runs-on: windows-latest
@@ -65,12 +65,12 @@ jobs:
           CMAKE_POLICY_VERSION_MINIMUM: "3.5"
         run: |
           flutter build windows --release
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath Sadar-Windows-x64.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath Focus-Clock-Windows-x64.zip
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Windows-x64
-          path: Sadar-Windows-x64.zip
+          name: Focus-Clock-Windows-x64
+          path: Focus-Clock-Windows-x64.zip
 
   build-web:
     runs-on: ubuntu-latest
@@ -83,9 +83,9 @@ jobs:
       - name: Build Web
         run: |
           flutter build web --release
-          cd build/web && zip -r ../../Sadar-Web.zip .
+          cd build/web && zip -r ../../Focus-Clock-Web.zip .
       - name: Upload Web Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Sadar-Web
-          path: Sadar-Web.zip
+          name: Focus-Clock-Web
+          path: Focus-Clock-Web.zip
